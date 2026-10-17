@@ -58,7 +58,9 @@
 #'   `$cov` (for subject-level effect data) so that `contrast()` gives exact
 #'   standard errors.
 #' @param chunk_size Number of voxels to process at once (default: 10000)
-#' @param n_threads Number of parallel threads to use. Defaults to fmrireg.num_threads option.
+#' @param n_threads Number of OpenMP threads for the compiled fitter. Defaults to
+#'   \code{options(fmrireg.num_threads)}, else the environment variable
+#'   \code{FMRIREG_NUM_THREADS}, else 0 (the OpenMP default).
 #' @param verbose Logical. Print progress messages (default: TRUE)
 #'
 #' @return An fmri_meta object containing:
@@ -71,6 +73,11 @@
 #'     \item model: Model specification
 #'     \item data: Input group_data object
 #'   }
+#'   For fmrigds-backed group data (from \code{group_data()}) the fit is the
+#'   fmrigds reducer \code{"fmrireg:meta_reg"}. When such data hold several
+#'   subject-level contrasts, each is fitted and the result is an
+#'   \code{fmri_meta_list}: a list of \code{fmri_meta} objects named by
+#'   contrast.
 #'
 #' @export
 #'
@@ -106,7 +113,7 @@ fmri_meta <- function(data,
                       contrasts = NULL,
                       return_cov = NULL,
                       chunk_size = 10000,
-                      n_threads = getOption("fmrireg.num_threads", 0),
+                      n_threads = .fmrireg_num_threads(),
                       verbose = TRUE) {
   
   # Validate legacy group_data only; gds-backed objects skip this
@@ -146,7 +153,7 @@ fmri_meta.group_data_h5 <- function(data,
                                     contrasts = NULL,
                                     return_cov = NULL,
                                     chunk_size = 10000,
-                                    n_threads = getOption("fmrireg.num_threads", 0),
+                                    n_threads = .fmrireg_num_threads(),
                                     verbose = TRUE) {
   if (!isTRUE(getOption("fmrireg.suppress_deprecation", FALSE))) {
     .Deprecated("fmri_meta", msg = "fmri_meta.group_data_h5() is deprecated. Use fmri_meta() with a GDS-backed group_data() object.")
@@ -177,7 +184,7 @@ fmri_meta.group_data_h5 <- function(data,
       # Named numeric vector
       w <- rep(0, ncol(model_info$X)); names(w) <- colnames(model_info$X)
       if (!is.null(names(contrasts))) {
-        w[names(contrasts)] <- contrasts
+        w <- .meta_named_contrast_weights(contrasts, colnames(model_info$X))
       } else if (length(contrasts) == length(w)) {
         w <- contrasts
       } else {
@@ -317,7 +324,7 @@ fmri_meta.group_data_gds <- function(data,
                                      contrasts = NULL,
                                      return_cov = NULL,
                                      chunk_size = 10000,
-                                     n_threads = getOption("fmrireg.num_threads", 0),
+                                     n_threads = .fmrireg_num_threads(),
                                      verbose = TRUE) {
   .fmri_meta_group_data_gds_impl(
     data = data,
@@ -346,7 +353,7 @@ fmri_meta.group_data_nifti <- function(data,
                                        contrasts = NULL,
                                        return_cov = NULL,
                                        chunk_size = 10000,
-                                       n_threads = getOption("fmrireg.num_threads", 0),
+                                       n_threads = .fmrireg_num_threads(),
                                        verbose = TRUE) {
   # Similar to group_data_h5 but using read_nifti_chunk
   method <- .meta_resolve_method(match.arg(method))
@@ -376,7 +383,7 @@ fmri_meta.group_data_nifti <- function(data,
     } else if (is.numeric(contrasts)) {
       w <- rep(0, ncol(model_info$X)); names(w) <- colnames(model_info$X)
       if (!is.null(names(contrasts))) {
-        w[names(contrasts)] <- contrasts
+        w <- .meta_named_contrast_weights(contrasts, colnames(model_info$X))
       } else if (length(contrasts) == length(w)) {
         w <- contrasts
       } else {

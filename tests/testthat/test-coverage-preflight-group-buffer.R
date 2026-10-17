@@ -27,16 +27,12 @@ test_that("preflight and effective_df helpers cover remaining branches", {
   }
 })
 
-test_that("group_data print/summary and detect format cover remaining lines", {
+test_that("group_data print/summary cover remaining lines", {
   gd <- tryCatch(fmrireg:::.demo_group_data_csv(), error = function(e) NULL)
   skip_if(is.null(gd), "no demo group data")
   expect_output(print(gd), regexp = ".")
   expect_output(summary(gd), regexp = ".")
   expect_true(n_subjects(gd) >= 1L || length(get_subjects(gd)) >= 1L)
-
-  expect_equal(fmrireg:::detect_group_data_format("x.nii.gz"), "nifti")
-  expect_equal(fmrireg:::detect_group_data_format("x.h5"), "h5")
-  expect_equal(fmrireg:::detect_group_data_format(data.frame(a = 1)), "csv")
 })
 
 test_that("fmri_ttest_gds classic path and error gates on demo csv-as-gds", {

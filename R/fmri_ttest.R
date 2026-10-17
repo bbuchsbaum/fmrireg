@@ -291,7 +291,7 @@ fmri_ttest <- function(gd,
         voxelwise = voxelwise_cov,
         center_voxelwise = center_voxelwise,
         voxel_name = voxel_name,
-        n_threads = getOption("fmrireg.num_threads", 0)
+        n_threads = .fmrireg_num_threads()
       )
     } else {
       # One fitter for every weighting scheme: "ivw" uses V as absolute
@@ -304,7 +304,7 @@ fmri_ttest <- function(gd,
         Y = Y, V = if (is.null(V)) matrix(1, nrow(Y), ncol(Y)) else V, X = X,
         method = method, robust = robust,
         weights = weights, weights_custom = weights_custom,
-        n_threads = getOption("fmrireg.num_threads", 0)
+        n_threads = .fmrireg_num_threads()
       )
       rownames(out$beta) <- rownames(out$se) <- rownames(out$z) <- colnames(X)
       if (!is.null(contrast)) {

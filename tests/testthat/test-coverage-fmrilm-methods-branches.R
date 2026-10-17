@@ -66,9 +66,16 @@ test_that("fmri_lm_fit and engine resolve helpers accept matrix models", {
   cfg <- fmri_lm_control()
 
   fit <- fmrireg:::fmri_lm_fit(
-    fmod, dset, strategy = "runwise", cfg = cfg, nchunks = 1L
+    fmod, dset, cfg = cfg, compute = compute_spec(voxel_chunks = 1L)
   )
   expect_s3_class(fit, "fmri_lm")
+  expect_identical(attr(fit, "strategy"), "runwise")
+  joint <- fmrireg:::fmri_lm_fit(
+    fmod, dset, cfg = fmri_lm_control(estimation = estimation_spec("joint")),
+    compute = compute_spec(voxel_chunks = 2L)
+  )
+  expect_identical(attr(joint, "strategy"), "chunkwise")
+  expect_equal(coef(joint), coef(fit), tolerance = 1e-10)
 
   # Resolve engine spec for named engines / invalid names
   sketch <- tryCatch(

@@ -15,7 +15,7 @@ fmri_meta(
   contrasts = NULL,
   return_cov = NULL,
   chunk_size = 10000,
-  n_threads = getOption("fmrireg.num_threads", 0),
+  n_threads = .fmrireg_num_threads(),
   verbose = TRUE
 )
 }
@@ -80,7 +80,9 @@ standard errors.}
 
 \item{chunk_size}{Number of voxels to process at once (default: 10000)}
 
-\item{n_threads}{Number of parallel threads to use. Defaults to fmrireg.num_threads option.}
+\item{n_threads}{Number of OpenMP threads for the compiled fitter. Defaults to
+\code{options(fmrireg.num_threads)}, else the environment variable
+\code{FMRIREG_NUM_THREADS}, else 0 (the OpenMP default).}
 
 \item{verbose}{Logical. Print progress messages (default: TRUE)}
 }
@@ -95,6 +97,11 @@ An fmri_meta object containing:
 \item model: Model specification
 \item data: Input group_data object
 }
+For fmrigds-backed group data (from \code{group_data()}) the fit is the
+fmrigds reducer \code{"fmrireg:meta_reg"}. When such data hold several
+subject-level contrasts, each is fitted and the result is an
+\code{fmri_meta_list}: a list of \code{fmri_meta} objects named by
+contrast.
 }
 \description{
 Performs voxelwise or ROI-based meta-analysis on group fMRI data using

@@ -2,7 +2,7 @@ Package: fmrireg
 Type: Package
 Title: Regression Analysis of Functional Magnetic Resonance Imaging Data
 Version: 0.3.0.9000
-LinkingTo: Rcpp,RcppArmadillo, roptim, RcppParallel
+LinkingTo: Rcpp,RcppArmadillo
 Authors@R: person("Bradley", "Buchsbaum",, role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
 License: MIT + file LICENSE
 Description: Provides tools for the analysis of functional magnetic resonance
@@ -30,22 +30,15 @@ Imports:
     dplyr,
     ggplot2 (>= 3.4.0),
     tidyr,
-    robustbase,
     matrixStats,
-    furrr,
     rlang (>= 1.0.3),
     neuroim2,
     Rcpp,
-    RcppParallel,
     methods,
     fmridataset (>= 0.11.0.9000),
-    crayon,
-    plotly,
     cli,
-    bslib,
     future.apply,
     jsonlite,
-    progress,
     magrittr
 RoxygenNote: 7.3.3
 Roxygen: list(
@@ -54,9 +47,6 @@ Roxygen: list(
 Suggests: 
     testthat,
     RNifti,
-    ggrepel,
-    pls,
-    doParallel,
     fmristore,
     hdf5r,
     knitr,
@@ -65,12 +55,10 @@ Suggests:
     roxygen2,
     covr,
     gridExtra,
-    multivarious,
-    glmnet,
-    proxy,
-    forecast,
     future,
     shiny,
+    plotly,
+    bslib,
     sandwich,
     metafor,
     progressr,
@@ -83,7 +71,7 @@ Remotes:
     bbuchsbaum/fmriAR@ca27f2772bb4675573fae717a992c993c2f986c8,
     bbuchsbaum/fmrihrf@b9f6a90b05bdf3673ed43414eb06ec6c74200d43,
     bbuchsbaum/fmristore@e7fbbfca181ebd118acee150774a4f58640e039d,
-    bbuchsbaum/fmrigds@f015b7c7fa5008e2435d269aeb1882a9aa24eaf0,
+    bbuchsbaum/fmrigds@e9863f6527844db01e628c61aa6b817ab93b720d,
     anthonynorth/roxyglobals@ab29bdcd2e618fbfd91356fc22095e961b48333d,
     bbuchsbaum/fmridataset,
     bbuchsbaum/fmrilss@f851fb0632f90da12512212af5b80c9623c93fde,

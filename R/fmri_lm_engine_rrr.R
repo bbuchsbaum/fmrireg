@@ -2,18 +2,11 @@
 #' @keywords internal
 #' @noRd
 .preflight_rrr_gls_engine <- function(model, dataset, args, cfg) {
-  if (!inherits(model, "fmri_model")) {
-    stop("rrr_gls engine requires an 'fmri_model' object", call. = FALSE)
-  }
+  # Model and control classes are checked by .validate_engine_context().
   if (is.null(dataset)) {
     stop("rrr_gls engine requires a dataset", call. = FALSE)
   }
-  if (!inherits(cfg, "fmri_lm_control")) {
-    stop("rrr_gls engine requires an 'fmri_lm_control' object", call. = FALSE)
-  }
-
-  args <- .rrr_normalize_args(args)
-
+  .rrr_normalize_args(args)
   invisible(TRUE)
 }
 
@@ -22,7 +15,6 @@
 #' @keywords internal
 #' @noRd
 .fit_rrr_gls_engine <- function(model, dataset, args, cfg) {
-  .preflight_rrr_gls_engine(model, dataset, args, cfg)
   args <- .rrr_normalize_args(args)
 
   dataset <- dataset %||% model$dataset
@@ -50,13 +42,14 @@
     NULL
   }
 
-  run_indices <- .rrr_derive_run_indices(model, nrow(X_full))
+  run_indices <- .model_run_indices(model, nrow(X_full))
   white <- .rrr_whiten_data(
     X_task = X_task,
     Z_nuisance = Z_nuisance,
     Y = Y,
     cfg = cfg,
-    run_indices = run_indices
+    run_indices = run_indices,
+    censor = resolve_censor(cfg, dataset = dataset, n_time = nrow(Y))
   )
 
   resid <- .rrr_residualize_against_nuisance(
@@ -121,18 +114,11 @@
   )
 
   contrast_prep <- prepare_fmri_lm_contrasts(model)
-  simple_weights <- lapply(contrast_prep$simple, `[[`, "weights")
-  if (length(simple_weights)) {
-    names(simple_weights) <- names(contrast_prep$simple)
-  }
-  f_weights <- lapply(contrast_prep$f, `[[`, "weights")
-  if (length(f_weights)) {
-    names(f_weights) <- names(contrast_prep$f)
-  }
+  weights <- .prepared_contrast_weights(contrast_prep)
 
   scoped_contrasts <- .rrr_filter_task_contrasts(
-    simple_weights = simple_weights,
-    f_weights = f_weights,
+    simple_weights = weights$simple,
+    f_weights = weights$f,
     event_indices = event_indices,
     policy = args$contrast_policy
   )
@@ -383,48 +369,16 @@
 }
 
 
-#' Internal: derive run indices from model sampling frame
-#' @keywords internal
-#' @noRd
-.rrr_derive_run_indices <- function(model, n) {
-  .model_run_indices(model, n)
-}
-
-
-#' Internal: map cfg$ar into AR order
-#' @keywords internal
-#' @noRd
-.rrr_ar_order_from_cfg <- function(cfg) {
-  ar_struct <- as.character(cfg$ar$struct %||% "iid")
-  order <- switch(
-    ar_struct,
-    iid = 0L,
-    ar1 = 1L,
-    ar2 = 2L,
-    ar3 = 3L,
-    ar4 = 4L,
-    arp = as.integer(cfg$ar$p %||% 0L),
-    0L
-  )
-  if (!is.finite(order)) {
-    0L
-  } else {
-    as.integer(order)
-  }
-}
-
-
 #' Internal: apply global AR whitening to design and data
+#'
+#' The shared AR model is estimated once from the initial OLS residuals of the
+#' full (task + nuisance) design and held fixed, exactly as in the low-rank
+#' engine (`.lowrank_whiten_initial_ols()`).
 #' @keywords internal
 #' @noRd
-.rrr_whiten_data <- function(X_task, Z_nuisance, Y, cfg, run_indices = NULL) {
-  X_ref <- if (!is.null(Z_nuisance) && ncol(Z_nuisance) > 0L) {
-    cbind(X_task, Z_nuisance)
-  } else {
-    X_task
-  }
-
-  ar_order <- .rrr_ar_order_from_cfg(cfg)
+.rrr_whiten_data <- function(X_task, Z_nuisance, Y, cfg, run_indices = NULL,
+                             censor = NULL) {
+  ar_order <- .target_ar_order(.normalize_ar_options(cfg$ar)) %||% 0L
   if (ar_order <= 0L) {
     return(list(
       Xw_task = X_task,
@@ -435,39 +389,20 @@
     ))
   }
 
-  exact_first <- isTRUE(cfg$ar$exact_first)
-  censor <- cfg$ar$censor %||% NULL
-
-  estimate_phi <- function(resid) {
-    correction_design <- .shared_ar_correction_design(resid, cfg$ar, X_ref)
-    plan <- .estimate_ar_via_fmriAR(
-      residuals = .shared_ar_residual_input(resid, cfg$ar),
-      cfg = cfg$ar,
-      run_indices = run_indices,
-      censor = censor,
-      design = correction_design
-    )
-    phi <- plan$phi %||% plan$phi_by_parcel
-    if (is.null(phi) || !length(phi)) return(rep(0, ar_order))
-    if (length(phi) == 1L) as.numeric(phi[[1L]]) else lapply(phi, as.numeric)
+  X_ref <- if (!is.null(Z_nuisance) && ncol(Z_nuisance) > 0L) {
+    cbind(X_task, Z_nuisance)
+  } else {
+    X_task
   }
-
-  proj <- .fast_preproject(X_ref)
-  beta <- proj$Pinv %*% Y
-  phi <- estimate_phi(Y - X_ref %*% beta)
-
-  # Hold the initial OLS estimate fixed. Any design correction is specific to
-  # that operator; a later RRR/GLS residual cannot reuse design = X_ref alone.
-  tmp <- ar_whiten_transform(
+  white <- .lowrank_whiten_initial_ols(
     X = X_ref,
-    Y = Y,
-    phi = phi,
-    exact_first = exact_first,
-    censor = censor,
-    run_indices = run_indices
+    Z = Y,
+    ar_order = ar_order,
+    ar_opts = cfg$ar,
+    run_indices = run_indices,
+    censor = censor
   )
-  Xw_ref <- as.matrix(tmp$X)
-  Yw <- as.matrix(tmp$Y)
+  Xw_ref <- as.matrix(white$X)
 
   p_task <- ncol(X_task)
   Xw_task <- Xw_ref[, seq_len(p_task), drop = FALSE]
@@ -480,8 +415,8 @@
   list(
     Xw_task = Xw_task,
     Zw = Zw,
-    Yw = Yw,
-    phi = phi,
+    Yw = as.matrix(white$Y),
+    phi = white$phi,
     ar_order = ar_order
   )
 }
@@ -909,10 +844,13 @@
 #' @noRd
 .register_builtin_engines <- function() {
   if (is.null(get_engine("latent_sketch"))) {
-    register_engine(
+    .register_engine_entry(
       name = "latent_sketch",
-      preflight = .preflight_lowrank_engine_plugin,
-      fit = .fit_lowrank_engine_plugin,
+      preflight = .preflight_lowrank_engine,
+      fit = .run_lowrank_engine,
+      source = "builtin",
+      aliases = "sketch",
+      strategy = "sketch",
       capabilities = list(
         robust = FALSE,
         preprocessing = FALSE,
@@ -927,8 +865,9 @@
   }
 
   if (is.null(get_engine("rrr_gls"))) {
-    register_engine(
+    .register_engine_entry(
       name = "rrr_gls",
+      source = "builtin",
       preflight = .preflight_rrr_gls_engine,
       fit = .fit_rrr_gls_engine,
       capabilities = list(
@@ -939,11 +878,7 @@
         variance_methods = "model",
         df_methods = "residual",
         estimation_scopes = "joint",
-        requires_event_regressors = TRUE,
-        rank_constrained = TRUE,
-        whitening = "shared_ar",
-        se_modes = c("conditional", "bootstrap"),
-        contrast_scope = "event_only"
+        requires_event_regressors = TRUE
       )
     )
   }

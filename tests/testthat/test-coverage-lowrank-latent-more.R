@@ -71,7 +71,7 @@ test_that("run_lowrank_engine works on matrix_dataset sketch path", {
 
   # Engine may error on unsupported options; still exercise entry + preflight
   result <- tryCatch(
-    fmrireg:::.run_lowrank_engine(fmod, dset, low, cfg = cfg),
+    fmrireg:::.run_lowrank_engine(fmod, dset, list(lowrank = low), cfg = cfg),
     error = function(e) e
   )
   if (inherits(result, "error")) {

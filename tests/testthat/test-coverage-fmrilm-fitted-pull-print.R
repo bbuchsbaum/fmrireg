@@ -1,4 +1,4 @@
-# fmrilm.R: fitted_hrf error branches, pull_stat_revised, print.fmri_lm fallbacks.
+# fmrilm.R: fitted_hrf error branches, print.fmri_lm fallbacks.
 
 test_that("fitted_hrf.fmri_lm covers empty/feature/error metadata branches", {
   fit <- suppressWarnings(fmrireg:::.demo_fmri_lm())
@@ -63,58 +63,11 @@ test_that("fitted_hrf.fmri_lm covers empty/feature/error metadata branches", {
   expect_true(length(ok) >= 1L)
 })
 
-test_that("pull_stat_revised extracts betas/contrasts/F and errors", {
+test_that("print.fmri_lm writes its summary to stdout", {
   fit <- suppressWarnings(fmrireg:::.demo_fmri_lm())
-
-  betas <- fmrireg:::pull_stat_revised(fit, "betas", "estimate")
-  expect_true(inherits(betas, "tbl_df") || is.data.frame(betas) || is.matrix(betas))
-
-  expect_error(fmrireg:::pull_stat_revised(fit, "nope", "estimate"), "Invalid type")
-
-  # Empty contrasts table -> error paths
-  fit0 <- fit
-  fit0$result$contrasts <- tibble::tibble(
-    type = character(), name = character(), data = list()
-  )
-  expect_error(fmrireg:::pull_stat_revised(fit0, "contrasts", "estimate"), "No simple contrasts")
-  expect_error(fmrireg:::pull_stat_revised(fit0, "F", "stat"), "No F contrasts")
-
-  # Inject a contrast row to exercise contrast/F branches
-  fit2 <- fit
-  n_vox <- nrow(as.matrix(coef(fit)))
-  est <- list(rnorm(n_vox))
-  fit2$result$contrasts <- tibble::tibble(
-    type = c("contrast", "Fcontrast"),
-    name = c("A_vs_B", "omnibus"),
-    data = list(
-      tibble::tibble(estimate = est, se = est, stat = est, prob = est),
-      tibble::tibble(estimate = est, se = est, stat = est, prob = est)
-    )
-  )
-  c_est <- fmrireg:::pull_stat_revised(fit2, "contrasts", "estimate")
-  expect_true("A_vs_B" %in% names(c_est))
-  f_est <- fmrireg:::pull_stat_revised(fit2, "F", "stat")
-  expect_true("omnibus" %in% names(f_est))
-})
-
-test_that("print.fmri_lm covers crayon and no-crayon paths", {
-  fit <- suppressWarnings(fmrireg:::.demo_fmri_lm())
-  fit$strategy <- "runwise"
-  fit$bcons <- list()
 
   out <- capture.output(print(fit))
-  expect_true(any(grepl("fmri_lm|formula|Design|Baseline|Contrast", out, ignore.case = TRUE)))
-
-  # Force no-crayon branch via temporary unload of crayon namespace visibility
-  # by calling the method after stubbing requireNamespace
-  with_mocked_bindings(
-    requireNamespace = function(pkg, quietly = TRUE) {
-      if (identical(pkg, "crayon")) FALSE else base::requireNamespace(pkg, quietly = quietly)
-    },
-    {
-      out2 <- capture.output(print(fit))
-      expect_true(any(grepl("install 'crayon'|fmri_lm_result|Strategy|formula", out2)))
-    },
-    .package = "base"
-  )
+  expect_true(any(grepl("fMRI Linear Model Results", out, fixed = TRUE)))
+  expect_true(any(grepl("Estimation scope: runwise_meta", out, fixed = TRUE)))
+  expect_true(any(grepl("Formula: `onsets ~ hrf(condition)`", out, fixed = TRUE)))
 })

@@ -129,26 +129,32 @@ test_that("D5: effective-df inputs use the design rank, and rank-deficient df ma
   attr(XtXinv, "aliased") <- 5L
   attr(B, "aliased") <- 5L
 
+  # The robust df subtracts the design rank (4), not its width (5).
   seen <- list()
   local_mocked_bindings(
-    calculate_effective_df = function(n, p, robust_weights = NULL, ar_order = 0, ...) {
-      seen[[length(seen) + 1L]] <<- c(n = n, p = p)
-      n - p
+    .robust_effective_df = function(weights, rank, df_base = NULL) {
+      seen[[length(seen) + 1L]] <<- c(n = length(weights), p = rank)
+      sum(weights) - rank
     }
   )
+  w <- rep(1, nrow(Xa))
   l <- matrix(c(0, 1, -1, 0, 0), 1)
-  tt <- fmrireg:::.fast_t_contrast(B, sigma2, XtXinv, l, df, ar_order = 1,
-                                   aliased = 5L)
+  tt <- fmrireg:::.fast_t_contrast(B, sigma2, XtXinv, l, df, robust_weights = w,
+                                   ar_order = 1, aliased = 5L)
   FF <- fmrireg:::.fast_F_contrast(B, sigma2, XtXinv,
                                    rbind(c(0, 1, 0, 0, 0), c(0, 0, 1, 0, 0)), df,
-                                   ar_order = 1, aliased = 5L)
-  bs <- fmrireg:::beta_stats_matrix(B, XtXinv, sqrt(sigma2), df, colnames(Xa),
-                                    ar_order = 1)
+                                   robust_weights = w, ar_order = 1, aliased = 5L)
+  bs_w <- fmrireg:::beta_stats_matrix(B, XtXinv, sqrt(sigma2), df, colnames(Xa),
+                                      robust_weights = w, ar_order = 1)
   expect_length(seen, 3L)
   for (s in seen) {
     expect_equal(unname(s["n"]), nrow(Xa))
     expect_equal(unname(s["p"]), qrx$rank)
   }
+  bs <- fmrireg:::beta_stats_matrix(B, XtXinv, sqrt(sigma2), df, colnames(Xa),
+                                    ar_order = 1)
+  # Unit weights give exactly the residual df.
+  expect_equal(bs_w$data[[1]]$prob[[1]], bs$data[[1]]$prob[[1]])
 
   # And the statistics agree with lm on the rank-deficient design.
   for (v in seq_len(ncol(d$Y))) {
@@ -192,20 +198,3 @@ test_that("P-C2: reference F path equals .fast_F_contrast and anova(lm)", {
   expect_identical(Fc2$stat, Fc$stat)
 })
 
-test_that("P-C3: compute_contrast standard errors equal the per-voxel formula", {
-  d <- .cs_design(seed = 8L)
-  f <- .cs_fast(d$X, d$Y)
-  fr <- list(betas = f$B, XtXinv = f$XtXinv, sigma2 = f$sigma2, dfres = f$df)
-  C <- rbind(c(0, 1, -1, 0), c(0, 0, 0, 1))
-  out <- fmrireg:::compute_contrast(fr, C)
-  cv <- C %*% f$XtXinv %*% t(C)
-  ref <- sapply(seq_along(f$sigma2), function(v) sqrt(diag(cv) * f$sigma2[v]))
-  expect_equal(unname(out$stderr), unname(ref), tolerance = 1e-12)
-  for (v in seq_len(ncol(d$Y))) {
-    m <- lm(d$Y[, v] ~ 0 + d$X)
-    expect_equal(out$tstat[1, v],
-                 unname((coef(m)[2] - coef(m)[3]) /
-                          sqrt(drop(c(1, -1) %*% vcov(m)[2:3, 2:3] %*% c(1, -1)))),
-                 tolerance = 1e-8)
-  }
-})

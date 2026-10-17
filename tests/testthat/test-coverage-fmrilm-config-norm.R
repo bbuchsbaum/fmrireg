@@ -44,11 +44,9 @@ test_that(".fmri_lm_normalize_robust_options resolves aliases and conflicts", {
     "Conflicting robust"
   )
 
-  # engine_robust_options merges
   merged <- fmrireg:::.fmri_lm_normalize_robust_options(
     robust = NULL,
-    robust_options = list(),
-    engine_robust_options = list(type = "huber", max_iter = 3L)
+    robust_options = list(type = "huber", max_iter = 3L)
   )
   expect_equal(merged$type, "huber")
   expect_equal(merged$max_iter, 3L)
@@ -125,9 +123,9 @@ test_that(".fmri_lm_resolve_execution canonical vs legacy and conflicts", {
     strategy = "chunkwise", nchunks = 2L, use_fast_path = TRUE,
     progress = FALSE, parallel_voxels = FALSE, parallel_chunks = FALSE
   )
-  expect_equal(legacy$strategy, "chunkwise")
-  expect_equal(legacy$nchunks, 2L)
-  expect_true(isTRUE(legacy$use_fast_path))
+  expect_equal(legacy$cfg$estimation$scope, "joint")
+  expect_equal(legacy$compute$voxel_chunks, 2L)
+  expect_equal(legacy$compute$backend, "matrix")
 
   compute <- compute_spec(
     voxel_chunks = 3L, backend = "matrix", parallel = "chunks", progress = FALSE
@@ -137,9 +135,8 @@ test_that(".fmri_lm_resolve_execution canonical vs legacy and conflicts", {
     strategy = "runwise", nchunks = 1L, use_fast_path = FALSE,
     progress = TRUE, parallel_voxels = FALSE, parallel_chunks = FALSE
   )
-  expect_equal(canon$nchunks, 3L)
-  expect_true(isTRUE(canon$use_fast_path))
-  expect_true(isTRUE(canon$parallel_chunks))
+  expect_identical(canon$compute, compute)
+  expect_identical(canon$cfg, cfg)
 
   expect_error(
     fmrireg:::.fmri_lm_resolve_execution(

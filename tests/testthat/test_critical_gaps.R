@@ -60,8 +60,7 @@ test_that("AR whitening transforms data correctly", {
   # Create AR(1) structure
   phi <- 0.6
   
-  # Apply whitening - note function signature is (Y, X, phi) and returns list
-  result <- fmrireg:::ar_whiten_inplace(Y, X, phi)
+  result <- fmrireg:::ar_whiten_transform(X, Y, phi)
   X_white <- result$X
   Y_white <- result$Y
   

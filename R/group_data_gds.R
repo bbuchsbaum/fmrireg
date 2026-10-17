@@ -9,8 +9,27 @@
 #' @param ... Passed to the underlying constructor.
 #' @return A gds-backed group-level data object (class includes 'group_data_gds').
 #' @noRd
+# There is no in-memory route from fitted fmri_lm objects to a gds object yet;
+# per-subject maps written by write_results() are the supported input.
+.group_data_fmrilm_unsupported_msg <- paste(
+  "group_data(format = \"fmrilm\") is not supported.",
+  "Save each subject's fit with write_results() (e.g. format = \"nifti\" with",
+  "beta and se maps) and load the files with",
+  "group_data(list(beta = beta_paths, se = se_paths), format = \"nifti\")",
+  "or, for HDF5 output, group_data(h5_paths, format = \"h5\")."
+)
+
+.is_fmri_lm_list <- function(x) {
+  is.list(x) && !is.data.frame(x) && length(x) > 0L &&
+    all(vapply(x, inherits, logical(1), what = "fmri_lm"))
+}
+
 .group_data_gds <- function(data, format = c("auto","h5","nifti","csv","fmrilm"), ...) {
   format <- match.arg(format)
+  if (identical(format, "fmrilm") ||
+      (identical(format, "auto") && .is_fmri_lm_list(data))) {
+    stop(.group_data_fmrilm_unsupported_msg, call. = FALSE)
+  }
   dots <- list(...)
   fmrireg_mask <- dots$mask %||% NULL
   legacy_sample_labels <- NULL
@@ -18,7 +37,6 @@
   # Map legacy names to fmrigds adapter ids
   fformat <- switch(format,
                    csv = "tabular",
-                   fmrilm = "tabular", # temporary mapping until fmrilm adapter is present
                    format)
 
   src <- data

@@ -143,9 +143,9 @@ test_that(".run_lowrank_engine freezes AR from initial OLS residuals", {
   with_mocked_bindings(
     {
       out <- fmrireg:::.run_lowrank_engine(
-        fm = fm_dummy,
+        model = fm_dummy,
         dataset = dataset,
-        lowrank = lowrank,
+        args = list(lowrank = lowrank),
         cfg = cfg
       )
       expect_true(is.list(out))
@@ -207,9 +207,9 @@ test_that(".run_lowrank_engine uses design rank when computing rdf", {
   with_mocked_bindings(
     {
       out <- fmrireg:::.run_lowrank_engine(
-        fm = fm_dummy,
+        model = fm_dummy,
         dataset = dataset,
-        lowrank = lowrank,
+        args = list(lowrank = lowrank),
         cfg = cfg
       )
       expect_equal(out$result$rdf, n - qr(X)$rank)

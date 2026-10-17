@@ -36,33 +36,7 @@ test_that(".rrr_bootstrap_task_se returns finite SEs with and without blocks/con
   expect_equal(length(se_block$se_t), 0L)
 })
 
-test_that("fmriAR adapter order/df/lag/run-label/whiten branches", {
-  expect_equal(fmrireg:::.get_ar_order(plan = list(order = c(p = 2L, q = 0L))), 2L)
-  expect_equal(fmrireg:::.get_ar_order(cfg = list(struct = "ar3")), 3L)
-  expect_equal(fmrireg:::.get_ar_order(cfg = list(struct = "arp", p = 5L)), 5L)
-  expect_equal(fmrireg:::.get_ar_order(), 0L)
-
-  # Effective df: no AR -> n - p
-  expect_equal(
-    fmrireg:::.compute_ar_effective_df_compat(n = 50, p = 4, plan = NULL),
-    46
-  )
-  df_ar1 <- fmrireg:::.compute_ar_effective_df_compat(
-    n = 50, p = 4, ar_coef = 0.4
-  )
-  expect_true(df_ar1 < 46 && df_ar1 >= 1)
-
-  df_multi <- fmrireg:::.compute_ar_effective_df_compat(
-    n = 40, p = 3,
-    plan = list(phi = list(c(0.3, 0.1), c(0.25, 0.05)), theta = list(0.1, 0.05))
-  )
-  expect_true(is.finite(df_multi) && df_multi >= 1)
-
-  df_list_ar <- fmrireg:::.compute_ar_effective_df_compat(
-    n = 40, p = 3, ar_coef = list(0.2, 0.3), ma_coef = list(0.05, 0.02)
-  )
-  expect_true(is.finite(df_list_ar))
-
+test_that("fmriAR adapter lag/run-label/whiten branches", {
   X <- cbind(1, rnorm(40))
   budget <- fmrireg:::.ar_correction_lag_budget(X, target_order = 2L)
   expect_true(is.integer(budget) || is.numeric(budget))
@@ -85,12 +59,6 @@ test_that("fmriAR adapter order/df/lag/run-label/whiten branches", {
   expect_error(
     fmrireg:::.build_run_labels(4L, list(1:2, c(4L, 3L))),
     "partition|contiguous"
-  )
-
-  expect_null(fmrireg:::.shared_ar_correction_design(matrix(1, 3, 2), list(), NULL))
-  expect_equal(
-    fmrireg:::.shared_ar_correction_design(matrix(1, 3, 2), list(struct = "ar1"), X[1:3, ]),
-    X[1:3, ]
   )
 
   expect_error(

@@ -23,35 +23,35 @@ whiten_R <- function(M, phi, exact_first_ar1 = FALSE) {
   res
 }
 
-test_that("ar_whiten_inplace AR1", {
+test_that("ar_whiten_transform AR1", {
   Y <- matrix(1:4, ncol = 1)
   X <- matrix(4:1, ncol = 1)
   phi <- 0.5
   Yref <- whiten_R(Y, phi)
   Xref <- whiten_R(X, phi)
-  result <- ar_whiten_inplace(Y, X, phi)
+  result <- ar_whiten_transform(X, Y, phi)
   expect_equal(result$Y, Yref)
   expect_equal(result$X, Xref)
 })
 
-test_that("ar_whiten_inplace AR2", {
+test_that("ar_whiten_transform AR2", {
   Y <- matrix(1:6, ncol = 1)
   X <- matrix(6:1, ncol = 1)
   phi <- c(0.6, -0.3)
   Yref <- whiten_R(Y, phi)
   Xref <- whiten_R(X, phi)
-  result <- ar_whiten_inplace(Y, X, phi)
+  result <- ar_whiten_transform(X, Y, phi)
   expect_equal(result$Y, Yref)
   expect_equal(result$X, Xref)
 })
 
-test_that("ar_whiten_inplace exact first AR1", {
+test_that("ar_whiten_transform exact first AR1", {
   Y <- matrix(rnorm(5), ncol = 1)
   X <- matrix(rnorm(5), ncol = 1)
   phi <- 0.4
   Yref <- whiten_R(Y, phi, TRUE)
   Xref <- whiten_R(X, phi, TRUE)
-  result <- ar_whiten_inplace(Y, X, phi, TRUE)
+  result <- ar_whiten_transform(X, Y, phi, exact_first = TRUE)
   expect_equal(result$Y, Yref)
   expect_equal(result$X, Xref)
 })

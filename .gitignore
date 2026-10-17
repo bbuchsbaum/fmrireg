@@ -6,33 +6,17 @@ inst/doc
 /Meta/
 docs
 
-# Keep only specific markdown files: AGENTS.md, CLAUDE.md, CRAN_guidance.md, NEWS.md, README.md
-# Ignore all other markdown files in root
-*.md
-!AGENTS.md
-!CLAUDE.md
-!CRAN_guidance.md
-!NEWS.md
-!README.md
-
-# Throwaway and debug R files
-migrate_to_fmrihrf.R
-fix_duplicate_rdnames.R
-auto_fix_s3_docs.R
-fix_s3_docs.R
-test_improved_convenience.R
-test_real_duplicates.R
-debug_warning2.R
-debug_warning.R
-test_user_error.R
-test_convenience_functions.R
+# Keep only specific markdown files in the root: CLAUDE.md, NEWS.md, README.md
+/*.md
+!/CLAUDE.md
+!/NEWS.md
+!/README.md
 
 # Generated output files
-repomix-output.txt
-test_output.txt
 *.tar.gz
 Rplots.pdf
-vignettes/*.html
+/vignettes/*.html
+!/vignettes/albers-header.html
 
 # Package check artifacts
 fmrireg.Rcheck/
@@ -56,7 +40,8 @@ coverage/
 
 # OS and editor files
 .DS_Store
-fmrireg.code-workspace
+*.code-workspace
+.vscode/
 
 # Compiled object files and shared libraries
 src/*.o
@@ -69,12 +54,6 @@ src/*.dll
 # Benchmark outputs
 bench/*.csv
 bench/*.out
-
-# Scratch files
-gds.txt
-
-# Obsolete CI configuration
-.travis.yml
 
 # testthat failure artifacts (check reporter)
 tests/testthat/_problems/

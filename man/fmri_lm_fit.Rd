@@ -4,56 +4,27 @@
 \alias{fmri_lm_fit}
 \title{Fit an fMRI Linear Regression Model with a Specified Fitting Strategy}
 \usage{
-fmri_lm_fit(
-  fmrimod,
-  dataset,
-  strategy = c("runwise", "chunkwise"),
-  cfg,
-  nchunks = 10,
-  use_fast_path = TRUE,
-  progress = FALSE,
-  parallel_voxels = FALSE,
-  parallel_chunks = FALSE,
-  compute = NULL,
-  ...
-)
+fmri_lm_fit(fmrimod, dataset, cfg, compute = compute_spec())
 }
 \arguments{
 \item{fmrimod}{An \code{fmri_model} object.}
 
 \item{dataset}{An \code{fmri_frame} object containing the time-series data.}
 
-\item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
-
 \item{cfg}{An \code{fmri_lm_control} object containing all fitting options. See \code{\link{fmri_lm_control}}.}
 
-\item{nchunks}{Number of data chunks when strategy is \code{"chunkwise"}.
-This controls memory partitioning; chunks are processed sequentially unless
-\code{parallel_chunks = TRUE}. Default is \code{10}.}
-
-\item{use_fast_path}{Logical. If \code{TRUE} (the default), use the fast
-matrix engine, which supports OLS, AR whitening, robust, and preprocessing.
-\code{FALSE} selects the formula/lm reference engine (no robust or full
-preprocessing support); it is retained mainly as a parity oracle.}
-
-\item{progress}{Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.}
-
-\item{parallel_voxels}{Logical. If TRUE, voxelwise AR processing within runs
-is parallelised using \code{future.apply}. Default is \code{FALSE}.}
-
-\item{parallel_chunks}{Logical. If TRUE and \code{strategy = "chunkwise"},
-process chunks with \code{future.apply::future_lapply()} using the active
-\code{future} plan. Default is \code{FALSE}.}
-
-\item{...}{Additional arguments.}
+\item{compute}{A \code{\link{compute_spec}}: voxel chunks, matrix or
+reference backend, parallelism and progress.}
 }
 \value{
 A fitted fMRI linear regression model with the specified fitting strategy.
 }
 \description{
-This function fits an fMRI linear regression model using the specified \code{fmri_model} object, dataset,
-and data splitting strategy (either \code{"runwise"} or \code{"chunkwise"}). It is primarily an internal function
-used by the \code{fmri_lm} function.
+This function fits an fMRI linear regression model using the specified
+\code{fmri_model} object and dataset. The estimation scope in \code{cfg}
+selects the strategy (\code{"runwise_meta"} fits runs separately and pools
+them; \code{"joint"} fits one chunkwise model) and \code{compute} the
+mechanics. It is primarily an internal function used by \code{fmri_lm}.
 }
 \seealso{
 \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{matrix_frame}}

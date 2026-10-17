@@ -88,48 +88,26 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL, nuisance = NULL
     stop("solver must be NULL or a function", call. = FALSE)
   }
   
-  # Try C++ mixed model implementation
-  tryCatch({
-    
-    if (!is.null(solver) ||
-        (requireNamespace("Rcpp", quietly = TRUE) &&
-         requireNamespace("fmrilss", quietly = TRUE))) {
-      
-      # Use the C++ implementation with proper input validation
-      X_fixed <- .mixed_fixed_design(X[, fixed_ind, drop = FALSE], nuisance)
-      
-      solve_fun <- if (is.null(solver)) fmrilss::mixed_solve else solver
-      fit <- tryCatch({
-        solve_fun(Y = Y,
-                  Z = X[, ran_ind, drop = FALSE],
-                  X = X_fixed)
-      }, error = function(e2) {
-        warning(
-          "Mixed model solver failed: ", conditionMessage(e2),
-          "; returning NA coefficients for this response.",
-          call. = FALSE
-        )
-        NULL
-      })
-
-      if (is.null(fit)) return(failure_value())
-      
-      # Return results based on whether fixed_ind is empty
-      # Fixed-effect coefficients of interest come first; nuisance
-      # (baseline) coefficients are not returned.
-      if (length(fixed_ind) == 0) {
-        return(as.numeric(fit$u))
-      } else {
-        return(c(as.numeric(fit$u), as.numeric(fit$beta)[seq_along(fixed_ind)]))
-      }
-    } else {
-      warning(
-        "No mixed model solver is available; returning NA coefficients for this response.",
-        call. = FALSE
-      )
-      return(failure_value())
-    }
+  X_fixed <- .mixed_fixed_design(X[, fixed_ind, drop = FALSE], nuisance)
+  solve_fun <- solver %||% fmrilss::mixed_solve
+  fit <- tryCatch({
+    solve_fun(Y = Y,
+              Z = X[, ran_ind, drop = FALSE],
+              X = X_fixed)
+  }, error = function(e2) {
+    warning(
+      "Mixed model solver failed: ", conditionMessage(e2),
+      "; returning NA coefficients for this response.",
+      call. = FALSE
+    )
+    NULL
   })
+
+  if (is.null(fit)) return(failure_value())
+
+  # Fixed-effect coefficients of interest follow the random effects; nuisance
+  # (baseline) coefficients are not returned.
+  c(as.numeric(fit$u), as.numeric(fit$beta)[seq_along(fixed_ind)])
 }
 
 #' @param x An `fmri_frame` (see [matrix_frame()], [neurovec_frame()],
@@ -195,7 +173,7 @@ estimate_betas.fmri_frame <- function(x, fixed = NULL, ran, block,
     basemod
   }
 
-  bdes <- gen_beta_design(fixed, ran, block, bmod, dset, method = method)
+  bdes <- gen_beta_design(fixed, ran, block, bmod, dset)
   betas <- run_estimate_betas(bdes, dset, method, block = block,
                               maxit = maxit, fracs = fracs,
                               progress = progress, ...)
@@ -315,7 +293,7 @@ run_estimate_betas <- function(bdes, dset, method,
 
 
 #' @keywords internal
-gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL) {
+gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset) {
   # Get the base design matrices
   if (!is.null(fixed)) {
     emod_fixed <- event_model(fixed, data = .dset_event_table(dset), block = block, sampling_frame = .dset_sampling_frame(dset))
@@ -329,29 +307,14 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
   dmat_ran <- design_matrix(emod_ran)
   dmat_base <- design_matrix(bmod)
   
-  # Standard indices for all methods
+  # Column layout: random (trialwise) columns first, then the fixed columns.
   ran_ind <- 1:ncol(dmat_ran)
-  ran_ind_expanded <- ran_ind
-  
-  # Combine design matrices
-  dmat_all <- if (is.null(fixed)) {
-    cbind(dmat_ran, dmat_base)
+  fixed_ind <- if (is.null(fixed)) {
+    NULL
   } else {
-    cbind(dmat_ran, dmat_fixed, dmat_base)
+    ncol(dmat_ran) + seq_len(ncol(dmat_fixed))
   }
   
-  # Calculate fixed and base indices
-  start_fixed <- ncol(dmat_ran) + 1
-  if (is.null(fixed)) {
-    start_base <- start_fixed
-    fixed_ind <- NULL
-  } else {
-    start_base <- start_fixed + ncol(dmat_fixed)
-    fixed_ind <- start_fixed:(start_base - 1)
-  }
-  base_ind <- start_base:ncol(dmat_all)
-  
-  # Return list with indices
   list(
     bmod = bmod,
     emod_fixed = emod_fixed,
@@ -360,9 +323,7 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
     dmat_ran = dmat_ran,
     dmat_base = dmat_base,
     ran_ind = ran_ind,
-    ran_ind_expanded = ran_ind_expanded,
-    fixed_ind = fixed_ind,
-    base_ind = base_ind
+    fixed_ind = fixed_ind
   )
 }
 
@@ -467,38 +428,8 @@ inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise", "
 #'   \code{\link{glm_lss}} for single trial estimation
 glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL, 
                     block = ~ 1, progress = TRUE, ...) {
-  
-  # Validate inputs
-  if (!.is_fmri_frame(dataset)) {
-    stop("dataset must be an fmri_frame. Use matrix_frame() to create one from your data matrix.")
-  }
-  
-  if (!inherits(model_obj, "event_model")) {
-    stop("model_obj must be an event_model object")
-  }
-  
-  # Validate basis_obj
-  if (is.character(basis_obj)) {
-    # Check if it's a valid HRF basis name
-    # HRF_* basis objects exported by fmrihrf (HRF_SPMG1, HRF_FIR, ...)
-    valid_basis_names <- grep("^HRF_", getNamespaceExports("fmrihrf"), value = TRUE)
-    if (!basis_obj %in% valid_basis_names) {
-      stop(paste0("Unknown HRF basis name: ", basis_obj))
-    }
-    basis_obj <- getExportedValue("fmrihrf", basis_obj)
-  } else if (!inherits(basis_obj, "HRF")) {
-    stop("basis_obj must be an HRF object or a valid HRF basis name")
-  }
-  
-  # Extract the formula from the event model and inject the new basis
-  original_formula <- model_obj$model_spec$formula_or_list
-  if (is.null(original_formula)) {
-    stop("Cannot extract formula from event_model")
-  }
-  
-  # Inject the new basis into the formula
-  updated_formula <- inject_basis(original_formula, basis_obj)
-  
+  updated_formula <- .glm_convenience_formula(dataset, model_obj, basis_obj)
+
   # Call estimate_betas with the updated formula and the dataset's event table
   estimate_betas(dataset, 
                 fixed = NULL,
@@ -576,38 +507,8 @@ glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL,
 #'   \code{\link{glm_ols}} for condition-level estimation
 glm_lss <- function(dataset, model_obj, basis_obj, basemod = NULL,
                     block = ~ 1, use_cpp = FALSE, progress = TRUE, ...) {
-  
-  # Validate inputs
-  if (!.is_fmri_frame(dataset)) {
-    stop("dataset must be an fmri_frame. Use matrix_frame() to create one from your data matrix.")
-  }
-  
-  if (!inherits(model_obj, "event_model")) {
-    stop("model_obj must be an event_model object")
-  }
-  
-  # Validate basis_obj
-  if (is.character(basis_obj)) {
-    # Check if it's a valid HRF basis name
-    # HRF_* basis objects exported by fmrihrf (HRF_SPMG1, HRF_FIR, ...)
-    valid_basis_names <- grep("^HRF_", getNamespaceExports("fmrihrf"), value = TRUE)
-    if (!basis_obj %in% valid_basis_names) {
-      stop(paste0("Unknown HRF basis name: ", basis_obj))
-    }
-    basis_obj <- getExportedValue("fmrihrf", basis_obj)
-  } else if (!inherits(basis_obj, "HRF")) {
-    stop("basis_obj must be an HRF object or a valid HRF basis name")
-  }
-  
-  # Extract the formula from the event model and inject the new basis
-  original_formula <- model_obj$model_spec$formula_or_list
-  if (is.null(original_formula)) {
-    stop("Cannot extract formula from event_model")
-  }
-  
-  # Inject the new basis into the formula
-  updated_formula <- inject_basis(original_formula, basis_obj)
-  
+  updated_formula <- .glm_convenience_formula(dataset, model_obj, basis_obj)
+
   if (use_cpp) {
     warning("C++-optimized LSS implementation has been retired; using method = 'lss'.", call. = FALSE)
   }
@@ -628,10 +529,49 @@ glm_lss <- function(dataset, model_obj, basis_obj, basemod = NULL,
   betas_ran <- res$betas_ran
   if (!is.null(betas_ran)) {
     betas_mat <- as.matrix(betas_ran)
-    if (all(!is.finite(betas_mat)) || any(!is.finite(betas_mat))) {
-      stop("Cholesky factorization failed: design matrix not positive definite", call. = FALSE)
+    if (any(!is.finite(betas_mat))) {
+      stop(sprintf(
+        "LSS returned non-finite trial betas (%d of %d values); the trial design is likely singular or collinear with the baseline.",
+        sum(!is.finite(betas_mat)), length(betas_mat)
+      ), call. = FALSE)
     }
   }
 
   res
+}
+
+#' Internal: validate glm_ols()/glm_lss() inputs and inject the basis
+#'
+#' @return The event model's formula with `basis_obj` injected into its
+#'   `hrf()`/`trialwise()`/`feature()` terms.
+#' @keywords internal
+#' @noRd
+.glm_convenience_formula <- function(dataset, model_obj, basis_obj) {
+  if (!.is_fmri_frame(dataset)) {
+    stop("dataset must be an fmri_frame. Use matrix_frame() to create one from your data matrix.")
+  }
+  
+  if (!inherits(model_obj, "event_model")) {
+    stop("model_obj must be an event_model object")
+  }
+  
+  # Validate basis_obj
+  if (is.character(basis_obj)) {
+    # HRF_* basis objects exported by fmrihrf (HRF_SPMG1, HRF_FIR, ...)
+    valid_basis_names <- grep("^HRF_", getNamespaceExports("fmrihrf"), value = TRUE)
+    if (!basis_obj %in% valid_basis_names) {
+      stop(paste0("Unknown HRF basis name: ", basis_obj))
+    }
+    basis_obj <- getExportedValue("fmrihrf", basis_obj)
+  } else if (!inherits(basis_obj, "HRF")) {
+    stop("basis_obj must be an HRF object or a valid HRF basis name")
+  }
+  
+  # Extract the formula from the event model and inject the new basis
+  original_formula <- model_obj$model_spec$formula_or_list
+  if (is.null(original_formula)) {
+    stop("Cannot extract formula from event_model")
+  }
+  
+  inject_basis(original_formula, basis_obj)
 }

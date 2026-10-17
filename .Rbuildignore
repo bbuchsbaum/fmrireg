@@ -1,69 +1,30 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^docs$
-^\.travis\.yml$
+^doc$
+^Meta$
 ^codecov\.yml$
 ^README\.Rmd$
 ^_pkgdown\.yml$
-^outtakess
-^outtakes
-^test_data
-^doc$
-^Meta$
+^pkgdown$
+^codemeta\.json$
 ^\.github$
 ^\.git$
 ^data-raw$
-^\.vscode
-fmrireg.code-workspace
-data-raw/
-^pkgdown$
-^codemeta\.json$
+^bench$
+^tools$
+^Makefile$
+^CLAUDE\.md$
+^GLM_EFFICIENCY_CORRECTNESS_PRD\.json$
+^.*\.tar\.gz$
+^fmrireg\.Rcheck$
+^Rplots\.pdf$
+^\.rcmdcheck_result\.rds$
+
+# OS, editor and agent state
 ^\.DS_Store$
 ^\.Rhistory$
-^.*\.md$
-^.*\.tar\.gz$
-^experimental$
-^bench$
-^scripts$
-^fmrireg\.Rcheck$
-
-# Ignore the extension package living at the repo root
-^fmrireg\.cca($|/)
-
-# Throwaway and debug R files
-^migrate_to_fmrihrf\.R$
-^fix_duplicate_rdnames\.R$
-^auto_fix_s3_docs\.R$
-^fix_s3_docs\.R$
-^test_improved_convenience\.R$
-^test_real_duplicates\.R$
-^debug_warning2\.R$
-^debug_warning\.R$
-^test_user_error\.R$
-^test_convenience_functions\.R$
-
-# Generated output files
-^repomix-output\.txt$
-^test_output\.txt$
-^Rplots\.pdf$
-
-.claude
-.pytest_cache
-
-# Hidden directories
-^\.omc$
+^\.vscode$
+^.*\.code-workspace$
+^\.claude$
 ^\.mote($|/)
-^\.ruff_cache($|/)
-
-# EcoOracle onboarding
-^\.ecosystem\.yml$
-^tools$
-^manual_cards\.jsonl$
-
-# Non-standard top-level files
-^GLM_EFFICIENCY_CORRECTNESS_PRD\.json$
-
-# Temp check output
-^\.rcmdcheck_result\.rds$
-^Makefile$
-^gds\.txt$

@@ -56,7 +56,7 @@ test_that(".run_lowrank_engine latent_dataset path covers loadings Matrix/dense"
 
   fit <- fmrireg:::.run_lowrank_engine(
     fm, lds,
-    lowrank = list(time_sketch = list(method = "gaussian", m = 20L)),
+    args = list(lowrank = list(time_sketch = list(method = "gaussian", m = 20L))),
     cfg = fmri_lm_control()
   )
   expect_s3_class(fit, "fmri_lm")
@@ -78,10 +78,10 @@ test_that(".run_lowrank_engine by_cluster parcels AR path succeeds", {
 
   fit <- fmrireg:::.run_lowrank_engine(
     fx$model, fx$dataset,
-    lowrank = list(
+    args = list(lowrank = list(
       time_sketch = list(method = "gaussian", m = 24L),
       parcels = parcels
-    ),
+    )),
     cfg = cfg
   )
   expect_s3_class(fit, "fmri_lm")
@@ -89,10 +89,10 @@ test_that(".run_lowrank_engine by_cluster parcels AR path succeeds", {
 
   fit_cs <- fmrireg:::.run_lowrank_engine(
     fx$model, fx$dataset,
-    lowrank = list(
+    args = list(lowrank = list(
       time_sketch = list(method = "countsketch", m = 24L),
       parcels = parcels
-    ),
+    )),
     cfg = cfg
   )
   expect_s3_class(fit_cs, "fmri_lm")
@@ -100,10 +100,10 @@ test_that(".run_lowrank_engine by_cluster parcels AR path succeeds", {
   expect_error(
     fmrireg:::.run_lowrank_engine(
       fx$model, fx$dataset,
-      lowrank = list(
+      args = list(lowrank = list(
         time_sketch = list(method = "gaussian", m = 16L),
         parcels = 1:3
-      ),
+      )),
       cfg = cfg
     ),
     "parcels/group ids length"
@@ -124,13 +124,13 @@ test_that(".run_lowrank_engine landmarks path with ihs/srht AR", {
   fit_ihs <- tryCatch(
     fmrireg:::.run_lowrank_engine(
       fx$model, fx$dataset,
-      lowrank = list(
+      args = list(lowrank = list(
         time_sketch = list(method = "ihs", m = 18L, iters = 2L, tol = 0),
         landmarks = 4L,
         k_neighbors = 4L,
         kmeans_iter_max = 20L,
         kmeans_nstart = 1L
-      ),
+      )),
       cfg = cfg
     ),
     error = function(e) e
@@ -145,13 +145,13 @@ test_that(".run_lowrank_engine landmarks path with ihs/srht AR", {
   fit_srht <- tryCatch(
     fmrireg:::.run_lowrank_engine(
       fx$model, fx$dataset,
-      lowrank = list(
+      args = list(lowrank = list(
         time_sketch = list(method = "srht", m = 18L),
         landmarks = 4L,
         k_neighbors = 4L,
         kmeans_iter_max = 20L,
         kmeans_nstart = 1L
-      ),
+      )),
       cfg = cfg
     ),
     error = function(e) e

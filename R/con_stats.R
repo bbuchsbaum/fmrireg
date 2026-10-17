@@ -1,6 +1,16 @@
+#' QR decomposition stored in an `lm` fit
+#'
+#' Local equivalent of the unexported `stats:::qr.lm()` (no
+#' `getFromNamespace()`); `fmri_latent_lm.R` still calls it by this name.
 #' @keywords internal
 #' @noRd
-qr.lm <- getFromNamespace("qr.lm", "stats")
+qr.lm <- function(x, ...) {
+  qrx <- x[["qr"]]
+  if (is.null(qrx)) {
+    stop("lm object does not have a proper 'qr' component.", call. = FALSE)
+  }
+  qrx
+}
 
 #' Fit Contrasts
 #'
@@ -44,18 +54,41 @@ fit_contrasts <- function(object, ...) UseMethod("fit_contrasts")
   out
 }
 
-#' Effective-df inputs for a possibly rank-deficient design
+#' t statistics and two-sided p-values from estimates and standard errors
 #'
-#' The residual df is `n - rank`, so `n = df + rank` and the parameter count
-#' that `calculate_effective_df()` must subtract is the rank, not `ncol(X)`.
+#' The one way an estimate and its standard error become t inference, shared
+#' by every path (shared `XtXinv`, per-voxel `XtXinv`, per-voxel sandwich/HAC
+#' covariance): `.safe_tstat()` for t, so an exactly zero SE gives t = 0
+#' (p = 1), an NA SE gives NA, and there is no absolute tolerance that would
+#' make the result depend on the scale of the data.
+#' @param df Inference df, scalar or one per element.
 #' @keywords internal
 #' @noRd
-.effective_df_from_rank <- function(df, p, aliased, robust_weights, ar_order) {
-  if (is.null(robust_weights) && !(ar_order > 0)) {
-    return(df)
+.t_inference <- function(est, se, df) {
+  stat <- .safe_tstat(est, se)
+  list(stat = stat, prob = 2 * stats::pt(-abs(stat), df))
+}
+
+#' Inference df for a possibly rank-deficient design
+#'
+#' The one per-fit inference-df rule of the contrast engine. Without robust
+#' weights this is the residual df (whitening already accounts for the AR
+#' structure, see `calculate_effective_df()`). With robust weights it is
+#' `.robust_effective_df()`: sum(w) - rank, with rank = `p - length(aliased)`
+#' so aliased columns are not subtracted.
+#'
+#' `ar_order` does not change the df either: a positive `ar_order` only
+#' clamps it at >= 1. It is accepted because callers outside the contrast
+#' engine still pass it.
+#' @keywords internal
+#' @noRd
+.effective_df_from_rank <- function(df, p, aliased, robust_weights, ar_order = 0) {
+  df_eff <- if (is.null(robust_weights)) {
+    df
+  } else {
+    .robust_effective_df(robust_weights, p - length(aliased))
   }
-  rank <- p - length(aliased)
-  calculate_effective_df(df + rank, rank, robust_weights, ar_order, method = "simple")
+  if (ar_order > 0) max(df_eff, 1) else df_eff
 }
 
 .lm_cov_unscaled <- function(lmfit, varnames = NULL, warn = TRUE) {
@@ -518,13 +551,12 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, cov.unscale
   
   df_effective <- .effective_df_from_rank(df, nrow(B), aliased, robust_weights, ar_order)
 
-  tval <- .safe_tstat(est, se)
-  pval <- 2 * pt(-abs(tval), df_effective)
+  inf <- .t_inference(est, se, df_effective)
 
   list(estimate = est,
        se       = se,
-       stat     = tval,
-       prob     = pval,
+       stat     = inf$stat,
+       prob     = inf$prob,
        sigma    = sqrt(pmax(0, sigma2)), # Include sigma for potential compatibility
        stat_type = "tstat")
 }
@@ -599,6 +631,43 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, cov.unscale
        stat_type = "Fstat")
 }
 
+#' Contrasts under a per-voxel coefficient covariance
+#'
+#' Used wherever each voxel carries its own (already scaled) coefficient
+#' covariance, e.g. sandwich/HAC inference: `.fmri_lm_update_inference()` and
+#' the structured branch of `fit_contrasts.fmri_lm()`.
+#' @param l Length-p contrast vector; `L` an r x p contrast matrix.
+#' @param B p x V coefficients.
+#' @param covariance List of V p x p covariance matrices.
+#' @param df Inference df, scalar or length V.
+#' @keywords internal
+#' @noRd
+.cov_t_contrast <- function(l, B, covariance, df) {
+  l <- as.numeric(l)
+  estimate <- drop(l %*% B)
+  se <- vapply(covariance, function(cv) {
+    sqrt(pmax(drop(crossprod(l, cv %*% l)), 0))
+  }, numeric(1))
+  inf <- .t_inference(estimate, se, df)
+  list(estimate = estimate, se = se, stat = inf$stat, prob = inf$prob,
+       stat_type = "tstat")
+}
+
+#' @keywords internal
+#' @noRd
+.cov_F_contrast <- function(L, B, covariance, df) {
+  r <- qr(L)$rank
+  stat <- vapply(seq_along(covariance), function(v) {
+    u <- L %*% B[, v]
+    M <- L %*% covariance[[v]] %*% t(L)
+    tryCatch(drop(crossprod(u, solve(M, u))) / r,
+             error = function(e) NA_real_)
+  }, numeric(1))
+  list(estimate = stat, se = rep(1, length(stat)), stat = stat,
+       prob = stats::pf(stat, r, df, lower.tail = FALSE),
+       stat_type = "Fstat")
+}
+
 #' @keywords internal
 #' @noRd
 #' @autoglobal
@@ -614,17 +683,17 @@ fit_lm_contrasts_fast <- function(B, sigma2, XtXinv, conlist, fconlist, df,
   aliased <- aliased %||% .aliased_indices(B, XtXinv)
   
   # Process t-contrasts
-  tcontrast_results <- process_t_contrasts(
-    B = B, sigma2 = sigma2, XtXinv = XtXinv, 
+  tcontrast_results <- .process_contrasts(
+    "t", B = B, sigma2 = sigma2, XtXinv = XtXinv,
     conlist = conlist, df = df,
     robust_weights = robust_weights, ar_order = ar_order,
     aliased = aliased
   )
   
   # Process F-contrasts  
-  fcontrast_results <- process_f_contrasts(
-    B = B, sigma2 = sigma2, XtXinv = XtXinv,
-    fconlist = fconlist, df = df,
+  fcontrast_results <- .process_contrasts(
+    "F", B = B, sigma2 = sigma2, XtXinv = XtXinv,
+    conlist = fconlist, df = df,
     robust_weights = robust_weights, ar_order = ar_order,
     aliased = aliased
   )
@@ -638,89 +707,52 @@ fit_lm_contrasts_fast <- function(B, sigma2, XtXinv, conlist, fconlist, df,
   return(all_results)
 }
 
-#' Process t-contrasts for fast linear model fitting
+#' Process t- or F-contrasts for fast linear model fitting
+#'
+#' One loop for both kinds: resolve `colind`, expand the weights to the full
+#' design width, compute the statistics with the shared-`XtXinv` engine and
+#' package one result tibble per contrast. Any failure is reported with the
+#' contrast's name.
 #' @keywords internal
 #' @noRd
-#' @autoglobal
-process_t_contrasts <- function(B, sigma2, XtXinv, conlist, df, 
-                                robust_weights = NULL, ar_order = 0,
-                                aliased = integer(0)) {
+.process_contrasts <- function(kind = c("t", "F"), B, sigma2, XtXinv, conlist,
+                               df, robust_weights = NULL, ar_order = 0,
+                               aliased = integer(0)) {
+  kind <- match.arg(kind)
   if (length(conlist) == 0) return(list())
-  
+
+  if (identical(kind, "t")) {
+    label <- "t-contrast"
+    expand <- create_full_contrast_vector
+    engine <- .fast_t_contrast
+    package <- package_tcontrast_result
+  } else {
+    label <- "F-contrast"
+    expand <- create_full_contrast_matrix
+    engine <- .fast_F_contrast
+    package <- package_fcontrast_result
+  }
+
   results <- vector("list", length(conlist))
   names(results) <- names(conlist)
-  
+
   for (i in seq_along(conlist)) {
     con_name <- names(conlist)[i]
-    contrast_weights <- conlist[[i]]
-    
-    tryCatch({
-      # Extract colind - this is required for proper contrast computation
-      colind <- extract_colind(contrast_weights, con_name, "t-contrast")
-      
-      # Create full contrast vector
-      full_contrast <- create_full_contrast_vector(contrast_weights, colind, nrow(XtXinv))
-      
-      # Compute contrast statistics
-      stats <- .fast_t_contrast(B, sigma2, XtXinv, full_contrast, df, 
-                               robust_weights, ar_order, aliased, con_name)
-      
-      # Package results in expected format
-      results[[i]] <- package_tcontrast_result(
-        con_name, contrast_weights, colind, df, stats
-      )
-      
+    weights <- conlist[[i]]
+    results[[i]] <- tryCatch({
+      colind <- extract_colind(weights, con_name, label)
+      full_contrast <- expand(weights, colind, nrow(XtXinv))
+      stats <- engine(B, sigma2, XtXinv, full_contrast, df,
+                      robust_weights, ar_order, aliased, con_name)
+      package(con_name, weights, colind, df, stats)
     }, error = function(e) {
       stop(sprintf(
-        "Failed to compute t-contrast '%s': %s",
-        con_name, e$message
+        "Failed to compute %s '%s': %s",
+        label, con_name, e$message
       ), call. = FALSE)
     })
   }
-  
-  results
-}
 
-#' Process F-contrasts for fast linear model fitting  
-#' @keywords internal
-#' @noRd
-#' @autoglobal
-process_f_contrasts <- function(B, sigma2, XtXinv, fconlist, df,
-                                robust_weights = NULL, ar_order = 0,
-                                aliased = integer(0)) {
-  if (length(fconlist) == 0) return(list())
-  
-  results <- vector("list", length(fconlist))
-  names(results) <- names(fconlist)
-  
-  for (i in seq_along(fconlist)) {
-    con_name <- names(fconlist)[i]
-    contrast_matrix <- fconlist[[i]]
-    
-    tryCatch({
-      # Extract colind - this is required for proper contrast computation
-      colind <- extract_colind(contrast_matrix, con_name, "F-contrast")
-      
-      # Create full contrast matrix
-      full_contrast <- create_full_contrast_matrix(contrast_matrix, colind, nrow(XtXinv))
-      
-      # Compute contrast statistics
-      stats <- .fast_F_contrast(B, sigma2, XtXinv, full_contrast, df,
-                               robust_weights, ar_order, aliased, con_name)
-      
-      # Package results in expected format
-      results[[i]] <- package_fcontrast_result(
-        con_name, contrast_matrix, colind, df, stats
-      )
-      
-    }, error = function(e) {
-      stop(sprintf(
-        "Failed to compute F-contrast '%s': %s",
-        con_name, e$message
-      ), call. = FALSE)
-    })
-  }
-  
   results
 }
 
@@ -896,12 +928,9 @@ beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames,
     vc[, aliased] <- NA_real_
   }
   
-  # Compute t-stats: element-wise division
-  # Avoid division by zero
-  tstat <- .safe_tstat(betamat, vc)
-  
-  # Compute p-values using effective df
-  prob <- 2 * pt(-abs(tstat), df_effective)
+  inf <- .t_inference(betamat, vc, df_effective)
+  tstat <- inf$stat
+  prob <- inf$prob
   
   # Package into the same tibble structure as beta_stats
   ret <- dplyr::tibble(
@@ -997,18 +1026,18 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   }
   .posthoc_check_supported(object)
 
-  sigma <- object$result$sigma
+  sigma <- object$result[["sigma"]]
   if (is.null(sigma)) {
-    sigma <- object$result$betas$data[[1]]$sigma[[1]]
+    sigma <- object$result[["betas"]]$data[[1]][["sigma"]][[1]]
   }
   sigma <- as.numeric(sigma)
 
   beta_mat_raw <- tryCatch(
     suppressWarnings(as.matrix(coef(object, type = "betas"))),
-    error = function(e) object$result$betas$data[[1]]$estimate[[1]]
+    error = function(e) object$result[["betas"]]$data[[1]]$estimate[[1]]
   )
 
-  event_idx_hint <- as.integer(object$result$event_indices %||% integer(0))
+  event_idx_hint <- as.integer(object$result[["event_indices"]] %||% integer(0))
   expected_p <- length(event_idx_hint)
 
   if (expected_p > 0L) {
@@ -1040,7 +1069,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   beta_names <- colnames(beta_mat_vxp)
   if (is.null(beta_names)) {
     dm_names <- tryCatch(colnames(design_matrix(object$model)), error = function(e) NULL)
-    event_idx <- as.integer(object$result$event_indices %||% integer(0))
+    event_idx <- as.integer(object$result[["event_indices"]] %||% integer(0))
     if (!is.null(dm_names) && length(event_idx) == ncol(beta_mat_vxp) && length(event_idx) > 0L &&
         max(event_idx) <= length(dm_names)) {
       beta_names <- dm_names[event_idx]
@@ -1057,16 +1086,16 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   }
   sigma2 <- sigma^2
 
-  df_residual <- object$result$rdf
+  df_residual <- object$result[["rdf"]]
   if (is.null(df_residual)) {
-    df_residual <- object$result$betas$df.residual[1]
+    df_residual <- object$result[["betas"]][["df.residual"]][1]
   }
   df_residual <- as.numeric(df_residual)[1]
-  contrast_scope <- object$result$contrast_scope %||% NULL
+  contrast_scope <- object$result[["contrast_scope"]] %||% NULL
 
-  XtXinv <- object$result$cov.unscaled
+  XtXinv <- object$result[["cov.unscaled"]]
   if (is.null(XtXinv)) {
-    XtXinv <- object$result$XtXinv
+    XtXinv <- object$result[["XtXinv"]]
   }
   if (is.null(XtXinv)) {
     fmrimod <- object$model
@@ -1080,7 +1109,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   xtx_aliased <- attr(XtXinv, "aliased", exact = TRUE) %||% integer(0)
   XtXinv <- as.matrix(XtXinv)
   if (nrow(XtXinv) != p || ncol(XtXinv) != p) {
-    event_idx <- as.integer(object$result$event_indices %||% integer(0))
+    event_idx <- as.integer(object$result[["event_indices"]] %||% integer(0))
     if (length(event_idx) == p && length(event_idx) > 0L &&
         max(event_idx) <= nrow(XtXinv) && max(event_idx) <= ncol(XtXinv)) {
       XtXinv <- XtXinv[event_idx, event_idx, drop = FALSE]
@@ -1102,7 +1131,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   attr(betas, "aliased") <- as.integer(xtx_aliased)
   attr(XtXinv, "aliased") <- as.integer(xtx_aliased)
 
-  vm <- object$result$variance_model
+  vm <- object$result[["variance_model"]]
   structured_covariance <- NULL
   df_inference <- rep(df_residual, V)
   if (inherits(vm, "fmri_lm_variance_model")) {
@@ -1113,7 +1142,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
     }
     if (identical(vm$covariance_scope, "voxel") &&
         is.list(vm$covariance) && length(vm$covariance) == V) {
-      event_idx <- as.integer(object$result$event_indices %||% integer(0))
+      event_idx <- as.integer(object$result[["event_indices"]] %||% integer(0))
       structured_covariance <- lapply(vm$covariance, function(cv) {
         cv <- as.matrix(cv)
         if (nrow(cv) == p && ncol(cv) == p) return(cv)
@@ -1133,14 +1162,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
         aliased = xtx_aliased, contrast_name = name
       ))
     }
-    estimate <- drop(l %*% betas)
-    se <- vapply(structured_covariance, function(cv) {
-      sqrt(pmax(drop(crossprod(l, cv %*% l)), 0))
-    }, numeric(1))
-    stat <- ifelse(se > 0, estimate / se, NA_real_)
-    list(estimate = estimate, se = se, stat = stat,
-         prob = 2 * stats::pt(-abs(stat), df = df_inference),
-         stat_type = "tstat")
+    .cov_t_contrast(l, betas, structured_covariance, df_inference)
   }
 
   compute_F <- function(L, name) {
@@ -1150,16 +1172,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
         aliased = xtx_aliased, contrast_name = name
       ))
     }
-    r <- qr(L)$rank
-    stat <- vapply(seq_len(V), function(v) {
-      u <- L %*% betas[, v]
-      M <- L %*% structured_covariance[[v]] %*% t(L)
-      tryCatch(drop(crossprod(u, solve(M, u))) / r,
-               error = function(e) NA_real_)
-    }, numeric(1))
-    list(estimate = stat, se = rep(1, V), stat = stat,
-         prob = stats::pf(stat, r, df_inference, lower.tail = FALSE),
-         stat_type = "Fstat")
+    .cov_F_contrast(L, betas, structured_covariance, df_inference)
   }
 
   package <- function(con_name, type, stats) {

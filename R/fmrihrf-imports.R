@@ -1,14 +1,9 @@
 # Auto-generated file for fmrihrf imports
 
-#' @importFrom fmrihrf HRF as_hrf gen_hrf bind_basis
-#' @importFrom fmrihrf hrf_spmg1 hrf_gamma hrf_gaussian
-#' @importFrom fmrihrf hrf_bspline hrf_mexhat hrf_sine hrf_inv_logit hrf_half_cosine
-#' @importFrom fmrihrf lag_hrf block_hrf normalise_hrf
-#' @importFrom fmrihrf regressor feature_regressor sampling_frame
-#' @importFrom fmrihrf evaluate penalty_matrix reconstruction_matrix
-#' @importFrom fmrihrf blocklens blockids samples global_onsets
-#' @importFrom fmrihrf HRF_SPMG1 HRF_SPMG2 HRF_SPMG3 HRF_GAMMA HRF_GAUSSIAN HRF_BSPLINE HRF_FIR
-#' @importFrom fmrihrf nbasis
+#' @importFrom fmrihrf HRF as_hrf gen_hrf hrf_spmg1
+#' @importFrom fmrihrf regressor feature_regressor sampling_frame evaluate
+#' @importFrom fmrihrf blocklens blockids samples global_onsets nbasis
+#' @importFrom fmrihrf HRF_SPMG1 HRF_SPMG2 HRF_SPMG3 HRF_FIR
 NULL
 
 # Re-export commonly used functions for backward compatibility

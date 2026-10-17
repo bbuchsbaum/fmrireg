@@ -15,8 +15,7 @@
 ## fmridataset internals.
 ###############################################################################
 
-#' @importFrom fmridataset fmri_frame collect_assay temporal_schema
-#'   as_sampling_frame
+#' @importFrom fmridataset fmri_frame collect_assay
 NULL
 
 # ---------------------------------------------------------------------------
@@ -402,11 +401,6 @@ latent_frame <- function(x, TR, run_length = NULL, event_table = NULL,
 .dset_run_lengths <- function(x) {
   unname(as.integer(fmridataset::temporal_schema(x)$run_lengths))
 }
-
-#' Integer block id (1-based, order of first appearance) per observation
-#' @keywords internal
-#' @noRd
-.dset_block_ids <- function(x) fmridataset::temporal_schema(x)$block_ids
 
 #' Event table stored on the frame, as a data frame (empty when absent)
 #' @keywords internal

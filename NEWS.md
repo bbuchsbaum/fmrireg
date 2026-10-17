@@ -29,6 +29,73 @@
   computing the pseudo-inverse. A new test dispatches both methods from
   outside the namespace (#251).
 
+* `fmri_meta()` on group data from `group_data()` (fmrigds-backed) now runs
+  through fmrigds: fmrireg registers the reducer `"fmrireg:meta_reg"` (its
+  FE / DerSimonian-Laird / Paule-Mandel meta-regression with Huber and
+  equal/custom weights) at load, and fit-time `contrasts =` use
+  `fmrigds::coef_contrast()` instead of a second fit. Results are unchanged.
+  Data with several subject-level contrasts used to be analysed for the first
+  contrast only, without a warning; every contrast is now fitted and
+  `fmri_meta()` returns an `fmri_meta_list` of `fmri_meta` objects named by
+  contrast (single-contrast data still give one `fmri_meta`).
+  `fmri_ttest(engine = "meta")` stops with a message on such data.
+* `spatial_fdr()` is now a wrapper over `fmrigds::spatial_fdr_sabha()`, the
+  fmrigds port of the same procedure (identical results); fmrireg's C++
+  implementation was removed. The fmrigds post-hoc `"fmrireg:fdr:spatial"` is
+  kept as an alias of fmrigds's `"fdr:sabha"`.
+* fmrireg now requires fmrigds at commit e9863f6 (`coef_contrast()`,
+  `spatial_fdr_sabha()`); the `a_09` vignette no longer calls the unexported
+  `fmrigds::plan()`.
+* fmrireg no longer overwrites fmrigds's own reducers. Every group
+  `fmri_meta()`/`fmri_ttest()` call used to re-register `meta:fe`,
+  `meta:fe_reg`, `meta:re_reg` (switching it from DerSimonian-Laird to
+  Paule-Mandel) and the `fdr:spatial` posthoc with fmrireg's versions, so
+  `fmrigds::reduce()` gave different results once fmrireg had run, and
+  `reduce(method = "meta:fe")` failed. fmrireg's spatial-FDR posthoc is now
+  registered once, at load, as `"fmrireg:fdr:spatial"`.
+* Contrast standard errors and t statistics no longer depend on the scale of
+  the data. Voxelwise beta statistics set t = 0 below an absolute standard-error
+  threshold and the voxel-status check called voxels "constant" below an
+  absolute variance, so data in small units (Y x 1e-8) gave different t values
+  or none. All paths that form t from a per-voxel covariance now share one rule:
+  a standard error of exactly zero gives t = 0, p = 1 (two paths returned NA).
+* With the reference backend (`compute_spec(backend = "reference")`), joint AR
+  fits estimated phi separately in each voxel chunk from at most 64 voxels, so
+  results depended on `voxel_chunks`. Phi is now estimated once per run, and the
+  reference backend matches the matrix backend.
+* The `rrr_gls` engine now resolves `noise_spec(censor = "auto"/"none")` and a
+  censor column carried by the dataset, like the other fitting paths; it passed
+  the raw setting to AR estimation and ignored the dataset's censor column.
+* `standard_error(<fmri_latent_lm>, recon = TRUE)` works for AR fits; it failed
+  because the AR path did not store what the reconstruction needs.
+* When AR estimation fails, fmrireg now warns (class
+  `fmrireg_ar_estimation_failed`) before fitting without whitening; it used to
+  fall back silently.
+* `print()` on an `fmri_lm` fit uses the cli layout that reports the estimation
+  scope, residual df, formula, engine and contrasts. An older duplicate method
+  had been masking it, and the cli version wrote to stderr. `print()` on an
+  `fmri_model` shows the event terms, event count and baseline instead of empty
+  sections.
+* `write_results()` with `format = c("h5", "nifti")` computes each map once and
+  writes each JSON sidecar once; it computed statistic volumes up to twice per
+  format and wrote sidecars twice to the same path. File names and contents are
+  unchanged.
+* Contrast formulas and named contrasts for group fits now error on unknown
+  coefficient names or formulas they cannot parse; `parse_contrast_formula()`
+  returned all-zero weights for anything but `~ a - b`.
+* `group_data(format = "fmrilm")` (and a list of fits with `format = "auto"`)
+  failed with "invalid 'file' argument"; it now stops at once and names the
+  working route (`write_results()`, then `group_data(..., format = "nifti")`).
+* `fit_contrasts()` on an `fmri_lm` fit read `result$sigma`, which partially
+  matched `sigma2` when `sigma` was absent; it now stops instead of returning
+  wrong standard errors. `tidy()` had the same problem with `df`.
+* An internal helper that checked for required packages only checked the first
+  name it was given.
+* `spatial_fdr()` counted features with a missing p-value in each group's
+  Storey estimate of pi0 (as if they were below `tau`), lowering pi0, inflating
+  the other tests' weights and making q-values anti-conservative in groups with
+  missing values. Group sizes (`m_g`) now count finite p-values only.
+
 ## Documentation
 
 * The model-comparison section of the linear-model vignette now scores AIC
@@ -37,6 +104,44 @@
   serially correlated noise, so the selected model depended on the B-spline
   basis in the installed fmrihrf. The canonical (generating) HRF now wins in
   every voxel, with fmrihrf both before and after its B-spline fix (#250).
+
+## Internal
+
+* Removed about 1,150 lines of code that no exported function, S3 method or
+  `.onLoad` could reach, including the unwired bootstrap and sandwich helpers,
+  `fast_rlm_run()`, `multiresponse_rlm()`, `ar_whiten_inplace()` and an unused
+  C++ kernel. `create_fmri_model()` had three definitions, of which the last
+  file loaded won; it now has one, unchanged in behaviour, with matching
+  documentation. Fitted results do not change. See
+  `data-raw/simplification-2026-10-plan.md` for the remaining plan.
+* fmrireg no longer depends on robustbase, progress, roptim, crayon or
+  RcppParallel, and seven unused Suggests are gone. `.onLoad` no longer calls
+  `RcppParallel::setThreadOptions()`, which changed RcppParallel's thread pool
+  for other packages and nothing in fmrireg. `options(fmrireg.num_threads)`
+  and, when the option is unset, the `FMRIREG_NUM_THREADS` environment variable
+  set the thread count of fmrireg's OpenMP kernels.
+* One parallel backend. Every R-level parallel loop (voxel chunks with
+  `compute_spec(parallel_chunks = TRUE)`, voxelwise AR with
+  `parallel_voxels`, trial-wise `estimate_betas(method = "mixed")` and the
+  `"future"` backend of `run_jobs()`) now goes through future.apply under the
+  active `future::plan()`; furrr is no longer used. C++ kernels keep their
+  OpenMP threads (`fmrireg.num_threads`). `estimate_betas(method = "mixed",
+  progress = TRUE)` no longer requires progressr; without a parallel plan it
+  shows a cli progress bar.
+* plotly and bslib moved from Imports to Suggests: only `design_plot()` uses
+  them, and it already needed shiny from Suggests. Together with furrr,
+  RcppParallel and the packages removed earlier, installing fmrireg pulls in
+  89 non-base packages instead of 123.
+* Phase 2 of the simplification removed about 2,000 more lines: one AR-order
+  helper, one per-run design builder, one result packager for engines and the
+  plugin API, a single `write_results()` output plan, the legacy AR
+  compatibility layer (folded into the fmriAR adapter), duplicated `fmri_lm()`
+  front-ends, and dead branches in the integrated solver.
+* The unused example files `inst/extdata/{images_study,auditory}`,
+  `design_aug.txt` and `config.R` (about 2 MB) are no longer installed.
+  `face_design.txt` and `video_design.txt` remain.
+* `NEWS.md` and `README.md` are included in the source package again, so
+  `utils::news(package = "fmrireg")` works.
 
 ## Continuous integration
 

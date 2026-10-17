@@ -30,7 +30,7 @@ wbh_reference <- function(p, w, alpha) {
 pi0_reference <- function(p, group, tau) {
   f <- if (is.factor(group)) group else factor(group)
   tail <- tapply(is.finite(p) & p > tau, f, sum)
-  m <- tapply(rep(1L, length(p)), f, sum)
+  m <- tapply(is.finite(p), f, sum)
   est <- as.numeric(tail) / ((1 - tau) * as.numeric(m))
   est[is.na(est)] <- 1
   pmin(pmax(est, 0), 1)
@@ -223,7 +223,7 @@ test_that("weighted BH matches a direct R implementation (with NAs)", {
   p[sample(m, 40)] <- NA
 
   for (alpha in c(0.01, 0.05, 0.2)) {
-    got <- fmrireg:::weighted_bh_cpp(p, w, alpha = alpha)
+    got <- fmrigds:::sabha_weighted_bh_cpp(p, w, alpha = alpha)
     ref <- wbh_reference(p, w, alpha)
     expect_identical(as.logical(got$reject), ref$reject)
     expect_equal(got$k, ref$k)
@@ -231,7 +231,7 @@ test_that("weighted BH matches a direct R implementation (with NAs)", {
     expect_equal(got$w_norm, ref$w_norm, tolerance = 1e-12)
     expect_equal(sum(got$w_norm[is.finite(p)]), sum(is.finite(p)))
 
-    q <- fmrireg:::bh_qvalues_scaled_cpp(p / got$w_norm)
+    q <- fmrigds:::sabha_bh_qvalues_scaled_cpp(p / got$w_norm)
     expect_equal(q, ref$q, tolerance = 1e-12)
     expect_identical(ref$reject, !is.na(q) & q <= alpha)
   }
@@ -263,7 +263,7 @@ test_that("spatial_fdr end-to-end equals weighted BH with 1/pi0 group weights; N
   expect_false(any(res$reject[is.na(p)]))
   expect_true(all(is.na(res$q[is.na(p)])))
   expect_true(all(is.na(res$groups[c(40, 41)])))
-  expect_equal(sum(res$m_g), sum(!is.na(group)))
+  expect_equal(sum(res$m_g), sum(!is.na(group) & is.finite(p)))
 
   # NA z behaves like NA p
   z <- c(rnorm(500), NA, Inf - Inf)

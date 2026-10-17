@@ -68,8 +68,6 @@ test_that("as.array.NeuroVec and spatial mask helpers cover remaining branches",
     fmrireg:::.fmri_dataset_mask_space(list(), "test"),
     "fmri_frame"
   )
-  expect_null(fmrireg:::.fmri_try_space(NULL))
-  expect_null(fmrireg:::.fmri_try_space("path.nii"))
 })
 
 test_that("design_plot legend_threshold and color palette branches", {

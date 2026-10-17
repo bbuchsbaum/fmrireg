@@ -145,42 +145,6 @@ test_that("fmri_lm reports OLS standard errors that match lm()", {
 
 # ------------------------------------------- external reference agreement -----
 
-test_that("calculate_sandwich_variance matches sandwich::vcovHC(HC0)", {
-  skip_if_not_installed("sandwich")
-  set.seed(104)
-  n_t <- 150
-  X <- .vt_design(n_t, "er")
-  p <- ncol(X)
-  # heteroskedastic errors, so the sandwich genuinely differs from the OLS vcov
-  y <- as.numeric(X %*% rnorm(p) + rnorm(n_t) * seq(0.5, 2, length.out = n_t))
-  fit <- lm(y ~ X - 1)
-  r <- matrix(residuals(fit), ncol = 1)
-
-  # the function applies an n/(n-p) small-sample correction, i.e. HC1
-  got <- calculate_sandwich_variance(X, r, solve(crossprod(X)))
-  want <- sandwich::vcovHC(fit, type = "HC1")
-
-  expect_equal(unname(sqrt(diag(got))), unname(sqrt(diag(want))), tolerance = 1e-8)
-})
-
-test_that("compute_sandwich_variance matches sandwich::vcovHC", {
-  skip_if_not_installed("sandwich")
-  set.seed(105)
-  n_t <- 150
-  X <- .vt_design(n_t, "er")
-  p <- ncol(X)
-  y <- as.numeric(X %*% rnorm(p) + rnorm(n_t) * seq(0.5, 2, length.out = n_t))
-  fit <- lm(y ~ X - 1)
-  r <- matrix(residuals(fit), ncol = 1)
-
-  for (ty in c("HC0", "HC1")) {
-    got <- compute_sandwich_variance(X, r, type = ty)
-    want <- sandwich::vcovHC(fit, type = ty)
-    expect_equal(unname(sqrt(diag(got))), unname(sqrt(diag(want))),
-                 tolerance = 1e-8, info = ty)
-  }
-})
-
 test_that("bias correction recovers the true autocovariance from residuals", {
   n_t <- 220
   X <- .vt_design(n_t, "er")

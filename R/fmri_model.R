@@ -20,40 +20,27 @@
 
 #' Create an fMRI Model
 #'
-#' This function creates an fMRI model consisting of an event model and a baseline model.
+#' This function creates an \code{fmri_model} by combining an event model and a baseline model.
+#' If a baseline model is not provided, a default one is created based on the dataset.
 #'
 #' @param formula The model formula for experimental events.
 #' @param block The model formula for block structure.
-#' @param baseline_model (Optional) A \code{baseline_model} object. Default is \code{NULL}.
-#' @param dataset An \code{fmri_frame} object containing the time-series data.
+#' @param baseline_model (Optional) A \code{baseline_model} object. If \code{NULL}, a default baseline model is created.
+#' @param dataset An \code{fmri_frame} containing the event table and sampling frame.
 #' @param drop_empty Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.
 #' @param durations A vector of event durations. Default is \code{0}.
 #' @return An \code{fmri_model} object.
+#' @keywords internal
 #' @export
-#' @examples
-#' \dontrun{
-#' # Assuming you have an fmri_frame object named ds and a formula for events:
-#' fmri_mod <- create_fmri_model(formula = onset ~ hrf(x) + hrf(y),
-#'                               block = ~ run,
-#'                               dataset = ds,
-#'                               drop_empty = TRUE,
-#'                               durations = rep(0, nrow(ds$event_table)))
-#' }
 create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, drop_empty = TRUE, durations = 0) {
   assert_that(is.formula(formula), msg = "'formula' must be a formula")
+  formula <- .fmrireg_inject_registered_bases(formula)
   assert_that(is.formula(block), msg = "'block' must be a formula")
   assert_that(inherits(dataset, "fmri_frame"), msg = "'dataset' must be an 'fmri_frame'")
   assert_that(is.numeric(durations), msg = "'durations' must be numeric")
-  formula <- .fmrireg_inject_registered_bases(formula)
   
-  # Replicate durations if a single value is provided.
-  if (length(durations) == 1) {
-    durations <- rep(durations, nrow(.dset_event_table(dataset)))
-  }
-  
-  # Resolve conflict: use a temporary variable to hold the baseline model.
   if (is.null(baseline_model)) {
-    base_model_obj <- baseline_model(
+    baseline_model <- baseline_model(
       basis = "bs",
       degree = max(ceiling(median(.dset_run_lengths(dataset)) / 100), 3),
       sframe = .dset_sampling_frame(dataset)
@@ -61,11 +48,10 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
   } else {
     assert_that(inherits(baseline_model, "baseline_model"),
                 msg = "'baseline_model' must have class 'baseline_model'")
-    base_model_obj <- baseline_model
   }
-  
+
   ev_model <- event_model(
-    x = formula,
+    formula_or_list = formula,
     block = block,
     data = .dset_event_table(dataset),
     sampling_frame = .dset_sampling_frame(dataset),
@@ -73,7 +59,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
     durations = durations
   )
   
-  fmri_model(ev_model, base_model_obj, dataset)
+  fmri_model(ev_model, baseline_model, dataset)
 }
 
 
@@ -100,19 +86,6 @@ fmri_model <- function(event_model, baseline_model, dataset) {
   fmodel
 }
 
-
-#' (Internal) Prediction Matrix
-#'
-#' This function is intended to compute a prediction matrix for the model.
-#' (Currently a stub.)
-#'
-#' @param x An fmri_model object.
-#' @return (Not implemented)
-#' @keywords internal
-#' @noRd
-prediction_matrix <- function(x) {
-  stop("not implemented")
-}
 
 
 ## ============================================================================
@@ -146,13 +119,6 @@ design_matrix.fmri_model <- function(x, blockid = NULL, ...) {
   )
 }
 
-
-#' @importFrom tibble as_tibble
-#' @keywords internal
-#' @noRd
-design_env.fmri_model <- function(x, blockid = NULL, ...) {
-  stop("Not implemented")
-}
 
 
 ## ============================================================================
@@ -312,62 +278,25 @@ plot.fmri_model <- function(x, baseline = TRUE, ...) {
 #' @rdname print
 #' @return Invisibly returns the input object x
 print.fmri_model <- function(x, ...) {
-  # Header with fancy border
-  cat("\n=============================================")
-  cat("\n             fMRI Model                     ")
-  cat("\n=============================================")
-  
-  # Event Model Section
-  cat("\n Event Model                                ")
-  cat("\n---------------------------------------------")
-  cat("\n| Formula:", crayon::cyan(Reduce(paste, deparse(x$event_model$model_spec$formula))))
-  
-  # Event Model Summary
-  cat("\n| Summary:")
-  cat("\n|   - Terms:", crayon::yellow(length(terms(x$event_model))))
-  cat("\n|   - Events:", crayon::yellow(nrow(x$event_model$model_spec$event_table)))
-  cat("\n|   - Design Columns:", crayon::yellow(length(conditions(x$event_model))))
-  cat("\n|   - Blocks:", crayon::yellow(length(unique(x$event_model$blockids))))
-  
-  # Baseline Model Section (if present)
-  if (!is.null(x$baseline_model)) {
-    cat("\n---------------------------------------------")
-    cat("\n| Baseline Model                           |")
-    cat("\n| Components:")
-    
-    # Drift term info
-    if (!is.null(x$baseline_model$drift_term)) {
-      drift_name <- x$baseline_model$drift_term$varname
-      basis_type <- x$baseline_model$drift_spec$basis
-      degree <- x$baseline_model$drift_spec$degree
-      drift_cols <- ncol(design_matrix(x$baseline_model$drift_term))
-      cat("\n|   - Drift:", crayon::magenta(drift_name))
-      cat("\n|     - Type:", crayon::blue(basis_type))
-      cat("\n|     - Degree:", crayon::blue(degree))
-      cat("\n|     - Columns:", crayon::yellow(drift_cols))
-    }
-    
-    # Block term info
-    if (!is.null(x$baseline_model$block_term)) {
-      const_cols <- ncol(design_matrix(x$baseline_model$block_term))
-      cat("\n|   - Block Terms:", crayon::yellow(const_cols), "columns")
-    }
-    
-    # Nuisance term info
-    if (!is.null(x$baseline_model$nuisance_term)) {
-      nuis_cols <- ncol(design_matrix(x$baseline_model$nuisance_term))
-      cat("\n|   - Nuisance Terms:", crayon::yellow(nuis_cols), "columns")
-    }
+  cat("fMRI Model\n")
+  cat("==========\n")
+  form <- x$event_model$model_spec[["formula_or_list"]]
+  if (inherits(form, "formula")) {
+    cat("Formula:", paste(deparse(form, width.cutoff = 500L), collapse = " "), "\n")
   }
-  
-  # Total Model Summary
-  cat("\n---------------------------------------------")
-  cat("\n| Total Model                              |")
-  total_cols <- ncol(design_matrix(x))
-  cat("\n|   - Total Design Columns:", crayon::yellow(total_cols))
-  
-  # Footer
-  cat("\n=============================================\n")
+  cat("\n")
+
+  # fmridesign's event_model print renders with cli (to the message stream);
+  # route it to stdout so the whole summary prints in one place.
+  cat(cli::cli_fmt(print(x$event_model)), sep = "\n")
+  cat("\n")
+  if (!is.null(x$baseline_model)) {
+    print(x$baseline_model)
+    cat("\n")
+  }
+
+  cat("Total design columns:", ncol(design_matrix(x)), "\n")
+  invisible(x)
 }
 
 #' correlation_map.fmri_model

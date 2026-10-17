@@ -36,45 +36,6 @@ test_that("design_plot longify covers event and baseline terms", {
   expect_true(inherits(app2, "shiny.appobj") || is.list(app2))
 })
 
-test_that(".fmrigds_spatial_posthoc covers z and p array paths", {
-  set.seed(32)
-  P <- 20
-  group <- rep(1:4, length.out = P)
-  z <- rnorm(P)
-  z_arr <- array(z, dim = c(P, 1L, 1L))
-  q1 <- fmrireg:::.fmrigds_spatial_posthoc_compute(
-    list(z = z_arr), group = group, alpha = 0.2
-  )
-  expect_equal(dim(q1), dim(z_arr))
-  expect_true(all(is.finite(q1) | is.na(q1)))
-
-  p_arr <- array(pnorm(-abs(z)) * 2, dim = c(P, 1L, 2L))
-  q2 <- fmrireg:::.fmrigds_spatial_posthoc_compute(
-    list(p = p_arr), group = group, alpha = 0.2
-  )
-  expect_equal(dim(q2), dim(p_arr))
-
-  # Vector z without dims
-  q3 <- fmrireg:::.fmrigds_spatial_posthoc_compute(
-    list(z = z), group = group, alpha = 0.1
-  )
-  expect_equal(length(q3), P)
-
-  expect_error(
-    fmrireg:::.fmrigds_spatial_posthoc(list(z = z_arr), opts = list()),
-    "options\\$group"
-  )
-  out <- fmrireg:::.fmrigds_spatial_posthoc(
-    list(assays = list(z = z_arr)), opts = list(group = group, alpha = 0.1)
-  )
-  expect_true(!is.null(out$q))
-
-  expect_error(
-    fmrireg:::.fmrigds_spatial_posthoc_compute(list(), group, 0.05),
-    "requires p"
-  )
-})
-
 test_that("group_data_from_h5 validation and subject extraction", {
   expect_error(
     suppressWarnings(group_data_from_h5(1:3, validate = FALSE)),

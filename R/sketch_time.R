@@ -52,24 +52,24 @@ make_srht_plan <- function(Tlen, m) {
 #' @return The `plan$m` x `ncol(M)` sketched matrix.
 #' @keywords internal
 srht_apply <- function(M, plan) {
-  .Call('_fmrireg_cpp_srht_apply', PACKAGE = 'fmrireg', as.matrix(M),
-        as.integer(plan$rows),
-        as.numeric(plan$signs),
-        as.integer(plan$perm),
-        as.numeric(plan$scale),
-        .sketch_num_threads())
+  cpp_srht_apply(as.matrix(M),
+                 as.integer(plan$rows),
+                 as.numeric(plan$signs),
+                 as.integer(plan$perm),
+                 as.numeric(plan$scale),
+                 .sketch_num_threads())
 }
 
 #' Apply the adjoint of an SRHT plan (S' B) to an m x k matrix
 #' @keywords internal
 #' @noRd
 srht_adjoint <- function(B, plan) {
-  .Call('_fmrireg_cpp_srht_adjoint', PACKAGE = 'fmrireg', as.matrix(B),
-        as.integer(plan$rows),
-        as.numeric(plan$signs),
-        as.integer(plan$perm),
-        as.numeric(plan$scale),
-        .sketch_num_threads())
+  cpp_srht_adjoint(as.matrix(B),
+                 as.integer(plan$rows),
+                 as.numeric(plan$signs),
+                 as.integer(plan$perm),
+                 as.numeric(plan$scale),
+                 .sketch_num_threads())
 }
 
 #' Internal: thread count for the column-parallel SRHT kernels
@@ -79,8 +79,7 @@ srht_adjoint <- function(B, plan) {
 #' @keywords internal
 #' @noRd
 .sketch_num_threads <- function() {
-  n <- suppressWarnings(as.integer(getOption("fmrireg.num_threads", 0L))[1L])
-  if (length(n) != 1L || is.na(n) || n < 0L) 0L else n
+  .fmrireg_num_threads()
 }
 
 # --- Sketch operators and solvers used by the latent_sketch engine ---

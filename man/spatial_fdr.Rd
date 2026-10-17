@@ -65,7 +65,7 @@ Object of class "spatial_fdr_result" containing:
 \item{groups}{Integer vector of group IDs (1..G) in the numbering described
 under \code{group}}
 \item{G}{Integer scalar; number of groups}
-\item{m_g}{Integer vector; number of features per group}
+\item{m_g}{Integer vector; number of features with a finite p-value per group}
 \item{alpha}{Numeric scalar; FDR level used}
 \item{coef_name}{Character scalar; name of coefficient (for S3 method)}
 }
@@ -97,6 +97,11 @@ consistent under \eqn{N(0,1)} and stays close to it when, for example, 10\\%
 of features are true signals. With fewer than 500 finite z-values (or if the
 fit fails) the median and normal-consistent MAD of all finite z-values are
 used instead; with fewer than 10 the theoretical null is used.
+
+The computation is done by \code{fmrigds::spatial_fdr_sabha()} (also
+available in fmrigds pipelines as the post-hoc \code{"fdr:sabha"}, and as
+\code{"fmrireg:fdr:spatial"}); this function keeps fmrireg's argument names,
+the \code{fmri_meta} method and the \code{spatial_fdr_result} class.
 
 The method is particularly effective for:
 \itemize{

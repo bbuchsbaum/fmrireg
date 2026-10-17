@@ -119,7 +119,6 @@ test_that("mean-series pooling retains the matching OLS correction", {
   mean_after_projection <- rowMeans(residuals)
   projection_after_mean <- drop(qr.resid(qr(X), rowMeans(Y)))
   expect_equal(mean_after_projection, projection_after_mean, tolerance = 1e-12)
-  expect_identical(.shared_ar_correction_design(residuals, mean_cfg, X), X)
 
   budget <- .ar_correction_lag_budget(X, target_order = 1L)
   expected <- fmriAR::fit_noise(
@@ -209,10 +208,7 @@ test_that("production global AR routes the block residual operator", {
   )
 
   expect_error(
-    suppressWarnings(fmri_lm_fit(
-      model, dset, strategy = "runwise", cfg = cfg,
-      use_fast_path = TRUE, progress = FALSE
-    )),
+    suppressWarnings(fmri_lm_fit(model, dset, cfg = cfg)),
     "captured global AR"
   )
 

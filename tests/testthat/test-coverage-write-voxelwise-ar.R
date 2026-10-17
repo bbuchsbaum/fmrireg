@@ -51,30 +51,6 @@ test_that("write_results.fmri_lm nifti by_contrast covers spatial export", {
   expect_true(any(grepl("nii|json|A_vs_B|contrast", files, ignore.case = TRUE)))
 })
 
-test_that(".save_contrasts_by_contrast_nifti succeeds with spatial fmri_lm", {
-  fx <- create_spatial_fit(dims = c(2, 2, 1), n_time = 36L)
-  tmp <- tempfile("con_nifti_")
-  dir.create(tmp)
-  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
-
-  cons <- fx$fit$result$contrasts
-  cons <- cons[cons$type == "contrast" | cons$type %in% c("contrast", "t"), , drop = FALSE]
-  if (nrow(cons) == 0L) {
-    # Build from any available contrast rows
-    cons <- fx$fit$result$contrasts
-  }
-  expect_true(nrow(cons) >= 1L)
-
-  entities <- list(sub = "01", task = "test", space = "T1w")
-  created <- fmrireg:::.save_contrasts_by_contrast_nifti(
-    fx$fit, cons, tmp, entities, desc = "statmap",
-    contrast_stats = c("estimate", "stat", "se"),
-    overwrite = TRUE, output_formats = "nifti"
-  )
-  expect_true(is.list(created))
-  expect_true(length(created) >= 1L || length(list.files(tmp)) >= 1L)
-})
-
 test_that("runwise_lm_voxelwise AR(1) path on multi-run matrix data", {
   skip_if_not_installed("fmriAR")
   set.seed(62)
@@ -95,8 +71,8 @@ test_that("runwise_lm_voxelwise AR(1) path on multi-run matrix data", {
   model <- fmri_model(emod, bmod, dset)
 
   cfg <- fmri_lm_control(ar_options = list(struct = "ar1", voxelwise = TRUE))
-  # Drive through runwise_lm_impl which dispatches to voxelwise when configured
-  res <- fmrireg:::runwise_lm_impl(
+  # Drive through runwise_lm which dispatches to voxelwise when configured
+  res <- fmrireg:::runwise_lm(
     dset, model, contrast_objects = list(), cfg = cfg,
     use_fast_path = TRUE, progress = FALSE, verbose = TRUE
   )
@@ -106,7 +82,6 @@ test_that("runwise_lm_voxelwise AR(1) path on multi-run matrix data", {
 
 test_that("process_run_ar_robust covers AR+robust run fitting", {
   skip_if_not_installed("fmriAR")
-  skip_if_not_installed("robustbase")
   set.seed(63)
   n <- 50L
   V <- 3L

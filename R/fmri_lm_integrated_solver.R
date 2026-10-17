@@ -17,77 +17,31 @@ NULL
 #'
 #' @param X Design matrix
 #' @param Y Response matrix
-#' @param config fmri_lm_control object with all options
+#' @param config fmri_lm_control object with all options. `config$ar$phi_fixed`
+#'   holds the AR coefficients fixed instead of estimating them.
 #' @param run_indices List of indices for each run
 #'
-#' @return List with full results including coefficients, residuals,
-#'   standard errors, AR parameters, robust weights, etc.
+#' @return List with `betas`, `sigma2`, `XtXinv` (in the fitted, whitened
+#'   and/or weighted domain), `dfres` and, as applicable, `rss`, `ar_coef`,
+#'   `ma_coef`, `phi_hat`, `ar_order`, `ar_plan` and `robust_weights`.
 #' @keywords internal
 #' @noRd
 solve_integrated_glm <- function(X, Y, config, run_indices = NULL) {
   stopifnot(inherits(config, "fmri_lm_control"))
-  
-  # Initial projection and context
-  proj <- .fast_preproject(X)
-  glm_ctx <- glm_context(X = X, Y = Y, proj = proj)
-  
-  # Determine solving strategy
-  method <- config$method %||% "auto"
-  if (method == "auto") {
-    # Determine method based on options
-    # Handle both config structures (ar_options vs ar)
-    ar_struct <- config$ar$struct %||% 
-                 (config$ar_options$cor_struct %||% "iid")
-    robust_type <- config$robust$type %||% config$robust %||% FALSE
-    if (identical(robust_type, "none")) robust_type <- FALSE
-    
-    temporal_noise <- (ar_struct != "iid" && ar_struct != "none") ||
-      as.integer(config$ar$q %||% 0L) > 0L
-    if (!isFALSE(robust_type) && temporal_noise) {
-      method <- "ar_robust"
-    } else if (!isFALSE(robust_type)) {
-      method <- "robust"
-    } else if (temporal_noise) {
-      method <- "ar"
-    } else {
-      method <- "ols"
-    }
-  }
-  
-  # Solve based on method
-  # Extract ar_options in correct format
-  ar_options <- if (!is.null(config$ar)) {
-    list(
-      cor_struct = config$ar$struct,
-      iter = config$ar$iter_gls,
-      exact_first = config$ar$exact_first,
-      p = config$ar$p,
-      q = config$ar$q %||% 0L,
-      global = config$ar$global %||% FALSE,
-      shared_estimator = config$ar$shared_estimator %||% "pooled_acvf",
-      phi = config$ar$phi %||% config$ar$phi_fixed,
-      theta = config$ar$theta %||% config$ar$theta_fixed
-    )
+
+  glm_ctx <- glm_context(X = X, Y = Y, proj = .fast_preproject(X))
+  robust <- .fmri_lm_robust_enabled(config$robust)
+  temporal <- .temporal_noise_enabled(config$ar)
+
+  if (robust && temporal) {
+    solve_ar_robust_pipeline(glm_ctx, config, run_indices)
+  } else if (robust) {
+    solve_robust_pipeline(glm_ctx, config$robust)
+  } else if (temporal) {
+    solve_ar_pipeline(glm_ctx, config$ar, run_indices)
   } else {
-    config$ar_options
+    solve_ols_pipeline(glm_ctx)
   }
-  
-  result <- switch(method,
-    "ols" = solve_ols_pipeline(glm_ctx),
-    "ar" = solve_ar_pipeline(glm_ctx, ar_options, run_indices),
-    "robust" = solve_robust_pipeline(glm_ctx, config$robust),
-    "ar_robust" = solve_ar_robust_pipeline(glm_ctx, config, run_indices),
-    stop("Unknown method: ", method)
-  )
-  
-  # Add method info
-  result$method <- method
-  result$config <- config
-  
-  # Compute standard errors
-  result <- compute_standard_errors(result, glm_ctx)
-  
-  result
 }
 
 #' OLS pipeline
@@ -95,8 +49,7 @@ solve_integrated_glm <- function(X, Y, config, run_indices = NULL) {
 #' @noRd
 solve_ols_pipeline <- function(glm_ctx) {
   result <- solve_glm_core(glm_ctx, return_fitted = TRUE)
-  result$residuals <- glm_ctx$Y - result$fitted
-  # Add XtXinv for contrast computation
+  result$fitted <- NULL
   result$XtXinv <- glm_ctx$proj$XtXinv
   result
 }
@@ -106,26 +59,14 @@ solve_ols_pipeline <- function(glm_ctx) {
 #' @noRd
 solve_ar_pipeline <- function(glm_ctx, ar_options, run_indices) {
   result <- iterative_ar_solve(glm_ctx, ar_options, run_indices)
-  
-  # Compute effective df
-  if (!is.null(result$ar_plan) || !is.null(result$ar_coef) || !is.null(result$ma_coef)) {
-    n <- nrow(glm_ctx$X)
-    p <- ncol(glm_ctx$X)
-    result$effective_df <- compute_ar_effective_df(
-      n, p, phi = result$ar_coef, plan = result$ar_plan
-    )
-  }
-  
-  # Add XtXinv if not present
+
   if (is.null(result$XtXinv)) {
-    if (!is.null(result$X_white)) {
-      result$XtXinv <- .fast_preproject(result$X_white)$XtXinv
-    } else {
-      warning("AR solver did not return whitened XtXinv; using unwhitened fallback.")
-      result$XtXinv <- glm_ctx$proj$XtXinv
-    }
+    warning("AR solver did not return whitened XtXinv; using unwhitened fallback.")
+    result$XtXinv <- glm_ctx$proj$XtXinv
   }
-  
+  # X_white/Y_white stay: the latent AR fit forms its whitened residual
+  # covariance from them (standard_error(<fmri_latent_lm>, recon = TRUE)).
+  result$fitted <- NULL
   result
 }
 
@@ -133,40 +74,20 @@ solve_ar_pipeline <- function(glm_ctx, ar_options, run_indices) {
 #' @keywords internal
 #' @noRd
 solve_robust_pipeline <- function(glm_ctx, robust_options) {
-  # Parse robust options
-  if (is.character(robust_options)) {
-    robust_config <- list(
-      type = robust_options,
-      k_huber = 1.345,
-      c_tukey = 4.685,
-      max_iter = 10,
-      scale_scope = "voxel"
-    )
-  } else {
-    robust_config <- robust_options
-  }
-  
-  # Run robust fitting
   robust_result <- robust_iterative_fitter(
     initial_glm_ctx = glm_ctx,
-    cfg_robust_options = robust_config,
-    X_orig_for_resid = glm_ctx$X,
-    sigma_fixed = robust_config$sigma_fixed %||% NULL
+    cfg_robust_options = robust_options,
+    X_orig_for_resid = glm_ctx$X
   )
 
   # WLS scale of the final weighted solve (the one robust scale estimator;
   # see robust_iterative_fitter()).
-  sigma2 <- as.numeric(robust_result$sigma2)
-  
-  # Format output
   list(
     betas = robust_result$betas_robust,
-    sigma2 = sigma2,
+    sigma2 = as.numeric(robust_result$sigma2),
     robust_weights = robust_result$robust_weights_final,
     XtXinv = robust_result$XtWXi_final,
-    dfres = robust_result$dfres,
-    fitted = glm_ctx$X %*% robust_result$betas_robust,
-    residuals = glm_ctx$Y - glm_ctx$X %*% robust_result$betas_robust
+    dfres = robust_result$dfres
   )
 }
 
@@ -174,109 +95,37 @@ solve_robust_pipeline <- function(glm_ctx, robust_options) {
 #' @keywords internal
 #' @noRd
 solve_ar_robust_pipeline <- function(glm_ctx, config, run_indices) {
-  # Extract ar_options in correct format
-  ar_options <- if (!is.null(config$ar)) {
-    list(
-      cor_struct = config$ar$struct,
-      iter = config$ar$iter_gls,
-      exact_first = config$ar$exact_first,
-      p = config$ar$p,
-      q = config$ar$q %||% 0L,
-      global = config$ar$global %||% FALSE,
-      shared_estimator = config$ar$shared_estimator %||% "pooled_acvf",
-      phi = config$ar$phi %||% config$ar$phi_fixed,
-      theta = config$ar$theta %||% config$ar$theta_fixed
-    )
-  } else {
-    config$ar_options
-  }
-  
-  # Step 1: Iterative AR whitening
+  # Step 1: AR estimation and whitening; reuse the whitened matrices.
   ar_result <- iterative_ar_solve(
     glm_ctx,
-    ar_options,
+    config$ar,
     run_indices,
     return_solution = FALSE
   )
-  
-  # Step 2: Reuse final AR-whitened matrices from iterative_ar_solve.
-  # Avoid a redundant second whitening pass.
-  proj_white <- .fast_preproject(ar_result$X_white)
+
   glm_ctx_white <- glm_context(
     X = ar_result$X_white,
     Y = ar_result$Y_white,
-    proj = proj_white
+    proj = .fast_preproject(ar_result$X_white)
   )
-  
-  # Step 3: Robust fitting on whitened data
-  robust_config <- if (is.character(config$robust)) {
-    list(
-      type = config$robust,
-      k_huber = 1.345,
-      c_tukey = 4.685,
-      max_iter = 10,
-      scale_scope = "voxel"
-    )
-  } else {
-    config$robust
-  }
-  
+
+  # Step 2: Robust fitting on whitened data
   robust_result <- robust_iterative_fitter(
     initial_glm_ctx = glm_ctx_white,
-    cfg_robust_options = robust_config,
-    X_orig_for_resid = glm_ctx_white$X,
-    sigma_fixed = robust_config$sigma_fixed %||% NULL
+    cfg_robust_options = config$robust,
+    X_orig_for_resid = glm_ctx_white$X
   )
 
   # WLS scale of the final weighted solve (the one robust scale estimator;
   # see robust_iterative_fitter()).
-  sigma2 <- as.numeric(robust_result$sigma2)
-  
-  # Combine results
   list(
     betas = robust_result$betas_robust,
-    sigma2 = sigma2,
+    sigma2 = as.numeric(robust_result$sigma2),
     robust_weights = robust_result$robust_weights_final,
     ar_coef = ar_result$ar_coef,
     ma_coef = ar_result$ma_coef,
     ar_plan = ar_result$ar_plan,
     XtXinv = robust_result$XtWXi_final,
-    dfres = robust_result$dfres,
-    fitted = glm_ctx_white$X %*% robust_result$betas_robust,
-    residuals = glm_ctx_white$Y - glm_ctx_white$X %*% robust_result$betas_robust,
-    effective_df = compute_ar_effective_df(
-      nrow(glm_ctx$X), 
-      ncol(glm_ctx$X),
-      phi = ar_result$ar_coef,
-      plan = ar_result$ar_plan,
-      n_runs = length(ar_result$ar_coef)
-    )
+    dfres = robust_result$dfres
   )
-}
-
-#' Compute standard errors
-#' @keywords internal
-#' @noRd
-compute_standard_errors <- function(result, glm_ctx) {
-  # Extract variance-covariance matrix
-  if (!is.null(result$XtXinv)) {
-    vcov <- result$XtXinv
-  } else if (!is.null(glm_ctx$proj$XtXinv)) {
-    vcov <- glm_ctx$proj$XtXinv
-  } else {
-    stop("Cannot compute standard errors: no variance-covariance matrix")
-  }
-  
-  # Use appropriate sigma2
-  if (!is.null(result$sigma2)) {
-    if (length(result$sigma2) == 1) {
-      # Single sigma2 for all voxels
-      result$standard_errors <- sqrt(diag(vcov) * result$sigma2)
-    } else {
-      # Vector of sigma2 (one per voxel)
-      result$standard_errors <- sqrt(diag(vcov) %o% result$sigma2)
-    }
-  }
-  
-  result
 }

@@ -1,6 +1,5 @@
-test_that("posthoc fdr:spatial matches spatial_fdr() per coefficient", {
+test_that("posthoc fmrireg:fdr:spatial matches spatial_fdr() per coefficient", {
   skip_if_not_installed("fmrigds")
-  fmrireg:::.ensure_fmrigds_registered()
   set.seed(42)
   # Build a tiny gds with z assay (features x coef)
   P <- 50; K <- 2
@@ -12,7 +11,7 @@ test_that("posthoc fdr:spatial matches spatial_fdr() per coefficient", {
   g <- fmrigds::as_gds(list(z = z_arr), space = NULL)
   # Apply spatial FDR via posthoc
   pl <- fmrigds::as_plan(g)
-  pl <- fmrigds::posthoc(pl, method = "fdr:spatial", options = list(group = grp))
+  pl <- fmrigds::posthoc(pl, method = "fmrireg:fdr:spatial", options = list(group = grp))
   gq <- fmrigds::compute(pl)
   q_assay <- fmrigds::assay(gq, "q")
   if (is.null(dim(q_assay))) {

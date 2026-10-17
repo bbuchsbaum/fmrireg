@@ -22,9 +22,6 @@ fmri_ttest.group_data_gds <- function(gd,
                            weights_custom = NULL,
                            combine = NULL) {
 
-  # Ensure our fmrigds registrations are available at first use
-  try(.ensure_fmrigds_registered(), silent = TRUE)
-
   engine <- match.arg(engine)
   sign   <- match.arg(sign)
   weights <- match.arg(weights)
@@ -177,6 +174,11 @@ fmri_ttest.group_data_gds <- function(gd,
       } else NULL,
       verbose = FALSE
     )
+    if (inherits(meta_fit, "fmri_meta_list")) {
+      stop("fmri_ttest(engine = 'meta') tests one subject-level contrast; these data have ",
+           length(meta_fit), " (", paste(names(meta_fit), collapse = ", "),
+           "). Use fmri_meta(), which fits each of them.", call. = FALSE)
+    }
 
     out <- list(
       beta = t(meta_fit$coefficients),

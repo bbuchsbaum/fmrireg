@@ -30,10 +30,7 @@ test_that("AR whitening controls false positives under AR(2) noise", {
   # Check that coefficients are close to zero
   expect_true(all(abs(result$betas[2, ]) < 0.5), 
               "AR whitening should control false positives")
-  
-  # Check effective df is reduced appropriately
-  expect_lt(result$effective_df, n_time - p, 
-            "Effective df should be reduced for AR models")
+
 })
 
 test_that("Robust fitting handles outliers in whitened data", {
@@ -84,69 +81,6 @@ test_that("Robust fitting handles outliers in whitened data", {
   
   expect_true(all(relative_error < 0.5),
               "AR+Robust should recover coefficients despite outliers")
-})
-
-test_that("Effective df computation follows standard formula", {
-  set.seed(789)
-  n_per_run <- 60
-  n_runs <- 3
-  n_time <- n_per_run * n_runs
-  p <- 2
-  
-  # Simple case with known AR parameters
-  phi <- c(0.5, 0.2)  # AR(2)
-  ar_order <- length(phi)
-  
-  # Test the standard compute_ar_effective_df function
-  # Following SPM/FSL/AFNI practice: no penalty for AR estimation
-  df_single_run <- fmrireg:::compute_ar_effective_df(n_time, p, phi, n_runs = 1)
-  df_multi_run <- fmrireg:::compute_ar_effective_df(n_time, p, phi, n_runs = n_runs)
-  
-  # Without penalty, df should be the same regardless of n_runs
-  expect_equal(df_single_run, df_multi_run, tolerance = 1e-10)
-  
-  # Current implementation uses lag-correlation inflation and should return a
-  # sensible df in bounds.
-  expect_gte(df_multi_run, 1)
-  expect_lte(df_multi_run, n_time - p)
-  
-  # Test conservative mode with penalize_ar = TRUE
-  df_conservative <- fmrireg:::compute_ar_effective_df(n_time, p, phi, n_runs = n_runs, penalize_ar = TRUE)
-  expect_equal(df_conservative, max(df_multi_run - ar_order, 1), tolerance = 1e-10)
-})
-
-test_that("Sandwich variance is computed correctly without diag matrices", {
-  set.seed(321)
-  n <- 50
-  p <- 3
-  
-  X <- cbind(1, rnorm(n), rnorm(n))
-  true_beta <- c(1, 2, -1)
-  Y <- X %*% true_beta + rnorm(n, sd = 0.5)
-  
-  # Add heteroscedasticity
-  Y[1:10] <- Y[1:10] + rnorm(10, sd = 2)
-  
-  # Compute OLS
-  XtX <- crossprod(X)
-  XtXinv <- solve(XtX)
-  beta_ols <- XtXinv %*% crossprod(X, Y)
-  residuals <- Y - X %*% beta_ols
-  
-  # Test sandwich variance computation
-  sandwich_var <- calculate_sandwich_variance(X, residuals, XtXinv)
-  
-  # Check dimensions
-  expect_equal(dim(sandwich_var), c(p, p))
-  
-  # Check positive definiteness
-  eigenvals <- eigen(sandwich_var, only.values = TRUE)$values
-  expect_true(all(eigenvals > 0), 
-              "Sandwich variance should be positive definite")
-  
-  # Standard errors should be positive
-  se <- sqrt(diag(sandwich_var))
-  expect_true(all(se > 0), "Standard errors should be positive")
 })
 
 test_that("Robust effective df is sum(w) - rank", {

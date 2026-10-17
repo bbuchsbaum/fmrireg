@@ -35,7 +35,6 @@ test_that("ols_betas and gen_beta_design cover fixed/null-fixed layouts", {
                 inherits(with_fixed$dmat_fixed, "tbl_df"))
   expect_true(length(with_fixed$fixed_ind) >= 1L)
   expect_true(length(with_fixed$ran_ind) >= 1L)
-  expect_true(length(with_fixed$base_ind) >= 1L)
 
   no_fixed <- fmrireg:::gen_beta_design(
     fixed = NULL,
@@ -49,25 +48,3 @@ test_that("ols_betas and gen_beta_design cover fixed/null-fixed layouts", {
   expect_equal(no_fixed$ran_ind, seq_len(ncol(no_fixed$dmat_ran)))
 })
 
-test_that("compute_sandwich_variance covers HC0/HC2/HC3 multi-voxel branches", {
-  set.seed(213)
-  n <- 30L
-  p <- 3L
-  X <- cbind(1, rnorm(n), rnorm(n))
-  resid1 <- matrix(rnorm(n), n, 1)
-  hc0 <- fmrireg:::compute_sandwich_variance(X, resid1, type = "HC0")
-  expect_equal(dim(hc0), c(p, p))
-  expect_true(all(is.finite(hc0)))
-
-  resid_multi <- matrix(rnorm(n * 4), n, 4)
-  expect_warning(
-    hc2 <- fmrireg:::compute_sandwich_variance(X, resid_multi, type = "HC2"),
-    "HC2 not implemented"
-  )
-  expect_equal(dim(hc2), c(p, p))
-  expect_warning(
-    hc3 <- fmrireg:::compute_sandwich_variance(X, resid_multi, type = "HC3"),
-    "HC3 not implemented"
-  )
-  expect_equal(dim(hc3), c(p, p))
-})

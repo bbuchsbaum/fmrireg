@@ -451,7 +451,9 @@ group_data_from_fmrilm <- function(lm_list,
                                    subjects = NULL,
                                    covariates = NULL) {
   if (!isTRUE(getOption("fmrireg.suppress_deprecation", FALSE))) {
-    .Deprecated("group_data", msg = "group_data_from_fmrilm() is deprecated. Use group_data(lm_list, format='fmrilm', ...) instead.")
+    .Deprecated("group_data", msg = paste("group_data_from_fmrilm() is deprecated.",
+                                          "Save each fit with write_results() and use",
+                                          "group_data(..., format = 'nifti') or format = 'h5' instead."))
   }
 
   if (!is.list(lm_list)) {

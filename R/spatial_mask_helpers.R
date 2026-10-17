@@ -40,13 +40,6 @@
 
 #' @keywords internal
 #' @noRd
-.fmri_try_space <- function(x) {
-  if (is.null(x) || is.character(x)) return(NULL)
-  tryCatch(neuroim2::space(x), error = function(e) NULL)
-}
-
-#' @keywords internal
-#' @noRd
 .fmri_normalize_mask_space <- function(space, mask_dim = NULL, context) {
   space_dim <- dim(space)
   if (length(space_dim) > 3L) {

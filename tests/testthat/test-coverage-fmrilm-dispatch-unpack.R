@@ -119,17 +119,9 @@ test_that("unpack_chunkwise concatenates beta chunks", {
   }
 })
 
-test_that("reshape_coef and pull_stat extract matrices from fmri_lm", {
+test_that("pull_stat extracts matrices from fmri_lm", {
   fx <- make_tiny_fit_fixture(n = 40L, V = 3L, seed = 53)
   fit <- fit_glm_on_transformed_series(fx$model, fx$Y, cfg = fx$cfg)
-
-  # reshape_coef: wide voxel x condition -> long
-  mat <- as.data.frame(matrix(1:6, 2, 3))
-  des <- data.frame(condition = c("A", "B", "C"), run = 1L)
-  long <- fmrireg:::reshape_coef(mat, des, measure = "estimate")
-  expect_true(nrow(long) >= 6L)
-  expect_true("estimate" %in% names(long))
-  expect_true("condition" %in% names(long))
 
   betas_est <- fmrireg:::pull_stat(fit, "betas", "estimate")
   expect_true(is.data.frame(betas_est) || tibble::is_tibble(betas_est) || is.matrix(betas_est))

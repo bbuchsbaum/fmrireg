@@ -139,38 +139,3 @@ test_that("robust fitting downweights spikes", {
 
 # Compare against MASS::rlm for single voxel
 
-test_that("fast_rlm_run approximates MASS::rlm", {
-  set.seed(10)
-  n <- 30
-  X <- cbind(1, rnorm(n))
-  beta <- c(0.5, 2)
-  y <- as.numeric(X %*% beta + rnorm(n, sd = 0.1))
-  y[5] <- y[5] + 5
-  proj <- fmrireg:::.fast_preproject(X)
-  fit_fast <- fmrireg:::fast_rlm_run(X, matrix(y, ncol = 1), proj,
-                                     psi = "huber", max_it = 2)
-  fit_mass <- MASS::rlm(X, y, psi = MASS::psi.huber, k = 1.345)
-  expect_equal(as.numeric(fit_fast$betas), as.numeric(fit_mass$coef), tolerance = 0.05)
-})
-
-test_that("fast_rlm_run errors with NA input", {
-  # Create data without NAs first
-  X <- cbind(1, rnorm(5))
-  y <- rnorm(5)
-  
-  # Test with NA in X
-  X_na <- X
-  X_na[2, 1] <- NA
-  expect_error({
-    proj <- fmrireg:::.fast_preproject(X_na)
-  }, "NA|singular|positive")
-  
-  # Test with NA in y (use valid X)
-  proj <- fmrireg:::.fast_preproject(X)
-  y_na <- y
-  y_na[3] <- NA
-  expect_error(
-    fmrireg:::fast_rlm_run(X, matrix(y_na, ncol = 1), proj),
-    "NA|missing"
-  )
-})

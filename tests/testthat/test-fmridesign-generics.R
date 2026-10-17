@@ -25,8 +25,31 @@ test_that("cross-dispatch: fmrireg:: re-exports reach fmridesign methods", {
 })
 
 test_that(".onLoad touches no private namespace", {
-  src <- paste(deparse(body(fmrireg:::.onLoad)), collapse = "\n")
-  expect_false(grepl("getFromNamespace|asNamespace|:::", src))
+  # Walk the parsed calls rather than grepping deparsed text: coverage
+  # instrumentation wraps each expression in covr:::count(), which is not
+  # code of .onLoad's own.
+  private_refs <- function(x) {
+    if (!is.call(x)) return(character(0))
+    fn <- x[[1]]
+    if (identical(fn, as.name(":::"))) {
+      pkg <- as.character(x[[2]])
+      return(if (identical(pkg, "covr")) character(0) else paste0(pkg, ":::", as.character(x[[3]])))
+    }
+    hit <- if (is.name(fn) && as.character(fn) %in% c("getFromNamespace", "asNamespace")) {
+      as.character(fn)
+    } else if (is.call(fn) && identical(fn[[1]], as.name("::")) &&
+               as.character(fn[[3]]) %in% c("getFromNamespace", "asNamespace")) {
+      as.character(fn[[3]])
+    }
+    c(hit, unlist(lapply(as.list(x), private_refs), use.names = FALSE))
+  }
+  expect_identical(private_refs(body(fmrireg:::.onLoad)), character(0))
+
+  # the walker does catch the forbidden forms
+  probe <- quote({ a <- fmridesign:::foo; b <- utils::getFromNamespace("x", "y"); asNamespace("z") })
+  expect_identical(private_refs(probe),
+                   c("fmridesign:::foo", "getFromNamespace", "asNamespace"))
+  expect_identical(private_refs(quote(covr:::count("id", f(x)))), character(0))
 })
 
 test_that("fmrireg registers no S3 methods for fmridesign-owned classes", {

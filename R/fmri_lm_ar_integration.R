@@ -15,10 +15,8 @@ NULL
 #' for all AR operations.
 #'
 #' @param glm_ctx A glm_context object
-#' @param ar_options List with AR configuration:
-#'   - cor_struct: "ar1", "ar2", etc. or "none"
-#'   - iter: Number of AR estimation iterations
-#'   - phi: Optional pre-specified AR coefficients
+#' @param ar_options AR configuration (a `noise_spec()`); `phi_fixed` holds
+#'   pre-specified AR coefficients (one vector, or one per run).
 #' @param run_indices List of indices for each run
 #'
 #' @return Updated glm_context with whitened matrices and AR info
@@ -54,8 +52,8 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
   }
 
   # If phi provided, use it directly
-  if (!is.null(ar_opts$phi)) {
-    phi_input <- ar_opts$phi
+  if (!is.null(ar_opts$phi_fixed)) {
+    phi_input <- ar_opts$phi_fixed
     if (!is.list(phi_input)) {
       phi_input <- list(phi_input)
     }
@@ -63,18 +61,7 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
     if (run_count > 1L && length(phi_input) == 1L && !isTRUE(ar_opts$global)) {
       phi_input <- rep(phi_input, run_count)
     }
-    theta_input <- if (!is.null(ar_opts$theta)) {
-      if (is.list(ar_opts$theta)) {
-        ar_opts$theta
-      } else {
-        list(ar_opts$theta)
-      }
-    } else {
-      replicate(length(phi_input), numeric(0), simplify = FALSE)
-    }
-    if (run_count > 1L && length(theta_input) == 1L && !isTRUE(ar_opts$global)) {
-      theta_input <- rep(theta_input, run_count)
-    }
+    theta_input <- replicate(length(phi_input), numeric(0), simplify = FALSE)
     # Create plan from provided coefficients
     runs <- NULL
     if (!is.null(run_indices)) {
@@ -122,9 +109,7 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
     X = whitened$X,
     Y = whitened$Y,
     proj = proj_new,
-    phi_hat = phi_list,
-    sigma_robust_scale = glm_ctx$sigma_robust_scale,
-    robust_weights = glm_ctx$robust_weights
+    phi_hat = phi_list
   )
 }
 
@@ -154,17 +139,15 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
   tol <- ar_opts$tol %||% tol
 
   if (is.null(max_iter)) {
-    max_iter <- if (is.null(ar_opts)) 1 else ar_opts$iter_gls %||% ar_opts$iter %||% 1
+    max_iter <- if (is.null(ar_opts)) 1 else ar_opts$iter_gls %||% 1
   }
-
-  ar_struct <- if (is.null(ar_opts)) "iid" else ar_opts$struct
 
   if (is.null(ar_opts) || !.temporal_noise_enabled(ar_opts) || max_iter == 0) {
     return(solve_glm_core(glm_ctx, return_fitted = TRUE))
   }
 
   # Honor fixed AR coefficients when supplied (skip AR re-estimation loop).
-  if (!is.null(ar_opts$phi)) {
+  if (!is.null(ar_opts$phi_fixed)) {
     glm_ctx_white <- whiten_glm_context(glm_ctx, ar_opts, run_indices)
     if (!isTRUE(return_solution)) {
       return(list(
@@ -172,9 +155,9 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
         Y_white = glm_ctx_white$Y,
         XtXinv = glm_ctx_white$proj$XtXinv,
         ar_coef = glm_ctx_white$phi_hat,
-        ma_coef = ar_opts$theta %||% NULL,
+        ma_coef = NULL,
         phi_hat = glm_ctx_white$phi_hat,
-        ar_order = .get_ar_order(plan = NULL, cfg = ar_opts),
+        ar_order = .target_ar_order(ar_opts) %||% 0L,
         ar_plan = NULL
       ))
     }
@@ -183,9 +166,9 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
     result$X_white <- glm_ctx_white$X
     result$Y_white <- glm_ctx_white$Y
     result$ar_coef <- glm_ctx_white$phi_hat
-    result$ma_coef <- ar_opts$theta %||% NULL
+    result$ma_coef <- NULL
     result$phi_hat <- glm_ctx_white$phi_hat
-    result$ar_order <- .get_ar_order(plan = NULL, cfg = ar_opts)
+    result$ar_order <- .target_ar_order(ar_opts) %||% 0L
     return(result)
   }
 
@@ -209,7 +192,7 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
       ar_coef = ar_result$ar_coef,
       ma_coef = ar_result$ma_coef,
       phi_hat = ar_result$ar_coef,
-      ar_order = .get_ar_order(ar_result$plan, ar_opts),
+      ar_order = .plan_ar_order(ar_result$plan, ar_opts),
       ar_plan = ar_result$plan
     ))
   }
@@ -230,45 +213,18 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
   result$ar_coef <- ar_result$ar_coef
   result$ma_coef <- ar_result$ma_coef
   result$phi_hat <- ar_result$ar_coef
-  result$ar_order <- .get_ar_order(ar_result$plan, ar_opts)
+  result$ar_order <- .plan_ar_order(ar_result$plan, ar_opts)
   result$ar_plan <- ar_result$plan  # Store for downstream use
 
   result
 }
 
-#' Compute effective degrees of freedom for AR models
-#'
-#' @description
-#' Adjusts degrees of freedom to account for autocorrelation
-#' in the residuals. Uses Satterthwaite-type approximation.
-#' Now delegates to fmriAR adapter for consistency.
-#'
-#' @param n Sample size
-#' @param p Number of parameters
-#' @param phi AR coefficients (can be list or vector)
-#' @param plan Optional fmriAR_plan object
-#' @param n_runs Number of runs (for compatibility)
-#' @param penalize_ar Whether to penalize for AR estimation
-#'
-#' @return Effective degrees of freedom
+#' AR order of an fmriAR plan, falling back to the configured order
 #' @keywords internal
 #' @noRd
-compute_ar_effective_df <- function(n, p, phi = NULL, plan = NULL,
-                                   n_runs = 1, penalize_ar = FALSE) {
-  # Delegate to adapter for consistency
-  df <- .compute_ar_effective_df_compat(n, p, plan, phi)
-
-  # Optional penalty for AR estimation (not standard)
-  if (penalize_ar && (!is.null(phi) || !is.null(plan))) {
-    ar_order <- if (!is.null(plan)) {
-      .get_ar_order(plan)
-    } else if (is.list(phi)) {
-      length(phi[[1]])
-    } else {
-      length(phi)
-    }
-    df <- df - ar_order
+.plan_ar_order <- function(plan, ar_opts) {
+  if (!is.null(plan$order)) {
+    return(plan$order[["p"]] %||% 0L)
   }
-
-  max(df, 1)
+  .target_ar_order(ar_opts) %||% 0L
 }

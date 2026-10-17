@@ -56,7 +56,6 @@ test_that("public joint AR and robust fits retain global df and post-hoc covaria
     fit <- fmri_lm(f$model, dataset = f$dataset, control = cfg,
                    compute = compute_spec(voxel_chunks = 2))
     expect_equal(fit$result$rdf, nrow(f$X) - qr(f$X)$rank, info = kind)
-    expect_equal(fit$result$cov.unscaled, fit$result$covariance_model_basis)
     post <- fit_contrasts(fit, list(a_b = c(1, -1)))$a_b
     inside <- fit$result$contrasts$data[[1]]
     expect_equal(as.numeric(post$estimate), as.numeric(inside$estimate), tolerance = 1e-9)

@@ -105,12 +105,14 @@ test_that("compute is mechanical and estimation scope chooses the estimator", {
     progress = FALSE, parallel_voxels = FALSE, parallel_chunks = FALSE
   )
 
-  expect_identical(joint_exec$strategy, "chunkwise")
-  expect_identical(joint_exec$nchunks, 3L)
-  expect_false(joint_exec$use_fast_path)
-  expect_true(joint_exec$parallel_chunks)
-  expect_identical(run_exec$strategy, "runwise")
-  expect_true(run_exec$parallel_voxels)
+  # A canonical compute leaves the scope in control: the legacy `strategy`
+  # does not override it.
+  expect_identical(joint_exec$cfg$estimation$scope, "joint")
+  expect_identical(joint_exec$compute$voxel_chunks, 3L)
+  expect_identical(joint_exec$compute$backend, "reference")
+  expect_identical(joint_exec$compute$parallel, "chunks")
+  expect_identical(run_exec$cfg$estimation$scope, "runwise_meta")
+  expect_identical(run_exec$compute$parallel, "voxels")
 
   expect_error(
     fmrireg:::.fmri_lm_resolve_execution(

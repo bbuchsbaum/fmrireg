@@ -1,28 +1,14 @@
-
 #' @noRd
 #' @keywords internal
 with_package <- function(name) {
-  if (!requireNamespace(name, quietly=TRUE)) {
-    stop(paste("Please install the", name, "package to use this functionality"))
+  missing <- name[!vapply(name, requireNamespace, logical(1), quietly = TRUE)]
+  if (length(missing) > 0L) {
+    stop(paste("Please install the", paste(missing, collapse = ", "),
+               if (length(missing) > 1L) "packages" else "package",
+               "to use this functionality"), call. = FALSE)
   }
+  invisible(NULL)
 }
-  
-
-
-
-# event_model generic is now imported from fmridesign
-# See fmridesign-imports.R for re-exports
-
-
-
-# get_data <- function(x, ...) UseMethod("get_data") # Now imported from fmridataset
-
-
-# get_data_matrix <- function(x, ...) UseMethod("get_data_matrix") # Now imported from fmridataset
-
-
-# get_mask <- function(x, ...) UseMethod("get_mask") # Now imported from fmridataset
-
 
 #' Retrieve the formula underlying a model object
 #'
@@ -33,22 +19,6 @@ with_package <- function(name) {
 #' @return A formula.
 #' @export
 get_formula <- function(x, ...) UseMethod("get_formula")
-
-
-# term_matrices generic is now imported from fmridesign
-# term_matrices <- function(x, ...) UseMethod("term_matrices")
-
-
-
-#' design_env
-#' 
-#' return regression design as a set of matrices stored in an environment
-#' 
-#' @param x the object
-#' @param ... extra args
-#' @keywords internal
-#' @noRd
-design_env <- function(x, ...) UseMethod("design_env")
 
 #' Contrast generic
 #'
@@ -74,70 +44,6 @@ contrast.default <- function(x, ...) fmridesign::contrast(x, ...)
 #' @return A tidy data frame with model coefficients and statistics
 #' @export
 tidy <- function(x, ...) UseMethod("tidy")
-
-
-# contrast_weights generic is now imported from fmridesign
-# See fmridesign-imports.R for re-exports
-
-
-
-
-
-# cells generic is now imported from fmridesign
-# cells <- function(x, ...) UseMethod("cells")
-
-
-
-# conditions generic is now imported from fmridesign
-# conditions <- function(x, ...) UseMethod("conditions")
-
-
-
-# convolve generic is now imported from fmridesign
-# convolve <- function(x, hrf, sampling_frame, ...) UseMethod("convolve")
-
-
-# is_continuous generic is now imported from fmridesign
-
-
-
-# is_categorical generic is now imported from fmridesign
-
-
-
-
-
-
-# event_table generic is now imported from fmridesign
-
-
-
-# event_terms generic is now imported from fmridesign
-
-
-
-# baseline_terms generic is now imported from fmridesign
-
-
-# term_indices generic is now imported from fmridesign
-# The event_model method was moved to fmridesign
-
-
-
-
-
-# design_matrix generic is now imported from fmridesign
-# design_matrix <- function(x, ...) { UseMethod("design_matrix") }
-
-# elements generic is now imported from fmridesign
-# elements <- function(x, ...) UseMethod("elements")
-
-
-
-
-
-# evaluate is now imported from fmrihrf
-
 
 #' fitted_hrf
 #'
@@ -189,54 +95,6 @@ tidy <- function(x, ...) UseMethod("tidy")
 #' @export
 fitted_hrf <- function(x, sample_at, ...) UseMethod("fitted_hrf")
 
-
-
-
-
-# global_onsets <- function(x, onsets, ...) UseMethod("global_onsets") # Now imported from fmrihrf
-
-
-
-# nbasis generic is now imported from fmrihrf package
-# See fmrihrf-imports.R for the import statement
-
-
-
-
-
- 
-# data_chunks <- function(x, nchunks, ...) UseMethod("data_chunks") # Now imported from fmridataset
-
-
-# onsets generic is now imported from fmridesign
-# onsets <- function(x) UseMethod("onsets")
-
-
-# durations generic is now imported from fmridesign
-# durations <- function(x) UseMethod("durations")
-
-# samples <- function(x, ...) UseMethod("samples") # Now imported from fmrihrf
-
-# split_by_block generic is now imported from fmridesign
-# split_by_block <- function(x, ...) UseMethod("split_by_block")
-
-# blockids is now imported from fmrihrf
-
-# blocklens is now imported from fmrihrf
-
-# Fcontrasts generic is now imported from fmridesign
-
-
-
-
-
-#' generate an AFNI linear model command from a configuration file
-
-
-# split_onsets is now imported from fmridesign
-
-
-
 #' estimate contrast
 #' 
 #' @param x the contrast
@@ -247,7 +105,6 @@ fitted_hrf <- function(x, sample_at, ...) UseMethod("fitted_hrf")
 #' @keywords internal
 estimate_contrast <- function(x, fit, colind, ...) UseMethod("estimate_contrast")
 
-
 #' estimate a linear model sequentially for each "chunk" (a matrix of time-series) of data
 #' 
 #' @param x the dataset 
@@ -255,8 +112,6 @@ estimate_contrast <- function(x, fit, colind, ...) UseMethod("estimate_contrast"
 #' @noRd
 #' @keywords internal
 chunkwise_lm <- function(x, ...) UseMethod("chunkwise_lm")
-
-
 
 #' Get Available Coefficient Names
 #'
@@ -409,7 +264,6 @@ stats <- function(x, ...) UseMethod("stats")
 #' @export
 p_values <- function(x, ...) UseMethod("p_values")
 
-
 #' Estimate Beta Coefficients for fMRI Data
 #'
 #' @description
@@ -469,15 +323,6 @@ p_values <- function(x, ...) UseMethod("p_values")
 #' @family model_estimation
 #' @export
 estimate_betas <- function(x, ...) UseMethod("estimate_betas")
-
-
-# design_map generic moved to fmridesign package
-
-
-
-
-
-
 
 #' Write Results from fMRI Analysis
 #'

@@ -115,26 +115,6 @@ test_that("pure MA fitting is not mistaken for IID", {
   expect_false(isTRUE(all.equal(out$X_white, X)))
 })
 
-test_that("ARMA effective degrees of freedom include theta", {
-  n <- 240L
-  n_beta <- 4L
-  phi <- 0.4
-  theta <- 0.3
-  rho <- stats::ARMAacf(ar = phi, ma = theta, lag.max = n - 1L)[-1L]
-  lag <- seq_along(rho)
-  expected <- n / (1 + 2 * sum((1 - lag / n) * rho)) - n_beta
-
-  actual <- fmrireg:::.compute_ar_effective_df_compat(
-    n, n_beta, ar_coef = list(phi), ma_coef = list(theta)
-  )
-  ar_only <- fmrireg:::.compute_ar_effective_df_compat(
-    n, n_beta, ar_coef = list(phi)
-  )
-
-  expect_equal(actual, expected, tolerance = 1e-12)
-  expect_false(isTRUE(all.equal(actual, ar_only)))
-})
-
 test_that("public runwise ARMA fitting returns per-run parameters and inference", {
   skip_if_not_installed("fmriAR", minimum_version = "0.3.3")
 

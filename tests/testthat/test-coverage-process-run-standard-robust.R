@@ -61,7 +61,6 @@ test_that("process_run_standard covers IID and AR1 with fixed phi", {
 })
 
 test_that("process_run_robust returns WLS components and fixed sigma", {
-  skip_if_not_installed("robustbase")
   fx <- make_run_fx(seed = 202L)
   cfg <- fmri_lm_control(robust = robust_spec(type = "huber", max_iter = 3L))
   out <- fmrireg:::process_run_robust(

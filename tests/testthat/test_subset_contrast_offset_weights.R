@@ -121,7 +121,7 @@ test_that("invalid requested contrasts fail instead of being dropped", {
   attr(bad, "colind") <- c(1L, 2L)
 
   expect_error(
-    process_t_contrasts(
+    .process_contrasts("t",
       B = matrix(0, 2, 1), sigma2 = 1, XtXinv = diag(2),
       conlist = list(requested = bad), df = 8
     ),
@@ -131,9 +131,9 @@ test_that("invalid requested contrasts fail instead of being dropped", {
   bad_f <- matrix(1, nrow = 2, ncol = 2)
   attr(bad_f, "colind") <- c(1L, 2L, 3L)
   expect_error(
-    process_f_contrasts(
+    .process_contrasts("F",
       B = matrix(0, 3, 1), sigma2 = 1, XtXinv = diag(3),
-      fconlist = list(requested_F = bad_f), df = 8
+      conlist = list(requested_F = bad_f), df = 8
     ),
     "Failed to compute F-contrast 'requested_F'.*do not match"
   )

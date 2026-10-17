@@ -163,47 +163,41 @@ test_that(".predict_output_files builds beta and contrast predictions", {
   out_dir <- tempfile("bids-pred-")
   predicted <- fmrireg:::.predict_output_files(
     path = out_dir,
-    entities = entities,
-    desc = "GLM",
-    format = "h5",
-    strategy = "by_stat",
-    save_betas = TRUE,
-    contrasts = NULL,
-    contrast_match = "auto",
-    contrast_stats = c("beta", "tstat", "fstat"),
-    fmrilm_obj = fake_lm
+    plan = fmrireg:::.bids_output_plan(
+      fake_lm, entities, desc = "GLM", format = "h5", strategy = "by_stat",
+      save_betas = TRUE, contrasts = NULL, contrast_match = "auto",
+      contrast_stats = c("beta", "tstat", "fstat")
+    ),
+    entities = entities, desc = "GLM", format = "h5"
   )
-  expect_true(is.character(predicted))
-  expect_true(any(grepl("betas\\.h5$", predicted)))
-  expect_true(any(grepl("betas\\.json$", predicted)))
-  expect_true(any(grepl("bold\\.(h5|json)$", predicted)))
+  pfx <- file.path(out_dir, "sub-01_task-test_space-MNI_")
+  expect_setequal(predicted, paste0(pfx, c(
+    "desc-GLM_betas.h5", "desc-GLM_betas.json",
+    "desc-beta_bold.h5", "desc-beta_bold.json",
+    "desc-tstat_bold.h5", "desc-tstat_bold.json",
+    "desc-fstat_bold.h5", "desc-fstat_bold.json"
+  )))
 
   predicted2 <- fmrireg:::.predict_output_files(
     path = out_dir,
-    entities = entities,
-    desc = "GLM",
-    format = c("h5", "nifti"),
-    strategy = "by_contrast",
-    save_betas = FALSE,
-    contrasts = "A_vs_B",
-    contrast_match = "exact",
-    contrast_stats = c("beta", "tstat"),
-    fmrilm_obj = fake_lm
+    plan = fmrireg:::.bids_output_plan(
+      fake_lm, entities, desc = "GLM", format = c("h5", "nifti"), strategy = "by_contrast",
+      save_betas = FALSE, contrasts = "A_vs_B", contrast_match = "exact",
+      contrast_stats = c("beta", "tstat")
+    ),
+    entities = entities, desc = "GLM", format = c("h5", "nifti")
   )
-  expect_true(any(grepl("contrast-AvsB", predicted2)))
-  expect_true(any(grepl("\\.nii\\.gz$", predicted2)))
+  expect_setequal(predicted2, paste0(pfx, "contrast-AvsB_desc-GLM_bold",
+                                     c(".h5", ".nii.gz", ".json")))
 
   predicted_gds <- fmrireg:::.predict_output_files(
     path = out_dir,
-    entities = entities,
-    desc = "GLM",
-    format = "gds",
-    strategy = "by_stat",
-    save_betas = FALSE,
-    contrasts = NULL,
-    contrast_match = "auto",
-    contrast_stats = "beta",
-    fmrilm_obj = fake_lm
+    plan = fmrireg:::.bids_output_plan(
+      fake_lm, entities, desc = "GLM", format = "gds", strategy = "by_stat",
+      save_betas = FALSE, contrasts = NULL, contrast_match = "auto",
+      contrast_stats = "beta"
+    ),
+    entities = entities, desc = "GLM", format = "gds"
   )
   expect_true(any(grepl("gds\\.h5$", predicted_gds)))
   expect_true(any(grepl("gds\\.rds$", predicted_gds)))

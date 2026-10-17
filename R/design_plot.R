@@ -5,6 +5,7 @@
 #' fMRI model. The design matrix is first converted into a long-format tibble and
 #' then plotted over time, faceted by block. Several customization options allow
 #' you to adjust the title, axis labels, line thickness, color palette, and more.
+#' Requires the suggested packages \pkg{shiny}, \pkg{plotly} and \pkg{bslib}.
 #'
 #' @param fmrimod An \code{fmri_model} object.
 #' @param term_name Optional: Name of the term to plot. If \code{NULL} (the default),
@@ -23,7 +24,6 @@
 #'
 #' @return A Shiny app that displays the design plot.
 #'
-#' @importFrom ggplot2 ggplot aes_string geom_line facet_wrap labs theme_bw scale_color_brewer guides theme_minimal
 #' @importFrom tidyr pivot_longer
 #' @export
 #'
@@ -64,7 +64,6 @@
 #'               facet_ncol = 1)
 #' }
 #'
-#' @importFrom bslib bs_theme card card_header layout_sidebar
 design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
                          plot_title = NULL,
                          x_label = "Time (s)", y_label = "Amplitude",
