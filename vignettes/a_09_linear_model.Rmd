@@ -1001,8 +1001,10 @@ gd_nii <- group_data(list(beta = beta_paths, se = se_paths), format = "nifti",
 fit_nii <- fmri_meta(gd_nii, formula = ~ 1 + group, method = "fe")
 
 # Inspect the pipeline with fmrigds
-pl <- fmrigds::plan(gd)
-pl <- fmrigds::reduce(pl, method = "meta:fe", formula = ~ 1 + group)
+# (fmri_meta() runs the reducer "fmrireg:meta_reg" that fmrireg registers)
+pl <- fmrigds::as_plan(gd)
+pl <- fmrigds::reduce(pl, method = "fmrireg:meta_reg", formula = ~ 1 + group,
+                      options = list(method = "pm"))
 fmrigds::explain_plan(pl)
 invisible(fmrigds::preview(pl, n = 1, assays = "beta"))
 res <- fmrigds::compute(pl)

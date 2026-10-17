@@ -173,3 +173,65 @@ test_that("the meta kernel matches closed forms (FE weighted mean, equal-weight 
   expect_equal(as.numeric(eq$beta), unname(ls[, 1]), tolerance = 1e-10)
   expect_equal(as.numeric(eq$se), unname(ls[, 2]), tolerance = 1e-10)
 })
+
+test_that("reducer fmrireg:meta_reg returns exactly the kernel's numbers through fmrigds", {
+  skip_if_not_installed("fmrigds")
+  expect_false(is.null(fmrigds::get_reducer("fmrireg:meta_reg")))
+  # registering again never replaces it
+  before <- fmrigds::get_reducer("fmrireg:meta_reg")
+  expect_false(fmrireg:::.register_fmrireg_meta_reg())
+  expect_identical(fmrigds::get_reducer("fmrireg:meta_reg"), before)
+
+  set.seed(1)
+  S <- 12; P <- 7
+  subj <- paste0("s", 1:S)
+  b <- array(rnorm(P * S), c(P, S, 1), dimnames = list(paste0("v", 1:P), subj, "c1"))
+  v <- array(runif(P * S, 0.05, 0.5), dim(b), dimnames(b))
+  cd <- data.frame(age = rnorm(S), row.names = subj)
+  g <- fmrigds::with_col_data(fmrigds::as_gds(list(beta = b, var = v)), cd)
+  X <- stats::model.matrix(~ age, cd)
+  for (cfg in list(list(method = "dl", robust = "huber", weights = "1/var"),
+                   list(method = "pm", robust = "none", weights = "1/var"),
+                   list(method = "fe", robust = "none", weights = "custom",
+                        custom_weights = seq(1, 3, length.out = S)))) {
+    r <- fmrigds::compute(fmrigds::reduce(
+      g, method = "fmrireg:meta_reg", formula = ~ age, weights = cfg$weights,
+      options = cfg[c("method", "robust", "custom_weights")[c(TRUE, TRUE, !is.null(cfg$custom_weights))]]
+    ))
+    ref <- fmrireg:::.meta_fit_core(t(b[, , 1]), t(v[, , 1]), X, method = cfg$method,
+                                    robust = cfg$robust,
+                                    weights = if (cfg$weights == "1/var") "ivw" else "custom",
+                                    weights_custom = cfg$custom_weights)
+    info <- paste(cfg$method, cfg$weights)
+    for (k in 1:2) {
+      tn <- colnames(X)[k]
+      expect_identical(as.numeric(fmrigds::assay(r, paste0("coef:", tn))), as.numeric(ref$beta[k, ]), info = info)
+      expect_identical(as.numeric(fmrigds::assay(r, paste0("se_coef:", tn))), as.numeric(ref$se[k, ]), info = info)
+      expect_identical(as.numeric(fmrigds::assay(r, paste0("p_coef:", tn))),
+                       2 * stats::pnorm(abs(as.numeric(ref$z[k, ])), lower.tail = FALSE), info = info)
+    }
+    expect_identical(as.numeric(fmrigds::assay(r, "tau2")), as.numeric(ref$tau2), info = info)
+    expect_identical(as.numeric(fmrigds::assay(r, "Q")), as.numeric(ref$Q_fe), info = info)
+    expect_identical(as.numeric(fmrigds::assay(r, "df_res")), as.numeric(ref$df), info = info)
+    expect_identical(as.numeric(fmrigds::assay(r, "cov:(Intercept):age")), ref$cov_tri[2, ], info = info)
+    expect_identical(fmrigds::coef_cov_tri(r, "fmrireg:meta_reg", contrast = 1)$cov_tri, ref$cov_tri,
+                     info = info)
+  }
+})
+
+test_that("gds fmri_meta() fits every subject-level contrast, each as if alone", {
+  skip_if_not_installed("fmrigds")
+  df <- .p1_long(K = 2L)
+  args <- list(formula = ~ 1 + group, method = "pm", contrasts = c(groupB = 1))
+  fits <- suppressMessages(do.call(fmri_meta, c(list(.p1_gds(df, "se")), args)))
+  expect_s3_class(fits, "fmri_meta_list")
+  expect_identical(names(fits), c("c1", "c2"))
+  expect_output(print(fits), "2 subject-level contrasts")
+  for (k in c("c1", "c2")) {
+    .p1_expect_fit(fits[[k]], .p1_reference(df, "se", args, contrast = k), args, k)
+    alone <- do.call(fmri_meta, c(list(.p1_gds(df[df$contrast == k, ], "se")), args))
+    expect_equal(fits[[k]][["coefficients"]], alone[["coefficients"]], tolerance = 1e-12)
+  }
+  # the second contrast is a different analysis (its true intercept is 0.5 higher)
+  expect_gt(mean(fits[["c2"]][["coefficients"]][, 1] - fits[["c1"]][["coefficients"]][, 1]), 0.3)
+})
