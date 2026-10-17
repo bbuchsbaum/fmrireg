@@ -56,7 +56,8 @@
     Z_nuisance = Z_nuisance,
     Y = Y,
     cfg = cfg,
-    run_indices = run_indices
+    run_indices = run_indices,
+    censor = resolve_censor(cfg, dataset = dataset, n_time = nrow(Y))
   )
 
   resid <- .rrr_residualize_against_nuisance(
@@ -417,7 +418,8 @@
 #' Internal: apply global AR whitening to design and data
 #' @keywords internal
 #' @noRd
-.rrr_whiten_data <- function(X_task, Z_nuisance, Y, cfg, run_indices = NULL) {
+.rrr_whiten_data <- function(X_task, Z_nuisance, Y, cfg, run_indices = NULL,
+                             censor = NULL) {
   X_ref <- if (!is.null(Z_nuisance) && ncol(Z_nuisance) > 0L) {
     cbind(X_task, Z_nuisance)
   } else {
@@ -436,7 +438,6 @@
   }
 
   exact_first <- isTRUE(cfg$ar$exact_first)
-  censor <- cfg$ar$censor %||% NULL
 
   estimate_phi <- function(resid) {
     correction_design <- .shared_ar_correction_design(resid, cfg$ar, X_ref)
