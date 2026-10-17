@@ -14,6 +14,29 @@ of C++, 41k lines of tests (265 files), 205 Rd pages, 1,196 tracked files /
 
 ---
 
+## Status (2026-10-17)
+
+- **Phase 1** and **Phase 2** are done on branch `claude/simplify-retire-cruft`
+  (`R/` 35,176 -> 31,952 lines). All bugs B1-B12 are fixed with regression
+  tests in `tests/testthat/test-simplify-2026-10-{A,B,C,D,E,merge}.R`, each of
+  which failed on the code before its fix. Refactors were pinned field by field
+  (137 fitting configurations, 26 engine fits, 24 `write_results()` layouts).
+- B4 was fixed minimally (`format = "fmrilm"` now errors and names the working
+  route); the conversion belongs to the group-analysis plan below.
+- Skipped from Phase 2 because group analysis is moving to fmrigds: the
+  `fmri_meta_gds.R` rewrite, the meta C++ kernel consolidation, the single
+  contrast resolver and the `fmri_ttest_gds.R` cleanup.
+- Kept on purpose: `as.array.NeuroVec` (fmristore's `LatentNeuroVec` needs it),
+  the `.estimate_ar` fallback (live when fmriAR fails, now with a warning),
+  plotting's `.ar_whiten` (differs from `ar_whiten_transform` on the first p
+  rows), `ar_order` in the fast contrast helpers (Phase 3 deprecation).
+- Behaviour changes worth knowing: a zero standard error gives t = 0, p = 1 on
+  every path; failed AR estimation warns; rrr engine AR failures now also fall
+  back (with the warning) like lowrank; reference-backend joint AR equals the
+  matrix backend; `print()` output for `fmri_lm` and `fmri_model` changed.
+
+---
+
 ## Phase 1 — done on branch `claude/simplify-retire-cruft`
 
 No exported function, S3 registration or fitted result changes. Full test
@@ -219,7 +242,33 @@ closed form or a reference implementation (CLAUDE.md standard).
 
 ## Phase 4 — structural
 
-1. **One group-analysis stack.** gds is the future (`group_data()` always
+1. **Group analysis moves to fmrigds (proposed division of labour).**
+   fmrigds owns the group data model, I/O and every across-subject estimator
+   as a registered reducer (FE/DL, regression, OLS t, permutation, z/p
+   combination, post-hoc FDR); fmrireg owns subject-level fitting, turning
+   `fmri_lm` fits into group inputs (`as_group_data(fits, contrast =)`), thin
+   `fmri_meta()`/`fmri_ttest()`/`spatial_fdr()` front-ends with fmrireg's
+   argument names and classes, run pooling, and BIDS/image output.
+   Estimator correctness tests live with the estimator. fmrireg never
+   overrides a reducer name; anything it registers is namespaced.
+   `cov_tri` (coefficient covariance for contrasts): fmrigds already
+   transports a reducer's `cov_tri` into `cov:<a>:<b>` assays
+   (`coef_cov_tri()`); the cost is the estimator, not the covariance. Now:
+   register `fmrireg:meta_reg` (PM/DL/FE, Huber, weights) wrapping the
+   existing `meta_fit_cov_cpp` (~80 LOC), which also fixes fit-only-the-first-
+   contrast. Later, only if another consumer needs PM/Huber: port `fit_one`
+   to fmrigds and delete fmrireg's kernel. Steps: (a) fmrigds: fix the bogus
+   `cov_tri` assay created when a reducer lists it in `provides`, add
+   `coef_contrast()`, extra per-voxel assays for covariates, `fdr:sabha`
+   (fmrireg's empirical-null spatial FDR) and `ttest:welch`; (b) fmrireg P1:
+   bump the fmrigds pin (fixes upstream DL-regression tau2; `a_09` uses the
+   now-unexported `plan()`), register `fmrireg:meta_reg` at load, rewrite the
+   gds `fmri_meta` path (~-600 LOC); (c) P2: `fmri_ttest` delegates, delete
+   `fmri_ttest_gds.R`, `ols_t.cpp` (except vcov) and the moved FDR code
+   (~-1,000 LOC); (d) P3, next minor: remove the legacy csv/h5/nifti stack and
+   accessors (needs an fmrigds t/df NIfTI adapter) (~-2,500 LOC).
+   The earlier, fmrireg-internal version of this item follows for reference.
+   **One group-analysis stack.** gds is the future (`group_data()` always
    builds gds; the `group_data_from_*` constructors are `.Deprecated`). The
    legacy stack is still live only for var/t-only NIfTI. Plan:
    (a) Phase 2 items above; add `.fmri_meta_from_matrices(Y, V | T, DF, X)`
