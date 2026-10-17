@@ -29,6 +29,23 @@
   computing the pseudo-inverse. A new test dispatches both methods from
   outside the namespace (#251).
 
+* `fmri_meta()` on group data from `group_data()` (fmrigds-backed) now runs
+  through fmrigds: fmrireg registers the reducer `"fmrireg:meta_reg"` (its
+  FE / DerSimonian-Laird / Paule-Mandel meta-regression with Huber and
+  equal/custom weights) at load, and fit-time `contrasts =` use
+  `fmrigds::coef_contrast()` instead of a second fit. Results are unchanged.
+  Data with several subject-level contrasts used to be analysed for the first
+  contrast only, without a warning; every contrast is now fitted and
+  `fmri_meta()` returns an `fmri_meta_list` of `fmri_meta` objects named by
+  contrast (single-contrast data still give one `fmri_meta`).
+  `fmri_ttest(engine = "meta")` stops with a message on such data.
+* `spatial_fdr()` is now a wrapper over `fmrigds::spatial_fdr_sabha()`, the
+  fmrigds port of the same procedure (identical results); fmrireg's C++
+  implementation was removed. The fmrigds post-hoc `"fmrireg:fdr:spatial"` is
+  kept as an alias of fmrigds's `"fdr:sabha"`.
+* fmrireg now requires fmrigds at commit e9863f6 (`coef_contrast()`,
+  `spatial_fdr_sabha()`); the `a_09` vignette no longer calls the unexported
+  `fmrigds::plan()`.
 * fmrireg no longer overwrites fmrigds's own reducers. Every group
   `fmri_meta()`/`fmri_ttest()` call used to re-register `meta:fe`,
   `meta:fe_reg`, `meta:re_reg` (switching it from DerSimonian-Laird to

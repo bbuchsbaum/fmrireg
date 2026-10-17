@@ -26,6 +26,17 @@ of C++, 41k lines of tests (265 files), 205 Rd pages, 1,196 tracked files /
 - Skipped from Phase 2 because group analysis is moving to fmrigds: the
   `fmri_meta_gds.R` rewrite, the meta C++ kernel consolidation, the single
   contrast resolver and the `fmri_ttest_gds.R` cleanup.
+- **Phase 4 item 1, step P1** (branch `claude/group-delegation-p1`): fmrigds
+  pinned to e9863f6; reducer `"fmrireg:meta_reg"` registered at load; the gds
+  `fmri_meta()` path rewritten as reduce -> `coef_contrast()` -> wrap (18
+  configurations pinned field by field at 1e-10, identical) and fitting every
+  subject-level contrast; `spatial_fdr()` wraps `fmrigds::spatial_fdr_sabha()`
+  and `src/spatial_fdr.cpp` is gone; `"fmrireg:fdr:spatial"` is an alias of
+  `"fdr:sabha"`. `R/` -470 lines, `src/` -347. No numeric change: no fmrireg
+  path or test used fmrigds's `meta:re_reg`, so its DL-trace fix does not
+  reach fmrireg. Left for P2: `fmri_ttest` delegation (its classic/Welch
+  engines still use only the first subject-level contrast), the meta C++
+  wrapper consolidation, the legacy stack (P3).
 - Kept on purpose: `as.array.NeuroVec` (fmristore's `LatentNeuroVec` needs it),
   the `.estimate_ar` fallback (live when fmriAR fails, now with a warning),
   plotting's `.ar_whiten` (differs from `ar_whiten_transform` on the first p

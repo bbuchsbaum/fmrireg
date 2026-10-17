@@ -73,6 +73,11 @@
 #'     \item model: Model specification
 #'     \item data: Input group_data object
 #'   }
+#'   For fmrigds-backed group data (from \code{group_data()}) the fit is the
+#'   fmrigds reducer \code{"fmrireg:meta_reg"}. When such data hold several
+#'   subject-level contrasts, each is fitted and the result is an
+#'   \code{fmri_meta_list}: a list of \code{fmri_meta} objects named by
+#'   contrast.
 #'
 #' @export
 #'
