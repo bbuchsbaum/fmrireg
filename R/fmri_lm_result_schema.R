@@ -118,8 +118,7 @@ empty_contrast_table <- function() {
   status <- result$voxel_status
   if (is.null(status) || length(status) != nvox) status <- rep("ok", nvox)
 
-  covariance <- result$covariance_model_basis %||%
-    result$covariance_by_voxel %||%
+  covariance <- result$covariance_by_voxel %||%
     result$covariance_by_run %||%
     result$covariance_by_cluster %||%
     result$cov.unscaled

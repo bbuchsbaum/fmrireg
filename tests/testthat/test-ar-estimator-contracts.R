@@ -209,10 +209,7 @@ test_that("production global AR routes the block residual operator", {
   )
 
   expect_error(
-    suppressWarnings(fmri_lm_fit(
-      model, dset, strategy = "runwise", cfg = cfg,
-      use_fast_path = TRUE, progress = FALSE
-    )),
+    suppressWarnings(fmri_lm_fit(model, dset, cfg = cfg)),
     "captured global AR"
   )
 

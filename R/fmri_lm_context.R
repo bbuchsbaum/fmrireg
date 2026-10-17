@@ -8,17 +8,13 @@
 #' @param Y Data matrix (time points \eqn{\times} observations).
 #' @param proj Preprojection object created by \code{.fast_preproject(X)}.
 #' @param phi_hat Optional autoregressive parameter estimates.
-#' @param sigma_robust_scale Optional robust scale estimate.
-#' @param robust_weights Optional vector of robust weights.
 #'
 #' @return A list with class \code{glm_context}.
 #' @keywords internal
 #' @noRd
 glm_context <- function(X = NULL, Y = NULL,
                         proj = NULL,
-                        phi_hat = NULL,
-                        sigma_robust_scale = NULL,
-                        robust_weights = NULL) {
+                        phi_hat = NULL) {
   if (!is.null(X) && !is.matrix(X)) {
     X <- as.matrix(X)
   }
@@ -30,9 +26,7 @@ glm_context <- function(X = NULL, Y = NULL,
     X = X,
     Y = Y,
     proj = proj,
-    phi_hat = phi_hat,
-    sigma_robust_scale = sigma_robust_scale,
-    robust_weights = robust_weights
+    phi_hat = phi_hat
   ), class = c("glm_context", "list"))
 }
 

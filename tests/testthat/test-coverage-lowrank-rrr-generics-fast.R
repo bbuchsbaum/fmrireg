@@ -109,7 +109,7 @@ test_that("runwise_lm_fast and chunkwise_lm_fast return pooled structures", {
   cfg <- fmri_lm_control()
 
   # Prefer public-ish impl wrappers when direct *_fast needs many args
-  fast_run <- fmrireg:::runwise_lm_impl(
+  fast_run <- fmrireg:::runwise_lm(
     dset, model, contrast_objects = list(), cfg = cfg,
     use_fast_path = TRUE, progress = FALSE
   )

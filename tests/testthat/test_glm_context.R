@@ -22,14 +22,10 @@ test_that("glm_context creation and validation works", {
   ctx2 <- glm_context(
     X = X,
     Y = Y,
-    robust_weights = rep(1, 50),
-    phi_hat = 0.5,
-    sigma_robust_scale = 1.2
+    phi_hat = 0.5
   )
   
-  expect_equal(ctx2$robust_weights, rep(1, 50))
   expect_equal(ctx2$phi_hat, 0.5)
-  expect_equal(ctx2$sigma_robust_scale, 1.2)
 })
 
 test_that("solve_glm_core handles basic OLS", {
@@ -151,8 +147,7 @@ test_that("glm_context works with robust weights", {
   ctx <- glm_context(
     X = Xw,
     Y = matrix(Yw, ncol = 1),
-    proj = proj,
-    robust_weights = weights
+    proj = proj
   )
   
   result <- solve_glm_core(ctx)
@@ -219,13 +214,11 @@ test_that("glm_context fields are preserved through operations", {
     X = X,
     Y = Y,
     proj = proj,
-    phi_hat = 0.7,
-    sigma_robust_scale = 2.1
+    phi_hat = 0.7
   )
   
   # Fields should be preserved
   expect_equal(ctx$phi_hat, 0.7)
-  expect_equal(ctx$sigma_robust_scale, 2.1)
   
   # After solving
   result <- solve_glm_core(ctx)

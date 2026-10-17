@@ -61,7 +61,7 @@ test_that("runwise_lm_slow and chunkwise_lm_slow paths via use_fast_path=FALSE",
   model <- fmri_model(emod, bmod, dset)
   cfg <- fmri_lm_control()
 
-  slow_run <- fmrireg:::runwise_lm_impl(
+  slow_run <- fmrireg:::runwise_lm(
     dset, model, contrast_objects = list(), cfg = cfg,
     use_fast_path = FALSE, progress = FALSE, verbose = TRUE
   )

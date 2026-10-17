@@ -95,8 +95,8 @@ test_that("runwise_lm_voxelwise AR(1) path on multi-run matrix data", {
   model <- fmri_model(emod, bmod, dset)
 
   cfg <- fmri_lm_control(ar_options = list(struct = "ar1", voxelwise = TRUE))
-  # Drive through runwise_lm_impl which dispatches to voxelwise when configured
-  res <- fmrireg:::runwise_lm_impl(
+  # Drive through runwise_lm which dispatches to voxelwise when configured
+  res <- fmrireg:::runwise_lm(
     dset, model, contrast_objects = list(), cfg = cfg,
     use_fast_path = TRUE, progress = FALSE, verbose = TRUE
   )

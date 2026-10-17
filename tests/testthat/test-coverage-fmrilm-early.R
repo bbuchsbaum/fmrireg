@@ -4,8 +4,6 @@ test_that(".fmri_lm_extract_engine_context peels engine args and rejects extras"
   ctx <- fmrireg:::.fmri_lm_extract_engine_context(list(
     engine = "rrr_gls",
     lowrank = list(m = 10),
-    ar_options = list(struct = "ar1"),
-    robust_options = list(type = "huber"),
     cfg = fmri_lm_control(),
     engine_args = list(rank = 2L),
     rrr_gls = list(se_mode = "bootstrap")

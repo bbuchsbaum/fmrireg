@@ -2,11 +2,9 @@
 #'
 #' Internal low-level solver used by the linear modelling code. It operates
 #' on a `glm_context` containing design matrix `X`, data matrix `Y` and the
-#' preprojection object `proj` from `.fast_preproject()`. If
-#' `glm_ctx$robust_weights` is `NULL` an ordinary (or prewhitened) least
-#' squares fit is performed. When `robust_weights` is supplied the matrices in
-#' the context are assumed to already have the weights applied and weighted
-#' least squares is performed.
+#' preprojection object `proj` from `.fast_preproject()`, and performs least
+#' squares on them as given: callers whiten (AR) or weight (robust, volume
+#' weights) `X` and `Y` beforehand.
 #'
 #' @param glm_ctx A `glm_context` object.
 #' @param return_fitted Logical; return fitted values.
@@ -92,7 +90,8 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
   if (!is.null(colnames(X)) && nrow(betas) == length(colnames(X))) {
     rownames(betas) <- colnames(X)
   }
-  if (length(aliased) > 0L) {
+  # Mark rank-deficient fits for downstream NA handling.
+  if (length(aliased) > 0L || (!is.null(proj$rank) && !proj$is_full_rank)) {
     attr(betas, "rank_deficient") <- TRUE
     attr(betas, "aliased") <- aliased
     attr(betas, "estimable") <- as.integer(proj$estimable %||% integer(0))
@@ -147,13 +146,6 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
     result$is_full_rank <- proj$is_full_rank
     result$aliased <- aliased
     result$estimable <- as.integer(proj$estimable %||% integer(0))
-    
-    # If rank deficient, mark coefficients as potentially unreliable
-    if (!proj$is_full_rank) {
-      attr(result$betas, "rank_deficient") <- TRUE
-      attr(result$betas, "aliased") <- aliased
-      attr(result$betas, "estimable") <- as.integer(proj$estimable %||% integer(0))
-    }
   }
   
   result

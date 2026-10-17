@@ -27,27 +27,28 @@ extract_censor_from_dataset <- function(dataset, run_num = NULL, n_time = NULL) 
     return(NULL)
   }
 
-  # Subset to run if needed
-
-  if (!is.null(run_num) && .is_fmri_frame(dataset)) {
-    blocklens <- .dset_run_lengths(dataset)
-    run_start <- if (run_num == 1) 1 else sum(blocklens[1:(run_num - 1)]) + 1
-    run_end <- sum(blocklens[1:run_num])
-    censor <- censor[run_start:run_end]
+  if (!is.null(run_num)) {
+    censor <- censor[.dset_run_rows(dataset)[[run_num]]]
   }
+  .censor_indices(censor)
+}
 
-  # Convert to indices: if binary (0/1), convert to indices where 1 = censored
+#' Censor specification as 1-based indices
+#'
+#' A logical or 0/1 mask becomes the indices of its censored (TRUE/1)
+#' entries; anything else is taken to be indices already.
+#' @return Integer indices, or NULL when nothing is censored.
+#' @keywords internal
+#' @noRd
+.censor_indices <- function(censor) {
   if (is.logical(censor)) {
     censor <- which(censor)
   } else if (is.numeric(censor) && all(censor %in% c(0, 1))) {
     censor <- which(censor == 1)
   }
-  # Otherwise assume censor is already integer indices
-
   if (length(censor) == 0) {
     return(NULL)
   }
-
   as.integer(censor)
 }
 
@@ -78,12 +79,7 @@ resolve_censor <- function(cfg, dataset = NULL, run_num = NULL, n_time = NULL) {
   }
 
   # Unset falls back to the dataset, which is what "auto" asks for explicitly.
-  if (is.null(censor_spec)) {
-    return(extract_censor_from_dataset(dataset, run_num, n_time))
-  }
-
-  # "auto" means extract from dataset
-  if (is.character(censor_spec) && identical(censor_spec, "auto")) {
+  if (is.null(censor_spec) || identical(censor_spec, "auto")) {
     return(extract_censor_from_dataset(dataset, run_num, n_time))
   }
 
@@ -92,43 +88,48 @@ resolve_censor <- function(cfg, dataset = NULL, run_num = NULL, n_time = NULL) {
 
   # Subset to run if needed and we have global censor vector
   if (!is.null(run_num) && !is.null(dataset) && .is_fmri_frame(dataset)) {
-    blocklens <- .dset_run_lengths(dataset)
-    total_time <- sum(blocklens)
+    run_rows <- .dset_run_rows(dataset)
+    rows <- run_rows[[run_num]]
+    total_time <- sum(lengths(run_rows))
+    is_mask <- is.logical(censor) ||
+      (is.numeric(censor) && all(censor %in% c(0, 1)))
 
-    # Check if censor is global (covers all runs)
-    if (is.logical(censor) && length(censor) == total_time) {
-      run_start <- if (run_num == 1) 1 else sum(blocklens[1:(run_num - 1)]) + 1
-      run_end <- sum(blocklens[1:run_num])
-      censor <- censor[run_start:run_end]
-    } else if (is.numeric(censor) && all(censor %in% c(0, 1)) && length(censor) == total_time) {
-      run_start <- if (run_num == 1) 1 else sum(blocklens[1:(run_num - 1)]) + 1
-      run_end <- sum(blocklens[1:run_num])
-      censor <- censor[run_start:run_end]
-    }
-    # If censor is indices, they may be global or local - assume global if max > run length
-    if (is.numeric(censor) && !all(censor %in% c(0, 1))) {
-      run_start <- if (run_num == 1) 1 else sum(blocklens[1:(run_num - 1)]) + 1
-      run_end <- sum(blocklens[1:run_num])
-      run_len <- run_end - run_start + 1
-      if (max(censor) > run_len) {
-        # Global indices - filter to this run and adjust
-        censor <- censor[censor >= run_start & censor <= run_end] - run_start + 1
-      }
+    if (is_mask && length(censor) == total_time) {
+      # Global mask covering all runs
+      censor <- censor[rows]
+    } else if (is.numeric(censor) && !is_mask && max(censor) > length(rows)) {
+      # Indices beyond the run length are global: keep this run's, made local.
+      run_start <- rows[1L]
+      censor <- censor[censor >= run_start & censor <= rows[length(rows)]] - run_start + 1
     }
   }
 
-  # Convert to indices
-  if (is.logical(censor)) {
-    censor <- which(censor)
-  } else if (is.numeric(censor) && all(censor %in% c(0, 1))) {
-    censor <- which(censor == 1)
-  }
+  .censor_indices(censor)
+}
 
-  if (length(censor) == 0) {
-    return(NULL)
+#' Split contrast objects into t- and F-contrast weight lists
+#'
+#' F-contrasts also inherit "contrast", so they are excluded from the simple
+#' (t) list; routing one through the t-contrast engine fails on its multi-row
+#' weight matrix. Each weight carries its contrast's `colind` attribute.
+#' @return List with `simple` and `f`, each a named list of weights.
+#' @keywords internal
+#' @noRd
+.contrast_weight_lists <- function(contrast_objects) {
+  weights_of <- function(cons) {
+    w <- lapply(cons, function(x) {
+      w <- x$weights
+      attr(w, "colind") <- attr(x, "colind")
+      w
+    })
+    names(w) <- sapply(cons, `[[`, "name")
+    w
   }
-
-  as.integer(censor)
+  list(
+    simple = weights_of(Filter(function(x) inherits(x, "contrast") &&
+                                 !inherits(x, "Fcontrast"), contrast_objects)),
+    f = weights_of(Filter(function(x) inherits(x, "Fcontrast"), contrast_objects))
+  )
 }
 
 #' Preprocess Run Data
@@ -212,11 +213,7 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
       N <- cfg$soft_subspace$nuisance_matrix
       # Subset to run if needed
       if (!is.null(run_num) && !is.null(dataset)) {
-        sframe <- .dset_sampling_frame(dataset)
-        blocklens <- fmrihrf::blocklens(sframe)
-        run_start <- if (run_num == 1) 1 else sum(blocklens[1:(run_num - 1)]) + 1
-        run_end <- sum(blocklens[1:run_num])
-        N <- N[run_start:run_end, , drop = FALSE]
+        N <- N[.dset_run_rows(dataset)[[run_num]], , drop = FALSE]
       }
     } else if (!is.null(cfg$soft_subspace$nuisance_mask) && !is.null(dataset)) {
       N <- extract_nuisance_timeseries(dataset, cfg$soft_subspace$nuisance_mask, run = run_num)
@@ -235,6 +232,18 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
   list(X = X, Y = Y, preprocess_info = preprocess_info)
 }
 
+#' Design matrix of one run, or of the whole model when `run` is NULL
+#'
+#' Evaluates the model formula on `term_matrices(model, run)`; pass `tmats`
+#' when the caller already holds them.
+#' @keywords internal
+#' @noRd
+.run_design <- function(model, run = NULL, tmats = term_matrices(model, run)) {
+  data_env <- list2env(tmats)
+  data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
+  model.matrix(get_formula(model), data_env)
+}
+
 #' Run-level design and (preprocessed) data
 #'
 #' Reads the run's data once, builds the run design from
@@ -245,11 +254,8 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
 #' @noRd
 .prepare_run_inputs <- function(run_chunk, model, cfg, dataset = NULL) {
   Y_run <- as.matrix(.chunk_data(run_chunk))
-  tmats_run <- term_matrices(model, run_chunk$chunk_num)
-  data_env_run <- list2env(tmats_run)
-  n_time_run <- nrow(tmats_run[[1]])
-  data_env_run[[".y"]] <- rep(0, n_time_run)
-  X_run <- model.matrix(get_formula(model), data_env_run)
+  X_run <- .run_design(model, run_chunk$chunk_num)
+  n_time_run <- nrow(X_run)
 
   preproc <- preprocess_run_data(X_run, Y_run, cfg, dataset, run_chunk$chunk_num)
   vw <- preproc$preprocess_info$volume_weights
@@ -292,11 +298,7 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
   censor_run <- resolve_censor(cfg, dataset, run_chunk$chunk_num, n_time_run)
 
   # AR modeling if needed
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
+  ar_order <- .target_ar_order(cfg$ar) %||% 0L
 
   if (.temporal_noise_enabled(cfg$ar)) {
     if (as.integer(cfg$ar$q %||% 0L) > 0L) {
@@ -542,11 +544,7 @@ process_run_ar_robust <- function(run_chunk, model, cfg, phi_fixed = NULL, sigma
   censor_run <- resolve_censor(cfg, dataset, run_chunk$chunk_num, n_time_run)
 
   # AR order
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
+  ar_order <- .target_ar_order(cfg$ar) %||% 0L
 
   # Step 1: Initial OLS for AR parameter estimation
   glm_ctx_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
@@ -610,16 +608,13 @@ process_run_ar_robust <- function(run_chunk, model, cfg, phi_fixed = NULL, sigma
 #' @param cfg fmri_lm_control object
 #' @param phi_fixed Optional fixed AR parameters
 #' @param sigma_fixed Optional fixed robust scale
+#' @param modmat Optional global design matrix (`.run_design(model)`)
 #' @return List with pre-computed matrices and metadata
 #' @keywords internal
 #' @noRd
-prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, sigma_fixed = NULL) {
-  # Get global design matrix
-  form <- get_formula(model)
-  tmats <- term_matrices(model)
-  data_env <- list2env(tmats)
-  data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
-  modmat_orig <- model.matrix(as.formula(form), data_env)
+prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, sigma_fixed = NULL,
+                                       modmat = NULL) {
+  modmat_orig <- modmat %||% .run_design(model)
 
   # Run structure. Chunks are lazy: each run's data is read once, inside the
   # per-run fit below, and never retained.
@@ -627,11 +622,7 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
   run_row_inds <- lapply(run_chunks, `[[`, "row_ind")
 
   # AR order
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
+  ar_order <- .target_ar_order(cfg$ar) %||% 0L
 
   ar_modeling <- cfg$ar$struct != "iid"
   robust_modeling <- .fmri_lm_robust_enabled(cfg$robust)
@@ -672,26 +663,7 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
       info$weights <- res$robust_weights
       info$sigma <- res$sigma_robust
     } else if (ar_modeling) {
-      info$phi_hat <- if (!is.null(phi_fixed)) {
-        phi_fixed
-      } else {
-        tmats_run <- term_matrices(model, rch$chunk_num)
-        data_env_run <- list2env(tmats_run)
-        data_env_run[[".y"]] <- rep(0, n_time_run)
-        X_run_orig <- model.matrix(form, data_env_run)
-        Y_run_full <- as.matrix(.chunk_data(rch))
-        ols <- solve_glm_core(
-          glm_context(X = X_run_orig, Y = Y_run_full,
-                      proj = .fast_preproject(X_run_orig)),
-          return_fitted = TRUE
-        )
-        # Keep the OLS-design-corrected estimate fixed. A GLS residual update
-        # has a different residual-forming operator and cannot reuse design = X.
-        .estimate_shared_ar_parameters(
-          Y_run_full - ols$fitted, ar_order, cfg$ar, censor = censor_run,
-          design = X_run_orig
-        )
-      }
+      info$phi_hat <- phi_fixed %||% .run_ar_phi(model, rch, cfg, censor_run)
     } else if (robust_modeling) {
       res <- process_run_robust(rch, model, cfg, sigma_fixed, dataset)
       info$weights <- res$robust_weights
@@ -732,6 +704,27 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
     run_row_inds = run_row_inds,
     ar_modeling = ar_modeling,
     ar_order = ar_order
+  )
+}
+
+#' Shared AR coefficients of one run, from all of its voxels
+#'
+#' Fits the run's own design by OLS and estimates the design-corrected shared
+#' AR coefficients from the residuals. Keep the estimate fixed for the GLS
+#' solve: a GLS residual update has a different residual-forming operator and
+#' cannot reuse the design correction.
+#' @keywords internal
+#' @noRd
+.run_ar_phi <- function(model, run_chunk, cfg, censor = NULL) {
+  X_run <- .run_design(model, run_chunk$chunk_num)
+  Y_run <- as.matrix(.chunk_data(run_chunk))
+  ols <- solve_glm_core(
+    glm_context(X = X_run, Y = Y_run, proj = .fast_preproject(X_run)),
+    return_fitted = TRUE
+  )
+  .estimate_shared_ar_parameters(
+    Y_run - ols$fitted, .target_ar_order(cfg$ar) %||% 0L, cfg$ar,
+    censor = censor, design = X_run
   )
 }
 

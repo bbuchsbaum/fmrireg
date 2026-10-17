@@ -49,8 +49,7 @@ test_that("solve_glm_core handles weighted least squares", {
   ctx <- glm_context(
     X = Xw,
     Y = matrix(Yw, ncol = 1),
-    proj = proj,
-    robust_weights = weights
+    proj = proj
   )
   
   result <- solve_glm_core(ctx)
@@ -290,8 +289,7 @@ test_that("solver preserves context structure", {
     X = X,
     Y = matrix(Y, ncol = 1),
     proj = proj,
-    phi_hat = 0.5,
-    sigma_robust_scale = 1.2
+    phi_hat = 0.5
   )
   
   result <- solve_glm_core(ctx)
@@ -303,5 +301,4 @@ test_that("solver preserves context structure", {
   
   # Original context should be unchanged
   expect_equal(ctx$phi_hat, 0.5)
-  expect_equal(ctx$sigma_robust_scale, 1.2)
 })

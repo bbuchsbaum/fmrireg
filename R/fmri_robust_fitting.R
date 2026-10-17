@@ -164,7 +164,7 @@ robust_iterative_fitter <- function(initial_glm_ctx,
 
     proj_w <- .fast_preproject(Xw)
     fit_w <- solve_glm_core(
-      glm_context(X = Xw, Y = Yw, proj = proj_w, robust_weights = w),
+      glm_context(X = Xw, Y = Yw, proj = proj_w),
       return_fitted = FALSE
     )
 

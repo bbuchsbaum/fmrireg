@@ -1,4 +1,4 @@
-test_that("runwise_lm wrapper matches modular implementation", {
+test_that("runwise_lm matches the public runwise fit", {
   dset <- .demo_matrix_dataset()
   model <- create_fmri_model(
     formula = onsets ~ hrf(condition),
@@ -18,16 +18,7 @@ test_that("runwise_lm wrapper matches modular implementation", {
       progress = FALSE
     )
   )
-  res_impl <- suppressWarnings(
-    fmrireg:::runwise_lm_impl(
-      dset = dset,
-      model = model,
-      contrast_objects = contrast_objects,
-      cfg = cfg,
-      use_fast_path = TRUE,
-      progress = FALSE
-    )
-  )
+  res_impl <- suppressWarnings(fmri_lm(model, dataset = dset, control = cfg))$result
 
   expect_equal(
     res_wrapper$betas$data[[1]]$estimate[[1]],
