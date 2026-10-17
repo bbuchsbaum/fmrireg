@@ -85,3 +85,19 @@ test_that("print.fmri_model shows event terms, event count, baseline basis and t
   expect_identical(ncol(design_matrix(fm)), 9L)
   expect_true(any(grepl("Total design columns: 9", out, fixed = TRUE)))
 })
+
+test_that("with_package checks every package and names all missing ones (B6)", {
+  expect_null(fmrireg:::with_package(c("stats", "utils")))
+  err <- tryCatch(
+    fmrireg:::with_package(c("stats", "notapkg.zzz1", "notapkg.zzz2")),
+    error = function(e) conditionMessage(e)
+  )
+  expect_identical(
+    err,
+    "Please install the notapkg.zzz1, notapkg.zzz2 packages to use this functionality"
+  )
+  # single missing package keeps the original wording
+  expect_error(fmrireg:::with_package("notapkg.zzz1"),
+               "Please install the notapkg.zzz1 package to use this functionality",
+               fixed = TRUE)
+})

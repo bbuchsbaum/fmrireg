@@ -2,9 +2,13 @@
 #' @noRd
 #' @keywords internal
 with_package <- function(name) {
-  if (!requireNamespace(name, quietly=TRUE)) {
-    stop(paste("Please install the", name, "package to use this functionality"))
+  missing <- name[!vapply(name, requireNamespace, logical(1), quietly = TRUE)]
+  if (length(missing) > 0L) {
+    stop(paste("Please install the", paste(missing, collapse = ", "),
+               if (length(missing) > 1L) "packages" else "package",
+               "to use this functionality"), call. = FALSE)
   }
+  invisible(NULL)
 }
   
 
