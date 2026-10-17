@@ -21,11 +21,12 @@ NULL
 #' @param parallel_voxels Logical. If TRUE, process voxels in parallel using future.apply.
 #' @return A list containing the combined results from runwise linear model analysis.
 #' @keywords internal
-runwise_lm_impl <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
-                            use_fast_path = TRUE, progress = FALSE,
-                            phi_fixed = NULL,
-                            sigma_fixed = NULL,
-                            parallel_voxels = FALSE) {
+#' @autoglobal
+runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
+                       use_fast_path = TRUE, progress = FALSE,
+                       phi_fixed = NULL,
+                       sigma_fixed = NULL,
+                       parallel_voxels = FALSE) {
   
   # Validate config
   assert_that(inherits(cfg, "fmri_lm_control"), msg = "'cfg' must be an 'fmri_lm_control' object")
@@ -40,7 +41,6 @@ runwise_lm_impl <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
   }
   
   # Extract model components
-  form <- get_formula(model)
   tmats <- term_matrices(model)
   event_indices <- attr(tmats, "event_term_indices")
   baseline_indices <- attr(tmats, "baseline_term_indices")
@@ -257,19 +257,13 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     X_run <- .run_design(model, tmats = tmats)
     n_time_run <- nrow(X_run)
 
-    # Apply preprocessing (volume weights and/or soft subspace projection)
+    # Apply preprocessing (soft subspace projection; volume weights stop
+    # above). Only the projected response is used: the design keeps its
+    # original columns, a known limitation of this reference path.
     preproc <- preprocess_run_data(X_run, Y_run, cfg, dataset, ym$chunk_num)
-
-    # Update design matrix terms and data in data_env
-    # Note: preprocessing may have transformed X, so we need to update tmats
-    if (cfg$volume_weights$enabled || cfg$soft_subspace$enabled) {
-      # For slow path with preprocessing, we need to use pre-transformed matrices
-      # This is a limitation - slow path doesn't fully support preprocessing
-      # Issue warning and use original data
-      if (cfg$volume_weights$enabled || cfg$soft_subspace$enabled) {
-        warning("Preprocessing (volume_weights/soft_subspace) with slow path is experimental.",
-                " Consider using use_fast_path=TRUE for full support.", call. = FALSE)
-      }
+    if (cfg$soft_subspace$enabled) {
+      warning("Preprocessing (volume_weights/soft_subspace) with slow path is experimental.",
+              " Consider using use_fast_path=TRUE for full support.", call. = FALSE)
     }
     data_env$.y <- preproc$Y
 
@@ -281,7 +275,7 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     ar_order <- .target_ar_order(cfg$ar) %||% 0L
     phi_hat_run <- NULL
     modmat <- NULL
-    if (cfg$ar$struct != "iid" && !.fmri_lm_robust_enabled(cfg$robust)) {
+    if (cfg$ar$struct != "iid") {
       Y_pre <- preproc$Y
       censor_run <- resolve_censor(cfg, dataset, ym$chunk_num, n_time_run)
       proj_run <- .fast_preproject(X_run)

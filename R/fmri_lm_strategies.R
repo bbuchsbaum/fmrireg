@@ -27,27 +27,28 @@ extract_censor_from_dataset <- function(dataset, run_num = NULL, n_time = NULL) 
     return(NULL)
   }
 
-  # Subset to run if needed
-
-  if (!is.null(run_num) && .is_fmri_frame(dataset)) {
-    blocklens <- .dset_run_lengths(dataset)
-    run_start <- if (run_num == 1) 1 else sum(blocklens[1:(run_num - 1)]) + 1
-    run_end <- sum(blocklens[1:run_num])
-    censor <- censor[run_start:run_end]
+  if (!is.null(run_num)) {
+    censor <- censor[.dset_run_rows(dataset)[[run_num]]]
   }
+  .censor_indices(censor)
+}
 
-  # Convert to indices: if binary (0/1), convert to indices where 1 = censored
+#' Censor specification as 1-based indices
+#'
+#' A logical or 0/1 mask becomes the indices of its censored (TRUE/1)
+#' entries; anything else is taken to be indices already.
+#' @return Integer indices, or NULL when nothing is censored.
+#' @keywords internal
+#' @noRd
+.censor_indices <- function(censor) {
   if (is.logical(censor)) {
     censor <- which(censor)
   } else if (is.numeric(censor) && all(censor %in% c(0, 1))) {
     censor <- which(censor == 1)
   }
-  # Otherwise assume censor is already integer indices
-
   if (length(censor) == 0) {
     return(NULL)
   }
-
   as.integer(censor)
 }
 
@@ -78,12 +79,7 @@ resolve_censor <- function(cfg, dataset = NULL, run_num = NULL, n_time = NULL) {
   }
 
   # Unset falls back to the dataset, which is what "auto" asks for explicitly.
-  if (is.null(censor_spec)) {
-    return(extract_censor_from_dataset(dataset, run_num, n_time))
-  }
-
-  # "auto" means extract from dataset
-  if (is.character(censor_spec) && identical(censor_spec, "auto")) {
+  if (is.null(censor_spec) || identical(censor_spec, "auto")) {
     return(extract_censor_from_dataset(dataset, run_num, n_time))
   }
 
@@ -92,43 +88,23 @@ resolve_censor <- function(cfg, dataset = NULL, run_num = NULL, n_time = NULL) {
 
   # Subset to run if needed and we have global censor vector
   if (!is.null(run_num) && !is.null(dataset) && .is_fmri_frame(dataset)) {
-    blocklens <- .dset_run_lengths(dataset)
-    total_time <- sum(blocklens)
+    run_rows <- .dset_run_rows(dataset)
+    rows <- run_rows[[run_num]]
+    total_time <- sum(lengths(run_rows))
+    is_mask <- is.logical(censor) ||
+      (is.numeric(censor) && all(censor %in% c(0, 1)))
 
-    # Check if censor is global (covers all runs)
-    if (is.logical(censor) && length(censor) == total_time) {
-      run_start <- if (run_num == 1) 1 else sum(blocklens[1:(run_num - 1)]) + 1
-      run_end <- sum(blocklens[1:run_num])
-      censor <- censor[run_start:run_end]
-    } else if (is.numeric(censor) && all(censor %in% c(0, 1)) && length(censor) == total_time) {
-      run_start <- if (run_num == 1) 1 else sum(blocklens[1:(run_num - 1)]) + 1
-      run_end <- sum(blocklens[1:run_num])
-      censor <- censor[run_start:run_end]
-    }
-    # If censor is indices, they may be global or local - assume global if max > run length
-    if (is.numeric(censor) && !all(censor %in% c(0, 1))) {
-      run_start <- if (run_num == 1) 1 else sum(blocklens[1:(run_num - 1)]) + 1
-      run_end <- sum(blocklens[1:run_num])
-      run_len <- run_end - run_start + 1
-      if (max(censor) > run_len) {
-        # Global indices - filter to this run and adjust
-        censor <- censor[censor >= run_start & censor <= run_end] - run_start + 1
-      }
+    if (is_mask && length(censor) == total_time) {
+      # Global mask covering all runs
+      censor <- censor[rows]
+    } else if (is.numeric(censor) && !is_mask && max(censor) > length(rows)) {
+      # Indices beyond the run length are global: keep this run's, made local.
+      run_start <- rows[1L]
+      censor <- censor[censor >= run_start & censor <= rows[length(rows)]] - run_start + 1
     }
   }
 
-  # Convert to indices
-  if (is.logical(censor)) {
-    censor <- which(censor)
-  } else if (is.numeric(censor) && all(censor %in% c(0, 1))) {
-    censor <- which(censor == 1)
-  }
-
-  if (length(censor) == 0) {
-    return(NULL)
-  }
-
-  as.integer(censor)
+  .censor_indices(censor)
 }
 
 #' Split contrast objects into t- and F-contrast weight lists
@@ -237,11 +213,7 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
       N <- cfg$soft_subspace$nuisance_matrix
       # Subset to run if needed
       if (!is.null(run_num) && !is.null(dataset)) {
-        sframe <- .dset_sampling_frame(dataset)
-        blocklens <- fmrihrf::blocklens(sframe)
-        run_start <- if (run_num == 1) 1 else sum(blocklens[1:(run_num - 1)]) + 1
-        run_end <- sum(blocklens[1:run_num])
-        N <- N[run_start:run_end, , drop = FALSE]
+        N <- N[.dset_run_rows(dataset)[[run_num]], , drop = FALSE]
       }
     } else if (!is.null(cfg$soft_subspace$nuisance_mask) && !is.null(dataset)) {
       N <- extract_nuisance_timeseries(dataset, cfg$soft_subspace$nuisance_mask, run = run_num)

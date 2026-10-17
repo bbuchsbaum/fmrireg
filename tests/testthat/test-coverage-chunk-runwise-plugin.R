@@ -51,19 +51,19 @@ test_that("chunkwise_lm.fmri_frame fast and slow paths with progress", {
   )
 })
 
-test_that("runwise_lm_impl fast/slow and progress bar branches", {
+test_that("runwise_lm fast/slow and progress bar branches", {
   fx <- make_two_run_fx(n_per = 36L, V = 3L, seed = 18L)
   cfg <- fmri_lm_control()
   cons <- list()
 
-  fast <- fmrireg:::runwise_lm_impl(
+  fast <- fmrireg:::runwise_lm(
     fx$dataset, fx$model, cons, cfg = cfg,
     use_fast_path = TRUE, progress = FALSE, verbose = TRUE
   )
   expect_true(is.list(fast))
   expect_true(!is.null(fast$betas) || !is.null(fast$event_indices))
 
-  slow <- fmrireg:::runwise_lm_impl(
+  slow <- fmrireg:::runwise_lm(
     fx$dataset, fx$model, cons, cfg = cfg,
     use_fast_path = FALSE, progress = FALSE, verbose = FALSE
   )
@@ -72,7 +72,7 @@ test_that("runwise_lm_impl fast/slow and progress bar branches", {
   # AR runwise (global) if fmriAR available
   skip_if_not_installed("fmriAR")
   cfg_ar <- fmri_lm_control(ar_options = list(struct = "ar1"))
-  ar_fit <- fmrireg:::runwise_lm_impl(
+  ar_fit <- fmrireg:::runwise_lm(
     fx$dataset, fx$model, cons, cfg = cfg_ar,
     use_fast_path = TRUE, progress = FALSE
   )

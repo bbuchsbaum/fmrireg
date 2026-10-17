@@ -1230,20 +1230,11 @@ pull_stat <- function(x, type, element) {
     
     # Ensure tibble output for consistency with original behavior
     res <- suppressMessages(tibble::as_tibble(ret, .name_repair = "check_unique"))
-  } else if (type == "contrasts") {
-    ret <- x$result$contrasts %>% dplyr::filter(type == "contrast")
+  } else if (type %in% c("contrasts", "F")) {
+    con_type <- if (type == "F") "Fcontrast" else "contrast"
+    ret <- x$result$contrasts %>% dplyr::filter(type == con_type)
     if (nrow(ret) == 0) {
-      stop("No simple contrasts for this model.")
-    }
-    cnames <- ret$name
-    # Name inputs before binding to avoid temporary name-repair messages.
-    out <- lapply(ret$data, function(x) x[[element]]) %>% stats::setNames(cnames) %>% dplyr::bind_cols()
-    names(out) <- cnames
-    out
-  } else if (type == "F") {
-    ret <- x$result$contrasts %>% dplyr::filter(type == "Fcontrast")
-    if (nrow(ret) == 0) {
-      stop("No F contrasts for this model.")
+      stop(if (type == "F") "No F contrasts for this model." else "No simple contrasts for this model.")
     }
     cnames <- ret$name
     # Name inputs before binding to avoid temporary name-repair messages.
@@ -1448,45 +1439,6 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 }
 
 
-
-
-#' Perform Runwise Linear Modeling on fMRI Dataset
-#'
-#' This function performs a runwise linear model analysis on an fMRI dataset by
-#' running the linear model for each data run and combining the results.
-#'
-#' @param dset An \code{fmri_frame} object.
-#' @param model The \code{fmri_model} used for the analysis.
-#' @param contrast_objects The list of full contrast objects.
-#' @param cfg An \code{fmri_lm_control} object containing all fitting options.
-#' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
-#' @param use_fast_path Logical. Whether to use the fast matrix engine (default is \code{TRUE}).
-#' @param progress Logical. Display a progress bar for run processing. Default is \code{FALSE}.
-#' @param phi_fixed Optional fixed AR parameters.
-#' @param sigma_fixed Optional fixed robust scale estimate.
-#' @param parallel_voxels Logical. If TRUE, process voxels in parallel using
-#'   `future.apply`. Default is \code{FALSE}.
-#' @return A list containing the combined results from runwise linear model analysis.
-#' @keywords internal
-#' @autoglobal
-runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
-                       use_fast_path = TRUE, progress = FALSE,
-                       phi_fixed = NULL,
-                       sigma_fixed = NULL,
-                       parallel_voxels = FALSE) {
-  runwise_lm_impl(
-    dset = dset,
-    model = model,
-    contrast_objects = contrast_objects,
-    cfg = cfg,
-    verbose = verbose,
-    use_fast_path = use_fast_path,
-    progress = progress,
-    phi_fixed = phi_fixed,
-    sigma_fixed = sigma_fixed,
-    parallel_voxels = parallel_voxels
-  )
-}
 
 
 #' Print an fmri_lm_result object
