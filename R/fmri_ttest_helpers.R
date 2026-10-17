@@ -591,7 +591,7 @@ fmri_meta_fit_extended <- function(Y, V, X,
                                   voxelwise = NULL,
                                   center_voxelwise = TRUE,
                                   voxel_name = "voxel_cov",
-                                  n_threads = getOption("fmrireg.num_threads", 0)) {
+                                  n_threads = .fmrireg_num_threads()) {
   
   method <- .meta_resolve_method(match.arg(method))
   robust <- match.arg(robust)

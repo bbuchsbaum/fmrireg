@@ -35,7 +35,7 @@
 .meta_fit_core <- function(Y, V, X, method = "pm", robust = "none",
                            weights = "ivw", weights_custom = NULL,
                            huber_c = 1.345, robust_iter = 2,
-                           n_threads = getOption("fmrireg.num_threads", 0)) {
+                           n_threads = .fmrireg_num_threads()) {
   Y <- as.matrix(Y)
   X <- as.matrix(X)
   storage.mode(X) <- "double"
@@ -103,7 +103,9 @@
 #' @param huber_c Numeric scalar; tuning constant for Huber M-estimator (default: 1.345).
 #'   Smaller values provide more robust estimates but may reduce efficiency.
 #' @param robust_iter Integer scalar; number of IRLS iterations for robust estimation (default: 2)
-#' @param n_threads Integer scalar; number of OpenMP threads (0 = use all available)
+#' @param n_threads Integer scalar; number of OpenMP threads (0 = OpenMP default).
+#'   Defaults to \code{options(fmrireg.num_threads)}, else the environment
+#'   variable \code{FMRIREG_NUM_THREADS}, else 0.
 #'
 #' @return List with components:
 #'   \item{beta}{Numeric matrix of coefficients (predictors x features)}
@@ -122,7 +124,7 @@ fmri_meta_fit <- function(Y, V, X,
                          robust = c("none", "huber"),
                          huber_c = 1.345, 
                          robust_iter = 2,
-                         n_threads = getOption("fmrireg.num_threads", 0)) {
+                         n_threads = .fmrireg_num_threads()) {
   
   method <- .meta_resolve_method(match.arg(method))
   robust <- match.arg(robust)
@@ -180,7 +182,7 @@ fmri_meta_fit_contrasts <- function(Y, V, X, Cmat,
                                    robust = c("none", "huber"),
                                    huber_c = 1.345,
                                    robust_iter = 2,
-                                   n_threads = getOption("fmrireg.num_threads", 0)) {
+                                   n_threads = .fmrireg_num_threads()) {
   method <- .meta_resolve_method(match.arg(method))
   robust <- match.arg(robust)
   if (!is.matrix(Y)) Y <- as.matrix(Y)
@@ -205,7 +207,7 @@ fmri_meta_fit_cov <- function(Y, V, X,
                              robust = c("none", "huber"),
                              huber_c = 1.345,
                              robust_iter = 2,
-                             n_threads = getOption("fmrireg.num_threads", 0)) {
+                             n_threads = .fmrireg_num_threads()) {
   method <- .meta_resolve_method(match.arg(method))
   robust <- match.arg(robust)
   if (!is.matrix(Y)) Y <- as.matrix(Y)

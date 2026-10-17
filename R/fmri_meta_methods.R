@@ -219,34 +219,51 @@ contrast.fmri_meta <- function(x, contrast, ...) {
 
 #' Parse Contrast Formula
 #'
+#' Accepts a one-sided formula whose right-hand side is a signed sum of
+#' coefficient names, each optionally multiplied by a number, e.g.
+#' \code{~ groupold - groupyoung} or \code{~ 0.5 * a + 0.5 * b - c}.
+#' Unknown coefficient names and any other expression are errors.
+#'
 #' @param formula Contrast formula
 #' @param object fmri_meta object
 #' @return Numeric vector of contrast weights
 #' @keywords internal
 parse_contrast_formula <- function(formula, object) {
-  # Get coefficient names
   coef_names <- colnames(object$coefficients)
-  
-  # Simple implementation - would expand for complex formulas
-  formula_str <- deparse(formula)
-  
-  # Initialize weights
-  weights <- rep(0, length(coef_names))
-  names(weights) <- coef_names
-  
-  # Parse simple contrasts like ~ groupold - groupyoung
-  # This is a placeholder - full implementation would use proper formula parsing
-  if (grepl("-", formula_str)) {
-    parts <- strsplit(formula_str, "-")[[1]]
-    parts <- trimws(gsub("~", "", parts))
-    
-    if (length(parts) == 2) {
-      if (parts[1] %in% coef_names) weights[parts[1]] <- 1
-      if (parts[2] %in% coef_names) weights[parts[2]] <- -1
-    }
+  rhs <- formula[[length(formula)]]
+  unparseable <- function() {
+    stop("Cannot parse contrast formula ", deparse(formula),
+         ": use a signed sum of coefficient names, optionally multiplied by ",
+         "numbers (e.g. ~ a - b or ~ 0.5 * a + 0.5 * b). Available coefficients: ",
+         paste(coef_names, collapse = ", "), call. = FALSE)
   }
-  
-  return(weights)
+  terms <- list()
+  add <- function(name, w) terms[[length(terms) + 1L]] <<- list(name = name, w = w)
+  walk <- function(e, sign) {
+    if (is.call(e) && identical(e[[1L]], as.name("(")) && length(e) == 2L) {
+      return(walk(e[[2L]], sign))
+    }
+    if (is.call(e) && (identical(e[[1L]], as.name("+")) || identical(e[[1L]], as.name("-")))) {
+      op <- if (identical(e[[1L]], as.name("-"))) -1 else 1
+      if (length(e) == 2L) return(walk(e[[2L]], sign * op))
+      walk(e[[2L]], sign)
+      return(walk(e[[3L]], sign * op))
+    }
+    if (is.call(e) && identical(e[[1L]], as.name("*")) && length(e) == 3L) {
+      if (is.numeric(e[[2L]]) && length(e[[2L]]) == 1L) return(walk(e[[3L]], sign * e[[2L]]))
+      if (is.numeric(e[[3L]]) && length(e[[3L]]) == 1L) return(walk(e[[2L]], sign * e[[3L]]))
+      unparseable()
+    }
+    # A coefficient name: a symbol, or an interaction label such as a:b
+    if (is.name(e) || (is.call(e) && identical(e[[1L]], as.name(":")))) {
+      return(add(if (is.name(e)) as.character(e) else paste(deparse(e), collapse = ""), sign))
+    }
+    unparseable()
+  }
+  walk(rhs, 1)
+  contrast <- vapply(terms, `[[`, numeric(1), "w")
+  names(contrast) <- vapply(terms, `[[`, character(1), "name")
+  .meta_named_contrast_weights(contrast, coef_names)
 }
 
 #' Build Contrast from Named Vector
@@ -256,22 +273,26 @@ parse_contrast_formula <- function(formula, object) {
 #' @return Numeric vector of contrast weights
 #' @keywords internal
 build_contrast_from_names <- function(contrast, object) {
-  coef_names <- colnames(object$coefficients)
-  weights <- rep(0, length(coef_names))
-  names(weights) <- coef_names
+  .meta_named_contrast_weights(contrast, colnames(object$coefficients))
+}
 
+# Named contrast -> full weight vector over coef_names; repeated names add up.
+# Unknown names are an error (never a silently dropped or zero weight).
+.meta_named_contrast_weights <- function(contrast, coef_names) {
   unknown <- setdiff(names(contrast), coef_names)
-  if (length(unknown)) {
+  if (length(unknown) || anyNA(names(contrast)) || any(!nzchar(names(contrast)))) {
     stop(
       "Coefficient(s) not found in model: ", paste(unknown, collapse = ", "),
       ". Available coefficients: ", paste(coef_names, collapse = ", "),
       call. = FALSE
     )
   }
-
-  weights[names(contrast)] <- contrast
-  
-  return(weights)
+  weights <- stats::setNames(rep(0, length(coef_names)), coef_names)
+  for (k in seq_along(contrast)) {
+    nm <- names(contrast)[k]
+    weights[[nm]] <- weights[[nm]] + as.numeric(contrast[[k]])
+  }
+  weights
 }
 
 #' Print Meta-Analysis Results

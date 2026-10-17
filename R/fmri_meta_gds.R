@@ -9,11 +9,8 @@
                           contrasts = NULL,
                           return_cov = NULL,
                           chunk_size = 10000,
-                          n_threads = getOption("fmrireg.num_threads", 0),
+                          n_threads = .fmrireg_num_threads(),
                           verbose = TRUE) {
-
-  # Ensure our fmrigds registrations are available at first use
-  try(.ensure_fmrigds_registered(), silent = TRUE)
 
   method  <- .meta_resolve_method(match.arg(method))
   robust  <- match.arg(robust)
@@ -69,7 +66,7 @@
   fit_direct <- function(Y, V, X) {
     .meta_fit_core(Y = Y, V = V, X = X, method = method, robust = robust,
                    weights = weights, weights_custom = weights_custom,
-                   n_threads = getOption("fmrireg.num_threads", 0))
+                   n_threads = .fmrireg_num_threads())
   }
   cov_direct <- NULL
 

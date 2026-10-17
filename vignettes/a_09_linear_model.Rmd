@@ -71,7 +71,7 @@ Statistical analysis of fMRI data typically involves fitting a linear model to e
 4. Computing contrasts between conditions
 5. Testing statistical hypotheses about brain activity
 
-Thread usage in internal routines can be adjusted globally. Set `options(fmrireg.num_threads = <n>)` or the environment variable `FMRIREG_NUM_THREADS` before loading the package to control how many threads RcppParallel uses.
+Thread usage in the compiled (OpenMP) group-analysis and sketching kernels can be adjusted globally with `options(fmrireg.num_threads = <n>)` or the environment variable `FMRIREG_NUM_THREADS`; the option takes precedence, both are read at call time, and 0 (the default) leaves the choice to OpenMP. Functions with an `n_threads` argument (e.g. `fmri_meta()`) use this value as their default.
 
 This vignette demonstrates how to conduct a complete linear model analysis using the `fmrireg` package, from data simulation to statistical inference.
 
