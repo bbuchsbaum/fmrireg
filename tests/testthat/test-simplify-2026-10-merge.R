@@ -29,3 +29,16 @@ test_that("plotly, bslib and furrr are not hard dependencies", {
     expect_false(grepl(paste0("\\b", pkg, "\\b"), imports), info = pkg)
   }
 })
+
+test_that("spatial_fdr Storey pi0 counts only tests with a finite p-value", {
+  # group 1: 10 finite tests, 4 above tau, plus 10 missing; group 2: complete
+  p <- c(c(0.9, 0.8, 0.7, 0.6, rep(0.01, 6)), rep(NA, 10),
+         c(0.9, 0.95, 0.7, 0.6, 0.55, rep(0.02, 5)))
+  g <- rep(c(1, 2), c(20, 10))
+  res <- spatial_fdr(p = p, group = g, tau = 0.5, lambda = 0)
+  expect_equal(res$pi0_raw, c(4 / (0.5 * 10), 5 / (0.5 * 10)))
+  expect_equal(res$m_g, c(10L, 10L))
+  # the missing tests change nothing for the others
+  res_drop <- spatial_fdr(p = p[!is.na(p)], group = g[!is.na(p)], tau = 0.5, lambda = 0)
+  expect_equal(res$q[!is.na(p)], res_drop$q)
+})

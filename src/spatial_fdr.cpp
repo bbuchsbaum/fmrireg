@@ -40,8 +40,11 @@ List group_pi0_counts_cpp(NumericVector p, IntegerVector group, double tau, int 
       stop("group ids must lie in 1..G");
     }
     
+    // Only tests with a finite p-value count: missing tests are also left out
+    // of the weighted BH step, and counting them here would lower pi0.
+    if (!R_finite(p[i])) continue;
     ++m_g[idx];
-    if (R_finite(p[i]) && p[i] > tau) {
+    if (p[i] > tau) {
       ++tail_g[idx];
     }
   }

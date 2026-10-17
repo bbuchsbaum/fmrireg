@@ -30,7 +30,7 @@ wbh_reference <- function(p, w, alpha) {
 pi0_reference <- function(p, group, tau) {
   f <- if (is.factor(group)) group else factor(group)
   tail <- tapply(is.finite(p) & p > tau, f, sum)
-  m <- tapply(rep(1L, length(p)), f, sum)
+  m <- tapply(is.finite(p), f, sum)
   est <- as.numeric(tail) / ((1 - tau) * as.numeric(m))
   est[is.na(est)] <- 1
   pmin(pmax(est, 0), 1)
@@ -263,7 +263,7 @@ test_that("spatial_fdr end-to-end equals weighted BH with 1/pi0 group weights; N
   expect_false(any(res$reject[is.na(p)]))
   expect_true(all(is.na(res$q[is.na(p)])))
   expect_true(all(is.na(res$groups[c(40, 41)])))
-  expect_equal(sum(res$m_g), sum(!is.na(group)))
+  expect_equal(sum(res$m_g), sum(!is.na(group) & is.finite(p)))
 
   # NA z behaves like NA p
   z <- c(rnorm(500), NA, Inf - Inf)

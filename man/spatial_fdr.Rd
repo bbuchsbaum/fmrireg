@@ -65,7 +65,7 @@ Object of class "spatial_fdr_result" containing:
 \item{groups}{Integer vector of group IDs (1..G) in the numbering described
 under \code{group}}
 \item{G}{Integer scalar; number of groups}
-\item{m_g}{Integer vector; number of features per group}
+\item{m_g}{Integer vector; number of features with a finite p-value per group}
 \item{alpha}{Numeric scalar; FDR level used}
 \item{coef_name}{Character scalar; name of coefficient (for S3 method)}
 }

@@ -74,6 +74,10 @@
   wrong standard errors. `tidy()` had the same problem with `df`.
 * An internal helper that checked for required packages only checked the first
   name it was given.
+* `spatial_fdr()` counted features with a missing p-value in each group's
+  Storey estimate of pi0 (as if they were below `tau`), lowering pi0, inflating
+  the other tests' weights and making q-values anti-conservative in groups with
+  missing values. Group sizes (`m_g`) now count finite p-values only.
 
 ## Documentation
 
