@@ -1,6 +1,5 @@
 # Runwise Linear Model Strategy
 # Implementation of the runwise fitting strategy using modular components
-#' @importFrom future.apply future_lapply
 NULL
 
 
@@ -406,7 +405,7 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
 
     voxel_results <- if (parallel_voxels) {
       if (verbose) message("Processing voxels in parallel...")
-      future.apply::future_lapply(seq_len(n_voxels), fit_voxel, future.seed = TRUE)
+      .fmrireg_lapply(seq_len(n_voxels), fit_voxel, parallel = TRUE)
     } else {
       lapply(seq_len(n_voxels), function(v) {
         out <- fit_voxel(v)

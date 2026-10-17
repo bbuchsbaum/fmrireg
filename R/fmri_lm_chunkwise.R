@@ -39,12 +39,6 @@ chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
   # Get chunks
   chunks <- .dset_chunks(dset, nchunks)
   
-  # Progress bar setup
-  if (progress && !parallel_chunks) {
-    pb <- cli::cli_progress_bar("Fitting chunks", total = length(chunks), clear = FALSE)
-    on.exit(cli::cli_progress_done(id = pb), add = TRUE)
-  }
-  
   # Extract model components
   tmats <- term_matrices(model)
   event_indices <- attr(tmats, "event_term_indices")
@@ -93,28 +87,9 @@ chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
 #' @keywords internal
 #' @noRd
 .chunkwise_apply <- function(chunks, FUN, parallel_chunks = FALSE, progress = FALSE) {
-  if (!isTRUE(parallel_chunks)) {
-    return(lapply(seq_along(chunks), function(i) {
-      out <- FUN(i, chunks[[i]])
-      if (progress) cli::cli_progress_update()
-      out
-    }))
-  }
-
-  if (progress && requireNamespace("progressr", quietly = TRUE)) {
-    return(progressr::with_progress({
-      p <- progressr::progressor(steps = length(chunks))
-      future.apply::future_lapply(seq_along(chunks), function(i) {
-        out <- FUN(i, chunks[[i]])
-        p()
-        out
-      }, future.seed = TRUE)
-    }))
-  }
-
-  future.apply::future_lapply(seq_along(chunks), function(i) {
-    FUN(i, chunks[[i]])
-  }, future.seed = TRUE)
+  .fmrireg_lapply(seq_along(chunks), function(i) FUN(i, chunks[[i]]),
+                  parallel = parallel_chunks, progress = progress,
+                  label = "Fitting chunks")
 }
 
 #' Chunkwise LM Fast Path

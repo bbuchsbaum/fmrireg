@@ -99,6 +99,18 @@
   for other packages and nothing in fmrireg. `options(fmrireg.num_threads)`
   and, when the option is unset, the `FMRIREG_NUM_THREADS` environment variable
   set the thread count of fmrireg's OpenMP kernels.
+* One parallel backend. Every R-level parallel loop (voxel chunks with
+  `compute_spec(parallel_chunks = TRUE)`, voxelwise AR with
+  `parallel_voxels`, trial-wise `estimate_betas(method = "mixed")` and the
+  `"future"` backend of `run_jobs()`) now goes through future.apply under the
+  active `future::plan()`; furrr is no longer used. C++ kernels keep their
+  OpenMP threads (`fmrireg.num_threads`). `estimate_betas(method = "mixed",
+  progress = TRUE)` no longer requires progressr; without a parallel plan it
+  shows a cli progress bar.
+* plotly and bslib moved from Imports to Suggests: only `design_plot()` uses
+  them, and it already needed shiny from Suggests. Together with furrr,
+  RcppParallel and the packages removed earlier, installing fmrireg pulls in
+  89 non-base packages instead of 123.
 * Phase 2 of the simplification removed about 2,000 more lines: one AR-order
   helper, one per-run design builder, one result packager for engines and the
   plugin API, a single `write_results()` output plan, the legacy AR

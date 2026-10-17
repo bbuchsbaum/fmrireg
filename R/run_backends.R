@@ -25,7 +25,7 @@
   }
   if (!exists("future", envir = .run_backend_registry, inherits = FALSE)) {
     assign("future", function(jobs, run_one, ...) {
-      future.apply::future_lapply(jobs, run_one, future.seed = TRUE)
+      .fmrireg_lapply(jobs, run_one, parallel = TRUE)
     }, envir = .run_backend_registry)
   }
   invisible(NULL)

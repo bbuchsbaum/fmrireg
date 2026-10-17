@@ -70,7 +70,7 @@ fmrireg is an R package for fMRI time series regression analysis with a layered 
 ### Performance Considerations
 
 - C++ implementations via Rcpp for computationally intensive operations
-- Parallelization via OpenMP kernels and future.apply (`options(fmrireg.num_threads = N)` sets the OpenMP thread count used by the meta-analysis kernels)
+- Parallelization has two layers: R-level loops go through `.fmrireg_lapply()` (R/parallel.R), which uses future.apply under the user's `future::plan()`; C++ kernels use OpenMP threads from `.fmrireg_num_threads()` (`options(fmrireg.num_threads)` / `FMRIREG_NUM_THREADS`). Do not add another parallel backend (no furrr, RcppParallel, parallel::mclapply).
 - Chunked processing for large datasets to manage memory
 
 ### CRAN Compliance
