@@ -52,24 +52,24 @@ make_srht_plan <- function(Tlen, m) {
 #' @return The `plan$m` x `ncol(M)` sketched matrix.
 #' @keywords internal
 srht_apply <- function(M, plan) {
-  .Call('_fmrireg_cpp_srht_apply', PACKAGE = 'fmrireg', as.matrix(M),
-        as.integer(plan$rows),
-        as.numeric(plan$signs),
-        as.integer(plan$perm),
-        as.numeric(plan$scale),
-        .sketch_num_threads())
+  cpp_srht_apply(as.matrix(M),
+                 as.integer(plan$rows),
+                 as.numeric(plan$signs),
+                 as.integer(plan$perm),
+                 as.numeric(plan$scale),
+                 .sketch_num_threads())
 }
 
 #' Apply the adjoint of an SRHT plan (S' B) to an m x k matrix
 #' @keywords internal
 #' @noRd
 srht_adjoint <- function(B, plan) {
-  .Call('_fmrireg_cpp_srht_adjoint', PACKAGE = 'fmrireg', as.matrix(B),
-        as.integer(plan$rows),
-        as.numeric(plan$signs),
-        as.integer(plan$perm),
-        as.numeric(plan$scale),
-        .sketch_num_threads())
+  cpp_srht_adjoint(as.matrix(B),
+                 as.integer(plan$rows),
+                 as.numeric(plan$signs),
+                 as.integer(plan$perm),
+                 as.numeric(plan$scale),
+                 .sketch_num_threads())
 }
 
 #' Internal: thread count for the column-parallel SRHT kernels
