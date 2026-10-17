@@ -148,27 +148,10 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
                               verbose = FALSE, progress = FALSE,
                               parallel_chunks = FALSE) {
   
-  # Separate contrast types. F-contrasts also inherit "contrast", so exclude
-  # them from the simple (t) list to avoid routing an F-contrast through the
-  # t-contrast engine (which then fails on its multi-row weight matrix).
-  simple_conlist <- Filter(function(x) inherits(x, "contrast") && !inherits(x, "Fcontrast"), contrast_objects)
-  fconlist <- Filter(function(x) inherits(x, "Fcontrast"), contrast_objects)
-  
-  # Extract weights with colind attributes
-  simple_conlist_weights <- lapply(simple_conlist, function(x) {
-    w <- x$weights
-    attr(w, "colind") <- attr(x, "colind")
-    w
-  })
-  names(simple_conlist_weights) <- sapply(simple_conlist, `[[`, "name")
-  
-  fconlist_weights <- lapply(fconlist, function(x) {
-    w <- x$weights
-    attr(w, "colind") <- attr(x, "colind")
-    w
-  })
-  names(fconlist_weights) <- sapply(fconlist, `[[`, "name")
-  
+  weights <- .contrast_weight_lists(contrast_objects)
+  simple_conlist_weights <- weights$simple
+  fconlist_weights <- weights$f
+
   # Check if we need special handling
   ar_modeling <- cfg$ar$struct != "iid"
   robust_modeling <- .fmri_lm_robust_enabled(cfg$robust)
@@ -442,27 +425,9 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
   form <- get_formula(model)
   proj_modmat <- .fast_preproject(modmat)
 
-  # Prepare contrast weights for integrated solver path. Exclude F-contrasts,
-  # which also inherit "contrast", from the t-contrast (simple) list.
-  simple_conlist <- Filter(function(x) inherits(x, "contrast") && !inherits(x, "Fcontrast"), contrast_objects)
-  simple_conlist_weights <- lapply(simple_conlist, function(x) {
-    w <- x$weights
-    attr(w, "colind") <- attr(x, "colind")
-    w
-  })
-  if (length(simple_conlist) > 0) {
-    names(simple_conlist_weights) <- sapply(simple_conlist, `[[`, "name")
-  }
-
-  fconlist <- Filter(function(x) inherits(x, "Fcontrast"), contrast_objects)
-  fconlist_weights <- lapply(fconlist, function(x) {
-    w <- x$weights
-    attr(w, "colind") <- attr(x, "colind")
-    w
-  })
-  if (length(fconlist) > 0) {
-    names(fconlist_weights) <- sapply(fconlist, `[[`, "name")
-  }
+  weights <- .contrast_weight_lists(contrast_objects)
+  simple_conlist_weights <- weights$simple
+  fconlist_weights <- weights$f
 
   needs_integrated <- !(cfg$ar$struct %in% c("iid", "none")) || .fmri_lm_robust_enabled(cfg$robust)
   if (needs_integrated && is.null(run_indices)) {

@@ -50,27 +50,10 @@ runwise_lm_impl <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
   proj_global <- .fast_preproject(modmat_global)
   Vu <- proj_global$XtXinv
   
-  # Separate contrast types. F-contrasts also inherit "contrast", so exclude
-  # them from the simple (t) list to avoid routing an F-contrast through the
-  # t-contrast engine (which then fails on its multi-row weight matrix).
-  simple_conlist <- Filter(function(x) inherits(x, "contrast") && !inherits(x, "Fcontrast"), contrast_objects)
-  fconlist <- Filter(function(x) inherits(x, "Fcontrast"), contrast_objects)
-  
-  # Extract weights with colind attributes
-  simple_conlist_weights <- lapply(simple_conlist, function(x) {
-    w <- x$weights
-    attr(w, "colind") <- attr(x, "colind")
-    w
-  })
-  names(simple_conlist_weights) <- sapply(simple_conlist, `[[`, "name")
-  
-  fconlist_weights <- lapply(fconlist, function(x) {
-    w <- x$weights
-    attr(w, "colind") <- attr(x, "colind")
-    w
-  })
-  names(fconlist_weights) <- sapply(fconlist, `[[`, "name")
-  
+  weights <- .contrast_weight_lists(contrast_objects)
+  simple_conlist_weights <- weights$simple
+  fconlist_weights <- weights$f
+
   # Determine if we're using voxelwise AR. runwise_lm_voxelwise() is fully
   # matrix-based (.fast_preproject/solve_glm_core/ar_whiten_transform), so this
   # dispatch is independent of use_fast_path -- gate on the AR config alone so

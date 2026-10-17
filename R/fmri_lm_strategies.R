@@ -131,6 +131,31 @@ resolve_censor <- function(cfg, dataset = NULL, run_num = NULL, n_time = NULL) {
   as.integer(censor)
 }
 
+#' Split contrast objects into t- and F-contrast weight lists
+#'
+#' F-contrasts also inherit "contrast", so they are excluded from the simple
+#' (t) list; routing one through the t-contrast engine fails on its multi-row
+#' weight matrix. Each weight carries its contrast's `colind` attribute.
+#' @return List with `simple` and `f`, each a named list of weights.
+#' @keywords internal
+#' @noRd
+.contrast_weight_lists <- function(contrast_objects) {
+  weights_of <- function(cons) {
+    w <- lapply(cons, function(x) {
+      w <- x$weights
+      attr(w, "colind") <- attr(x, "colind")
+      w
+    })
+    names(w) <- sapply(cons, `[[`, "name")
+    w
+  }
+  list(
+    simple = weights_of(Filter(function(x) inherits(x, "contrast") &&
+                                 !inherits(x, "Fcontrast"), contrast_objects)),
+    f = weights_of(Filter(function(x) inherits(x, "Fcontrast"), contrast_objects))
+  )
+}
+
 #' Preprocess Run Data
 #'
 #' @description
