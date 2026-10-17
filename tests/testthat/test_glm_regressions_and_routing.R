@@ -178,7 +178,7 @@ test_that("AR processing routes through fmriAR in production chunkwise path", {
   expect_gt(.GlobalEnv$.whiten_calls, 0L)
 })
 
-test_that("fixed-order AR estimation avoids legacy per-voxel fallback by default", {
+test_that("fixed-order AR estimation never calls the per-voxel estimator", {
   skip_if_not_installed("fmriAR")
 
   set.seed(1008)
@@ -190,10 +190,7 @@ test_that("fixed-order AR estimation avoids legacy per-voxel fallback by default
         where = asNamespace("fmrireg"),
         tracer = quote(.GlobalEnv$.legacy_ar_calls <- .GlobalEnv$.legacy_ar_calls + 1L),
         print = FALSE)
-  old_opt <- getOption("fmrireg.ar.fixed_order_legacy_fallback")
-  options(fmrireg.ar.fixed_order_legacy_fallback = FALSE)
   on.exit({
-    options(fmrireg.ar.fixed_order_legacy_fallback = old_opt)
     untrace("estimate_ar_parameters", where = asNamespace("fmrireg"))
     rm(.legacy_ar_calls, envir = .GlobalEnv)
   }, add = TRUE)
@@ -208,7 +205,7 @@ test_that("fixed-order AR estimation avoids legacy per-voxel fallback by default
   expect_equal(.GlobalEnv$.legacy_ar_calls, 0L)
 })
 
-test_that("non-voxelwise AR router defaults to zero fallback without legacy estimator", {
+test_that("non-voxelwise AR router falls back to zero without the per-voxel estimator", {
   skip_if_not_installed("fmriAR")
 
   set.seed(1009)
@@ -224,10 +221,7 @@ test_that("non-voxelwise AR router defaults to zero fallback without legacy esti
         where = asNamespace("fmrireg"),
         tracer = quote(.GlobalEnv$.legacy_ar_calls <- .GlobalEnv$.legacy_ar_calls + 1L),
         print = FALSE)
-  old_opt <- getOption("fmrireg.ar.nonvoxel_legacy_fallback")
-  options(fmrireg.ar.nonvoxel_legacy_fallback = FALSE)
   on.exit({
-    options(fmrireg.ar.nonvoxel_legacy_fallback = old_opt)
     untrace("estimate_ar_parameters", where = asNamespace("fmrireg"))
     rm(.legacy_ar_calls, envir = .GlobalEnv)
   }, add = TRUE)
@@ -236,36 +230,6 @@ test_that("non-voxelwise AR router defaults to zero fallback without legacy esti
 
   expect_equal(phi, c(0, 0))
   expect_equal(.GlobalEnv$.legacy_ar_calls, 0L)
-})
-
-test_that("non-voxelwise AR router can opt in to legacy fallback", {
-  skip_if_not_installed("fmriAR")
-
-  set.seed(1013)
-  resid <- rnorm(200)
-
-  local_mocked_bindings(
-    .estimate_ar_via_fmriAR = function(...) list(phi = list(numeric(0))),
-    .package = "fmrireg"
-  )
-
-  .GlobalEnv$.legacy_ar_calls <- 0L
-  trace("estimate_ar_parameters",
-        where = asNamespace("fmrireg"),
-        tracer = quote(.GlobalEnv$.legacy_ar_calls <- .GlobalEnv$.legacy_ar_calls + 1L),
-        print = FALSE)
-  old_opt <- getOption("fmrireg.ar.nonvoxel_legacy_fallback")
-  options(fmrireg.ar.nonvoxel_legacy_fallback = TRUE)
-  on.exit({
-    options(fmrireg.ar.nonvoxel_legacy_fallback = old_opt)
-    untrace("estimate_ar_parameters", where = asNamespace("fmrireg"))
-    rm(.legacy_ar_calls, envir = .GlobalEnv)
-  }, add = TRUE)
-
-  phi <- fmrireg:::.estimate_ar_parameters_routed(resid, ar_order = 2L)
-
-  expect_length(phi, 2L)
-  expect_gt(.GlobalEnv$.legacy_ar_calls, 0L)
 })
 
 test_that("iterative ARMA fmriAR path uses subset whitening before final full pass", {

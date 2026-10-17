@@ -8,9 +8,6 @@
 #' @noRd
 NULL
 
-# Internal operator
-`%||%` <- function(x, y) if (!is.null(x)) x else y
-
 #' Normalize AR options
 #'
 #' The AR options reaching the adapter are a `noise_spec()` (legacy user
@@ -48,13 +45,12 @@ NULL
 }
 
 #' Select whether the OLS design correction is valid for a shared estimator
+#'
+#' Always the design itself (see .estimate_shared_ar_parameters()); kept for
+#' the rrr engine, its remaining caller.
 #' @keywords internal
 #' @noRd
 .shared_ar_correction_design <- function(residuals, ar_opts, design) {
-  if (is.null(design)) return(NULL)
-  # OLS residualization is linear across response columns:
-  # rowMeans((I - P_X)Y) = (I - P_X)rowMeans(Y).  Consequently the matching
-  # design remains the exact residual-forming operator for mean_series too.
   design
 }
 
@@ -64,16 +60,98 @@ NULL
 .estimate_shared_ar_parameters <- function(residuals, ar_order, ar_opts,
                                            run_indices = NULL, censor = NULL,
                                            design = NULL) {
-  correction_design <- .shared_ar_correction_design(residuals, ar_opts, design)
+  # OLS residualization is linear across response columns:
+  # rowMeans((I - P_X)Y) = (I - P_X)rowMeans(Y), so the matching design stays
+  # the exact residual-forming operator for the mean_series estimator too.
   .estimate_ar_parameters_routed(
     .shared_ar_residual_input(residuals, ar_opts),
     ar_order = ar_order,
     run_indices = run_indices,
     censor = censor,
-    design = correction_design,
+    design = design,
     ar_options = ar_opts
   )
 }
+
+#' Estimate fixed-order AR coefficients via fmriAR
+#' @keywords internal
+#' @noRd
+.estimate_ar_parameters_routed <- function(residuals_vec, ar_order,
+                                           run_indices = NULL, censor = NULL,
+                                           design = NULL, ar_options = NULL) {
+  if (is.null(ar_order) || ar_order <= 0L) {
+    return(numeric(0))
+  }
+
+  resid_mat <- as.matrix(residuals_vec)
+  if (ncol(resid_mat) == 0L || nrow(resid_mat) <= ar_order) {
+    return(rep(0, ar_order))
+  }
+
+  ar_cfg <- switch(as.integer(ar_order),
+    `1` = list(struct = "ar1"),
+    `2` = list(struct = "ar2"),
+    list(struct = "arp", p = as.integer(ar_order))
+  )
+  if (!is.null(ar_options)) {
+    normalized_options <- .normalize_ar_options(ar_options)
+    ar_cfg$global <- isTRUE(normalized_options$global)
+    ar_cfg$exact_first <- isTRUE(normalized_options$exact_first)
+  }
+
+  plan <- tryCatch(
+    .estimate_ar_via_fmriAR(
+      residuals = resid_mat,
+      cfg = ar_cfg,
+      run_indices = run_indices,
+      censor = censor,
+      design = design
+    ),
+    error = function(e) {
+      if (inherits(e, "fmriAR_design_residual_mismatch")) stop(e)
+      NULL
+    }
+  )
+
+  phi <- NULL
+  if (!is.null(plan)) {
+    if (!is.null(plan$phi) && length(plan$phi) > 0L) {
+      phi <- if (length(plan$phi) == 1L) {
+        as.numeric(plan$phi[[1L]])
+      } else {
+        lapply(plan$phi, as.numeric)
+      }
+    } else if (!is.null(plan$phi_by_parcel) && length(plan$phi_by_parcel) > 0L) {
+      phi <- if (length(plan$phi_by_parcel) == 1L) {
+        as.numeric(plan$phi_by_parcel[[1L]])
+      } else {
+        lapply(plan$phi_by_parcel, as.numeric)
+      }
+    }
+  }
+
+  # No estimate (fmriAR failed or returned no coefficients): no whitening.
+  if (is.null(phi) || !length(phi)) {
+    phi <- rep(0, ar_order)
+  }
+
+  normalize_phi <- function(value) {
+    value <- as.numeric(value)
+    if (length(value) < ar_order) {
+      value <- c(value, rep(0, ar_order - length(value)))
+    } else if (length(value) > ar_order) {
+      value <- value[seq_len(ar_order)]
+    }
+    value[!is.finite(value)] <- 0
+    value
+  }
+
+  if (is.list(phi)) {
+    return(lapply(phi, normalize_phi))
+  }
+  normalize_phi(phi)
+}
+
 
 #' Determine whether temporal whitening is requested
 #' @keywords internal
@@ -261,41 +339,8 @@ NULL
       return(phi)
     }
 
-    # If fmriAR plan generation did not yield explicit phi coefficients, default
-    # to zero coefficients to keep the fast routed path and avoid per-voxel
-    # fallback estimation overhead. Legacy fallback can be re-enabled for
-    # diagnostics via option fmrireg.ar.fixed_order_legacy_fallback = TRUE.
-    if (!isTRUE(getOption("fmrireg.ar.fixed_order_legacy_fallback", FALSE))) {
-      return(rep(0, order))
-    }
-
-    # Legacy fallback: aggregate per-voxel fixed-order estimates.
-    accum <- rep(0, order)
-    used  <- 0L
-
-    for (j in seq_len(ncol(block))) {
-      resid_vec <- block[, j]
-      resid_vec <- resid_vec[is.finite(resid_vec)]
-      if (length(resid_vec) <= order) {
-        next
-      }
-
-      phi <- estimate_ar_parameters(resid_vec, order)
-      if (length(phi) < order) {
-        phi <- c(phi, rep(0, order - length(phi)))
-      } else if (length(phi) > order) {
-        phi <- phi[seq_len(order)]
-      }
-
-      accum <- accum + phi
-      used <- used + 1L
-    }
-
-    if (used == 0L) {
-      return(rep(0, order))
-    }
-
-    accum / used
+    # No explicit phi from fmriAR: zero coefficients (no whitening).
+    rep(0, order)
   })
 }
 
@@ -504,6 +549,143 @@ NULL
   list(X = result$X, Y = result$Y)
 }
 
+#' Whiten X and Y with fixed AR coefficients
+#'
+#' @param X Design matrix
+#' @param Y Data matrix
+#' @param phi AR coefficients: one vector (shared), or a list with one vector
+#'   per run.
+#' @param exact_first Logical for exact first sample scaling
+#' @param censor Integer vector of 1-based indices that were censored during
+#'   AR estimation. Passed to whiten_apply for consistent segment handling.
+#' @param run_indices Optional list of timepoint indices for each run. Whitening
+#'   is reset at every run boundary.
+#' @param ... Additional arguments (ignored)
+#' @return List with whitened X and Y
+#' @keywords internal
+#' @noRd
+ar_whiten_transform <- function(X, Y, phi, exact_first = FALSE, censor = NULL,
+                                run_indices = NULL, ...) {
+  if (anyNA(X) || anyNA(Y)) {
+    stop("NA values detected in 'X' or 'Y' for ar_whiten_transform")
+  }
+
+  if (!is.matrix(X)) X <- as.matrix(X)
+  if (!is.matrix(Y)) Y <- as.matrix(Y)
+
+  phi_list <- if (is.list(phi)) phi else list(phi)
+  pooling_mode <- if (length(phi_list) > 1L) "run" else "global"
+  plan <- fmriAR::compat$plan_from_phi(
+    phi = if (identical(pooling_mode, "global")) phi_list[[1]] else phi_list,
+    theta = replicate(length(phi_list), numeric(0), simplify = FALSE),
+    runs = .build_run_labels(nrow(X), run_indices),
+    pooling = pooling_mode,
+    exact_first = exact_first
+  )
+
+  .apply_ar_whitening_via_fmriAR(X, Y, plan, run_indices, censor = censor)
+}
+
+#' Estimate AR parameters of one residual series
+#'
+#' Used by the voxelwise AR path. fmriAR estimates the coefficients; the
+#' Yule-Walker fallback (`.estimate_ar()`) covers series fmriAR cannot fit.
+#'
+#' @param residuals_vec Numeric vector of residuals
+#' @param p_order Integer AR order
+#' @param censor Integer vector of 1-based indices to exclude from AR estimation,
+#'   or NULL for no censoring. Censored timepoints are excluded when computing
+#'   autocorrelations.
+#' @return Numeric vector of AR coefficients
+#' @keywords internal
+#' @noRd
+estimate_ar_parameters <- function(residuals_vec, p_order, censor = NULL) {
+  stopifnot(is.numeric(residuals_vec))
+  stopifnot(length(p_order) == 1L, p_order >= 1L)
+
+  if (length(residuals_vec) == 0L) {
+    stop("Residual vector must contain at least one value", call. = FALSE)
+  }
+
+  if (anyNA(residuals_vec)) {
+    stop("NA values detected in 'residuals_vec' for estimate_ar_parameters")
+  }
+
+  # A constant (zero-variance) residual series has no estimable AR structure.
+  # Short-circuit before consulting fmriAR so the result is deterministic across
+  # fmriAR versions (some return phi = 0 here rather than an empty vector).
+  res_sd <- stats::sd(residuals_vec)
+  if (!is.na(res_sd) && res_sd < sqrt(.Machine$double.eps)) {
+    return(numeric(0))
+  }
+
+  # Try fmriAR first (supports censor)
+  residuals_mat <- matrix(residuals_vec, ncol = 1)
+  plan <- tryCatch(
+    fmriAR::fit_noise(
+      resid = residuals_mat,
+      method = "ar",
+      p = p_order,
+      p_max = p_order,
+      censor = censor
+    ),
+    error = function(e) NULL
+  )
+
+  if (!is.null(plan) && !is.null(plan$phi) && length(plan$phi) > 0L) {
+    phi <- plan$phi[[1]]
+    if (length(phi) > 0L) {
+      return(as.numeric(phi))
+    }
+  }
+
+  # Fall back to Yule-Walker implementation (excludes censored manually if needed)
+  if (!is.null(censor) && length(censor) > 0) {
+    # For fallback, simply exclude censored points from estimation
+    valid_idx <- setdiff(seq_along(residuals_vec), censor)
+    if (length(valid_idx) <= p_order) {
+      return(rep(0, p_order))
+    }
+    residuals_vec <- residuals_vec[valid_idx]
+  }
+  fallback_phi <- .estimate_ar(residuals_vec, p_order)
+  if (length(fallback_phi) == 0L) {
+    return(numeric(0))
+  }
+
+  as.numeric(fallback_phi)
+}
+
+#' Estimate AR via Yule-Walker (fallback for estimate_ar_parameters())
+#'
+#' @param residuals_vec Numeric vector
+#' @param p_order AR order
+#' @return Numeric vector of AR coefficients
+#' @keywords internal
+#' @noRd
+.estimate_ar <- function(residuals_vec, p_order) {
+  stopifnot(is.numeric(residuals_vec))
+  stopifnot(length(p_order) == 1L, p_order >= 1L)
+
+  # Center residuals
+  res <- residuals_vec - mean(residuals_vec, na.rm = TRUE)
+
+  if (stats::sd(res, na.rm = TRUE) < sqrt(.Machine$double.eps)) {
+    return(numeric(0))
+  }
+
+  # Use stats::ar for Yule-Walker estimation (matching old behavior)
+  ar_fit <- stats::ar(res, order.max = p_order, method = "yule-walker",
+                       demean = FALSE, aic = FALSE)
+
+  # Return coefficients
+  if (length(ar_fit$ar) > 0) {
+    as.numeric(ar_fit$ar)
+  } else {
+    numeric(0)
+  }
+}
+
 #' Iterative AR-GLS estimation using fmriAR
 #'
 #' @param X Design matrix
@@ -567,10 +749,9 @@ NULL
   # Iterative refinement
   for (iter in seq_len(n_iter)) {
     # Estimate AR from current residuals, excluding censored timepoints
-    correction_design <- .shared_ar_correction_design(residuals, cfg, X)
     plan <- .estimate_ar_via_fmriAR(
       .shared_ar_residual_input(residuals, cfg),
-      cfg, run_indices, censor = censor, design = correction_design
+      cfg, run_indices, censor = censor, design = X
     )
     phi_now <- if (!is.null(plan) && !is.null(plan$phi) && length(plan$phi)) {
       unlist(lapply(plan$phi, as.numeric), use.names = FALSE)

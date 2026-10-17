@@ -1,4 +1,4 @@
-# fmriAR_adapter.R: fixed-order early returns, zero-fallback, legacy path.
+# fmriAR_adapter.R: fixed-order early returns and zero fallback.
 
 test_that(".estimate_phi_fixed_order covers short blocks and zero fallback", {
   skip_if_not_installed("fmriAR")
@@ -19,11 +19,7 @@ test_that(".estimate_phi_fixed_order covers short blocks and zero fallback", {
   expect_equal(length(phi_run), 2L)
   expect_equal(phi_run[[1]], 0)
 
-  old <- getOption("fmrireg.ar.fixed_order_legacy_fallback")
-  on.exit(options(fmrireg.ar.fixed_order_legacy_fallback = old), add = TRUE)
-
-  # Force fmriAR failure so zero-fallback / legacy branches execute
-  options(fmrireg.ar.fixed_order_legacy_fallback = FALSE)
+  # Force fmriAR failure: the fixed-order estimator falls back to zeros.
   suppressWarnings(
     trace(
       fmriAR::fit_noise,
@@ -38,14 +34,6 @@ test_that(".estimate_phi_fixed_order covers short blocks and zero fallback", {
   )
   expect_equal(zeros[[1]], c(0, 0))
 
-  options(fmrireg.ar.fixed_order_legacy_fallback = TRUE)
-  legacy <- fmrireg:::.estimate_phi_fixed_order(
-    matrix(rnorm(60 * 4), 60, 4), order = 1L, pooling = "global"
-  )
-  expect_equal(length(legacy[[1]]), 1L)
-  expect_true(is.finite(legacy[[1]]) || identical(legacy[[1]], 0))
-
-  # All columns too short for order => zeros via used==0
   short <- matrix(rnorm(6), 3, 2)
   short_phi <- fmrireg:::.estimate_phi_fixed_order(
     short, order = 3L, pooling = "global"
