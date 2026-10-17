@@ -20,22 +20,8 @@ test_that("lowrank engine helpers cover preflight, projection, and AR blend", {
 
   expect_true(fmrireg:::.preflight_lowrank_engine(fmod, dset, list(), cfg))
   expect_error(
-    fmrireg:::.preflight_lowrank_engine(list(), dset, list(), cfg),
-    "fmri_model"
-  )
-  expect_error(
     fmrireg:::.preflight_lowrank_engine(fmod, NULL, list(), cfg),
     "dataset"
-  )
-  expect_error(
-    fmrireg:::.preflight_lowrank_engine(fmod, dset, list(), list()),
-    "fmri_lm_control"
-  )
-
-  expect_true(
-    fmrireg:::.preflight_lowrank_engine_plugin(
-      fmod, dset, args = list(lowrank = list()), cfg = cfg
-    )
   )
 
   A <- matrix(c(1, 0.2, 0.1, 1), 2, 2)
@@ -69,15 +55,11 @@ test_that("rrr/lowrank engine registration preflight hooks exist", {
     fmrireg:::.preflight_rrr_gls_engine(fmod, dset, args = list(), cfg = cfg)
   )
   expect_error(
-    fmrireg:::.preflight_rrr_gls_engine(list(), dset, list(), cfg),
-    "fmri_model"
-  )
-  expect_error(
     fmrireg:::.preflight_rrr_gls_engine(fmod, NULL, list(), cfg),
     "dataset"
   )
   expect_error(
-    fmrireg:::.preflight_rrr_gls_engine(fmod, dset, list(), list()),
-    "fmri_lm_control"
+    fmrireg:::.preflight_rrr_gls_engine(fmod, dset, list(rank = 0L), cfg),
+    "positive integer"
   )
 })

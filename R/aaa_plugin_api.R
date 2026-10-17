@@ -27,13 +27,26 @@ register_engine <- function(name, fit, preflight = NULL, capabilities = list()) 
   if (!is.null(preflight) && !is.function(preflight)) {
     stop("`preflight` must be NULL or a function", call. = FALSE)
   }
-  if (is.null(capabilities)) {
-    capabilities <- list()
-  }
+  .register_engine_entry(name, fit, preflight, capabilities)
+}
+
+#' Internal: store an engine registration
+#'
+#' Built-in engines also record their `source`, user-facing `aliases` and
+#' dispatch `strategy`; plugins registered through [register_engine()] get the
+#' plugin defaults.
+#' @keywords internal
+#' @noRd
+.register_engine_entry <- function(name, fit, preflight = NULL,
+                                   capabilities = list(), source = "plugin",
+                                   aliases = character(), strategy = "engine") {
   .fmrireg_engine_registry[[name]] <- list(
     fit = fit,
     preflight = preflight,
-    capabilities = capabilities
+    capabilities = capabilities %||% list(),
+    source = source,
+    aliases = aliases,
+    strategy = strategy
   )
   invisible(TRUE)
 }
@@ -47,30 +60,12 @@ get_engine <- function(name) {
 }
 
 #' @keywords internal
-.builtin_engine_aliases <- function(name) {
-  if (identical(name, "latent_sketch")) {
-    "sketch"
-  } else {
-    character()
-  }
-}
-
-#' @keywords internal
-.builtin_engine_source <- function(name) {
-  if (name %in% c("latent_sketch", "rrr_gls")) {
-    "builtin"
-  } else {
-    "plugin"
-  }
-}
-
-#' @keywords internal
 .new_engine_spec <- function(name, registration, include_functions = FALSE) {
   spec <- list(
     name = name,
-    source = .builtin_engine_source(name),
-    aliases = .builtin_engine_aliases(name),
-    strategy = if (identical(name, "latent_sketch")) "sketch" else "engine",
+    source = registration$source %||% "plugin",
+    aliases = registration$aliases %||% character(),
+    strategy = registration$strategy %||% "engine",
     capabilities = .normalize_engine_capabilities(registration$capabilities),
     has_preflight = is.function(registration$preflight)
   )

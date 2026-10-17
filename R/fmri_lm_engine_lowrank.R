@@ -1,30 +1,13 @@
-#' Internal: run low-rank/sketched engine under fmri_lm
+#' Internal: preflight for the low-rank engine
+#'
+#' Model and control classes are checked by `.validate_engine_context()`.
 #' @keywords internal
 #' @noRd
-.preflight_lowrank_engine <- function(fm, dataset, lowrank, cfg) {
-  if (!inherits(fm, "fmri_model")) {
-    stop("latent_sketch engine requires an 'fmri_model' object", call. = FALSE)
-  }
+.preflight_lowrank_engine <- function(model, dataset, args, cfg) {
   if (is.null(dataset)) {
     stop("latent_sketch engine requires a dataset", call. = FALSE)
   }
-  if (!inherits(cfg, "fmri_lm_control")) {
-    stop("latent_sketch engine requires an 'fmri_lm_control' object", call. = FALSE)
-  }
-  
   invisible(TRUE)
-}
-
-#' Internal: plugin-compatible preflight for low-rank engine
-#' @keywords internal
-#' @noRd
-.preflight_lowrank_engine_plugin <- function(model, dataset, args, cfg) {
-  .preflight_lowrank_engine(
-    fm = model,
-    dataset = dataset,
-    lowrank = args$lowrank %||% list(),
-    cfg = cfg
-  )
 }
 
 #' Internal: map latent-space results back into voxel space
@@ -285,20 +268,14 @@
 #' computed as exact OLS (`.lowrank_exact_solve()`) and reports exact OLS quantities.
 #' @keywords internal
 #' @noRd
-.run_lowrank_engine <- function(fm, dataset, lowrank, cfg = NULL, ar_options = NULL) {
-  if (is.null(cfg)) {
-    cfg <- .fmri_lm_control_legacy(
-      estimation = estimation_spec("joint"), ar_options = ar_options
-    )
-  }
-  lowrank <- lowrank %||% list()
-  .preflight_lowrank_engine(fm, dataset, lowrank, cfg)
+.run_lowrank_engine <- function(model, dataset, args, cfg) {
+  lowrank <- args$lowrank %||% list()
 
   ar_opts <- cfg$ar %||% list()
   # Design (T x p)
-  X <- as.matrix(design_matrix(fm))
+  X <- as.matrix(design_matrix(model))
   Tlen <- nrow(X); p <- ncol(X)
-  run_indices <- .model_run_indices(fm, Tlen)
+  run_indices <- .model_run_indices(model, Tlen)
   censor <- resolve_censor(cfg, dataset = dataset, n_time = Tlen)
   varnames <- colnames(X)
 
@@ -446,7 +423,7 @@
 
   # Build fmri_lm-like result structure compatible with downstream code
   sigma <- sqrt(pmax(sigma2, 0))
-  contrast_prep <- prepare_fmri_lm_contrasts(fm)
+  contrast_prep <- prepare_fmri_lm_contrasts(model)
   if (is.null(grouped)) {
     stats <- .external_fmri_lm_stats(
       B, cov_unscaled, sigma, sigma2, dfres, varnames,
@@ -469,7 +446,7 @@
   }
 
   # Event/baseline indices for coef() methods
-  tmats <- term_matrices(fm)
+  tmats <- term_matrices(model)
   event_indices <- attr(tmats, "event_term_indices")
   baseline_indices <- attr(tmats, "baseline_term_indices")
   # `rss` is the residual sum of squares of the rows actually fitted: the
@@ -536,7 +513,7 @@
 
   ret <- list(
     result = result,
-    model = fm,
+    model = model,
     strategy = "sketch",
     bcons = contrast_prep$processed,
     dataset = dataset,
@@ -551,17 +528,3 @@
   attr(ret, "config") <- cfg
   ret
 }
-
-
-#' Internal: plugin-compatible fit for low-rank engine
-#' @keywords internal
-#' @noRd
-.fit_lowrank_engine_plugin <- function(model, dataset, args, cfg) {
-  .run_lowrank_engine(
-    fm = model,
-    dataset = dataset,
-    lowrank = args$lowrank %||% list(),
-    cfg = cfg
-  )
-}
-

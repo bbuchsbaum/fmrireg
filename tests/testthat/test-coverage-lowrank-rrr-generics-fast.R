@@ -21,16 +21,8 @@ test_that(".preflight_rrr_gls_engine and .fit_rrr_gls_engine happy path", {
 
   expect_true(fmrireg:::.preflight_rrr_gls_engine(model, dset, list(rank = 2L), cfg))
   expect_error(
-    fmrireg:::.preflight_rrr_gls_engine(list(), dset, list(), cfg),
-    "fmri_model"
-  )
-  expect_error(
     fmrireg:::.preflight_rrr_gls_engine(model, NULL, list(), cfg),
     "dataset"
-  )
-  expect_error(
-    fmrireg:::.preflight_rrr_gls_engine(model, dset, list(), list()),
-    "fmri_lm_control"
   )
 
   fit <- fmrireg:::.fit_rrr_gls_engine(
@@ -42,7 +34,7 @@ test_that(".preflight_rrr_gls_engine and .fit_rrr_gls_engine happy path", {
   expect_true(!is.null(fit$result) || !is.null(fit$betas) || inherits(fit, "fmri_lm"))
 })
 
-test_that(".fit_lowrank_engine_plugin landmarks path with tiny sketch", {
+test_that(".run_lowrank_engine landmarks path with tiny sketch", {
   set.seed(282)
   n <- 48L
   V <- 12L
@@ -61,12 +53,12 @@ test_that(".fit_lowrank_engine_plugin landmarks path with tiny sketch", {
   model <- fmri_model(emod, bmod, dset)
   cfg <- fmri_lm_control()
 
-  expect_true(fmrireg:::.preflight_lowrank_engine_plugin(
+  expect_true(fmrireg:::.preflight_lowrank_engine(
     model, dset, args = list(lowrank = list(k_latents = 3L)), cfg = cfg
   ))
 
   fit <- tryCatch(
-    fmrireg:::.fit_lowrank_engine_plugin(
+    fmrireg:::.run_lowrank_engine(
       model, dset,
       args = list(lowrank = list(
         method = "landmarks",

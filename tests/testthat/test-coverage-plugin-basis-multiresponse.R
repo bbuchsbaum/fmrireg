@@ -33,7 +33,10 @@ test_that("print.fmrireg_engine_spec and .new_engine_spec include_functions", {
   reg <- list(
     fit = function(model, dataset, args, cfg) list(ok = TRUE),
     preflight = function(...) TRUE,
-    capabilities = list(robust = TRUE, ma = FALSE, ar_voxelwise = TRUE)
+    capabilities = list(robust = TRUE, ma = FALSE, ar_voxelwise = TRUE),
+    source = "builtin",
+    aliases = "sketch",
+    strategy = "sketch"
   )
   spec <- fmrireg:::.new_engine_spec("latent_sketch", reg, include_functions = TRUE)
   expect_s3_class(spec, "fmrireg_engine_spec")
@@ -51,6 +54,8 @@ test_that("print.fmrireg_engine_spec and .new_engine_spec include_functions", {
     include_functions = FALSE
   )
   expect_equal(plugin_spec$source, "plugin")
+  expect_equal(plugin_spec$aliases, character())
+  expect_equal(plugin_spec$strategy, "engine")
   expect_false(isTRUE(plugin_spec$has_preflight))
   expect_null(plugin_spec$fit)
 })

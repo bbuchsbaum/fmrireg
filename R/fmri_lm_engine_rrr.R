@@ -2,18 +2,11 @@
 #' @keywords internal
 #' @noRd
 .preflight_rrr_gls_engine <- function(model, dataset, args, cfg) {
-  if (!inherits(model, "fmri_model")) {
-    stop("rrr_gls engine requires an 'fmri_model' object", call. = FALSE)
-  }
+  # Model and control classes are checked by .validate_engine_context().
   if (is.null(dataset)) {
     stop("rrr_gls engine requires a dataset", call. = FALSE)
   }
-  if (!inherits(cfg, "fmri_lm_control")) {
-    stop("rrr_gls engine requires an 'fmri_lm_control' object", call. = FALSE)
-  }
-
-  args <- .rrr_normalize_args(args)
-
+  .rrr_normalize_args(args)
   invisible(TRUE)
 }
 
@@ -22,7 +15,6 @@
 #' @keywords internal
 #' @noRd
 .fit_rrr_gls_engine <- function(model, dataset, args, cfg) {
-  .preflight_rrr_gls_engine(model, dataset, args, cfg)
   args <- .rrr_normalize_args(args)
 
   dataset <- dataset %||% model$dataset
@@ -852,10 +844,13 @@
 #' @noRd
 .register_builtin_engines <- function() {
   if (is.null(get_engine("latent_sketch"))) {
-    register_engine(
+    .register_engine_entry(
       name = "latent_sketch",
-      preflight = .preflight_lowrank_engine_plugin,
-      fit = .fit_lowrank_engine_plugin,
+      preflight = .preflight_lowrank_engine,
+      fit = .run_lowrank_engine,
+      source = "builtin",
+      aliases = "sketch",
+      strategy = "sketch",
       capabilities = list(
         robust = FALSE,
         preprocessing = FALSE,
@@ -870,8 +865,9 @@
   }
 
   if (is.null(get_engine("rrr_gls"))) {
-    register_engine(
+    .register_engine_entry(
       name = "rrr_gls",
+      source = "builtin",
       preflight = .preflight_rrr_gls_engine,
       fit = .fit_rrr_gls_engine,
       capabilities = list(
@@ -882,11 +878,7 @@
         variance_methods = "model",
         df_methods = "residual",
         estimation_scopes = "joint",
-        requires_event_regressors = TRUE,
-        rank_constrained = TRUE,
-        whitening = "shared_ar",
-        se_modes = c("conditional", "bootstrap"),
-        contrast_scope = "event_only"
+        requires_event_regressors = TRUE
       )
     )
   }
