@@ -77,19 +77,3 @@ cpp_srht_adjoint <- function(B, rows, signs, perm, scale, n_threads = 0L) {
     .Call('_fmrireg_cpp_srht_adjoint', PACKAGE = 'fmrireg', B, rows, signs, perm, scale, n_threads)
 }
 
-group_pi0_counts_cpp <- function(p, group, tau, G) {
-    .Call('_fmrireg_group_pi0_counts_cpp', PACKAGE = 'fmrireg', p, group, tau, G)
-}
-
-pi0_smooth_cpp <- function(pi0_raw, neighbors, lambda, iters) {
-    .Call('_fmrireg_pi0_smooth_cpp', PACKAGE = 'fmrireg', pi0_raw, neighbors, lambda, iters)
-}
-
-weighted_bh_cpp <- function(p, w, alpha) {
-    .Call('_fmrireg_weighted_bh_cpp', PACKAGE = 'fmrireg', p, w, alpha)
-}
-
-bh_qvalues_scaled_cpp <- function(q) {
-    .Call('_fmrireg_bh_qvalues_scaled_cpp', PACKAGE = 'fmrireg', q)
-}
-

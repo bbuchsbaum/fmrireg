@@ -70,6 +70,11 @@
 #' fit fails) the median and normal-consistent MAD of all finite z-values are
 #' used instead; with fewer than 10 the theoretical null is used.
 #'
+#' The computation is done by \code{fmrigds::spatial_fdr_sabha()} (also
+#' available in fmrigds pipelines as the post-hoc \code{"fdr:sabha"}, and as
+#' \code{"fmrireg:fdr:spatial"}); this function keeps fmrireg's argument names,
+#' the \code{fmri_meta} method and the \code{spatial_fdr_result} class.
+#'
 #' The method is particularly effective for:
 #' - Voxelwise analyses with spatial clustering of signal
 #' - Parcel-based analyses with anatomical or functional grouping
@@ -136,217 +141,31 @@ spatial_fdr <- function(z = NULL,
                                  verbose = verbose))
   }
   
-  # Input validation
-  if (is.null(z) && is.null(p)) {
-    stop("Must provide either z or p values", call. = FALSE)
+  # The procedure lives in fmrigds (spatial_fdr_sabha(), also the post-hoc
+  # "fdr:sabha"); it validates the inputs with the same messages.
+  if (verbose && !is.null(group)) {
+    cat("Spatial FDR: Processing", length(z %||% p), "features in",
+        if (is.factor(group)) nlevels(group) else length(unique(group[!is.na(group)])),
+        "groups\n")
   }
-  
-  if (!is.null(z) && !is.null(p)) {
-    stop("Provide either z or p, not both", call. = FALSE)
-  }
-  
-  m <- length(z %||% p)
-  
-  if (length(group) != m) {
-    stop("group length must match z/p length", call. = FALSE)
-  }
-  
-  if (alpha <= 0 || alpha >= 1) {
-    stop("alpha must be in (0, 1)", call. = FALSE)
-  }
-  
-  if (tau <= 0 || tau >= 1) {
-    stop("tau must be in (0, 1)", call. = FALSE)
-  }
-  
-  if (lambda < 0) {
-    warning("lambda < 0 not recommended; setting to 0", call. = FALSE)
-    lambda <- 0
-  }
-  
-  if (min_pi0 < 0 || min_pi0 > 1) {
-    stop("min_pi0 must be in [0, 1]", call. = FALSE)
-  }
-  
-  # Authoritative group numbering 1..G: factor levels (unused levels kept, so
-  # a neighbors list indexed by level stays aligned), otherwise sorted unique
-  # values. Every later step (pi0, smoothing, weights, `groups`) uses it.
-  gfac <- if (is.factor(group)) group else factor(group)
-  G <- nlevels(gfac)
-  group <- as.integer(gfac)
-  if (G == 0L) {
-    stop("No valid groups found", call. = FALSE)
-  }
-
+  res <- fmrigds::spatial_fdr_sabha(
+    z = if (!is.null(z)) as.numeric(z),
+    p = if (!is.null(p)) as.numeric(p),
+    group = group, alpha = alpha, tau = tau, lambda = lambda,
+    neighbors = neighbors, min_pi0 = min_pi0, empirical_null = empirical_null
+  )
   if (verbose) {
-    cat("Spatial FDR: Processing", m, "features in", G, "groups\n")
-  }
-  
-  # Step 1: Convert to p-values with optional empirical null
-  mu0 <- 0
-  sigma0 <- 1
-  
-  if (is.null(p)) {
-    zz <- as.numeric(z)
-    
-    if (empirical_null) {
-      if (verbose) cat("  Estimating empirical null...\n")
-      
-      en <- .spatial_fdr_empirical_null(zz)
-      mu0 <- en$mu0
-      sigma0 <- en$sigma0
-      if (verbose) {
-        cat("  Empirical null (", en$method, "): mu0 = ", round(mu0, 3),
-            ", sigma0 = ", round(sigma0, 3), "\n", sep = "")
-      }
+    if (res$mu0 != 0 || res$sigma0 != 1) {
+      cat("  Empirical null: mu0 = ", round(res$mu0, 3),
+          ", sigma0 = ", round(res$sigma0, 3), "\n", sep = "")
     }
-
-    # Standardize and convert to p-values
-    z0 <- (zz - mu0) / sigma0
-    p <- 2 * pnorm(abs(z0), lower.tail = FALSE)
-    
-  } else {
-    p <- pmin(pmax(as.numeric(p), 0), 1)
-  }
-  
-  # Step 2-3: Groupwise pi0 estimation
-  if (verbose) cat("  Estimating groupwise pi0...\n")
-  
-  gstats <- group_pi0_counts_cpp(p, group, tau, G)
-  m_g <- as.integer(gstats$m_g)
-  pi0_raw <- as.numeric(gstats$pi0_raw)
-  
-  # Replace NA (empty groups) with 1
-  pi0_raw[!is.finite(pi0_raw)] <- 1
-  
-  # Step 4: Smooth across neighbors (optional)
-  if (!is.null(neighbors)) {
-    if (verbose) cat("  Smoothing pi0 across neighbors...\n")
-    
-    if (length(neighbors) != G) {
-      stop("neighbors must be a list of length G (", G, ")", call. = FALSE)
-    }
-    
-    pi0_sm <- pi0_smooth_cpp(pi0_raw, neighbors, lambda = lambda, iters = 1L)
-  } else {
-    pi0_sm <- pi0_raw
-  }
-  
-  # Stabilize pi0
-  pi0_sm <- pmax(pi0_sm, min_pi0)
-  pi0_sm <- pmin(pi0_sm, 1.0)
-  
-  # Step 5: Compute weights
-  if (verbose) cat("  Computing adaptive weights...\n")
-  
-  # Group weights proportional to 1/pi0
-  a_g <- 1 / pi0_sm
-  
-  # Expand to feature-level weights (NA group -> weight 1)
-  w <- a_g[group]
-  w[is.na(w)] <- 1
-  
-  # Step 6: Weighted BH procedure
-  if (verbose) cat("  Applying weighted BH procedure...\n")
-  
-  wb <- weighted_bh_cpp(p, w, alpha = alpha)
-  rej <- wb$reject
-  thr <- wb$threshold
-  k <- wb$k
-  wN <- wb$w_norm
-  
-  # Compute BH q-values on scaled p' = p / wN
-  q_scaled <- bh_qvalues_scaled_cpp(p / wN)
-  
-  if (verbose) {
-    cat("  Results: ", sum(rej, na.rm = TRUE), " discoveries at FDR = ", 
+    cat("  Results: ", sum(res$reject, na.rm = TRUE), " discoveries at FDR = ",
         alpha, "\n", sep = "")
   }
-  
-  # Return results
-  structure(
-    list(
-      reject = rej,
-      q = q_scaled,
-      p = p,
-      weights = wN,
-      pi0_raw = pi0_raw,
-      pi0_smooth = pi0_sm,
-      threshold = thr,
-      k = k,
-      mu0 = mu0,
-      sigma0 = sigma0,
-      groups = group,
-      G = G,
-      m_g = m_g,
-      alpha = alpha,
-      tau = tau,
-      lambda = lambda
-    ),
-    class = "spatial_fdr_result"
-  )
-}
-
-#' Empirical null for spatial_fdr
-#'
-#' Central matching (Efron 2004): fit log f(z) = b0 + b1 z + b2 z^2 by Poisson
-#' regression on histogram counts within +/- 1.5 robust SDs of the median, so
-#' sigma0 = sqrt(-1 / (2 b2)) and mu0 = b1 sigma0^2. Non-null features mostly
-#' fall outside the window and, inside it, mainly shift b0, so the estimate is
-#' robust to a minority of signals. Falls back to median / normal-consistent
-#' MAD of all finite z when there are fewer than `min_cm` values or the fit is
-#' not usable, and to the theoretical null with fewer than 10 values.
-#'
-#' @param z Numeric vector of z-values.
-#' @param half_width Window half-width in robust SD units.
-#' @param nbins Number of histogram bins in the window.
-#' @param min_cm Minimum number of finite z for central matching.
-#' @return list(mu0, sigma0, method)
-#' @keywords internal
-#' @noRd
-.spatial_fdr_empirical_null <- function(z, half_width = 1.5, nbins = 40L,
-                                        min_cm = 500L) {
-  z <- z[is.finite(z)]
-  n <- length(z)
-  if (n < 10L) {
-    return(list(mu0 = 0, sigma0 = 1, method = "theoretical"))
-  }
-
-  mu_r <- stats::median(z)
-  s_r <- stats::mad(z, center = mu_r)          # consistent for N(0, 1)
-  if (!is.finite(s_r) || s_r <= 0) s_r <- stats::sd(z)
-  if (!is.finite(s_r) || s_r <= 0) {
-    warning("Could not estimate sigma0; using 1", call. = FALSE)
-    return(list(mu0 = mu_r, sigma0 = 1, method = "median"))
-  }
-
-  if (n >= min_cm) {
-    lo <- mu_r - half_width * s_r
-    hi <- mu_r + half_width * s_r
-    br <- seq(lo, hi, length.out = nbins + 1L)
-    mids <- (br[-1L] + br[-length(br)]) / 2
-    inwin <- z >= lo & z < hi
-    y <- tabulate(findInterval(z[inwin], br), nbins)
-    fit <- tryCatch(
-      suppressWarnings(stats::glm.fit(cbind(1, mids, mids^2), y,
-                                      family = stats::poisson())),
-      error = function(e) NULL
-    )
-    if (!is.null(fit) && isTRUE(fit$converged)) {
-      b <- unname(stats::coef(fit))
-      if (all(is.finite(b)) && b[3] < 0) {
-        s_cm <- sqrt(-1 / (2 * b[3]))
-        mu_cm <- b[2] * s_cm^2
-        # Accept only a sane fit; otherwise use the robust fallback
-        if (is.finite(s_cm) && s_cm > 0.5 * s_r && s_cm < 2 * s_r &&
-            abs(mu_cm - mu_r) < half_width * s_r) {
-          return(list(mu0 = mu_cm, sigma0 = s_cm, method = "central matching"))
-        }
-      }
-    }
-  }
-
-  list(mu0 = mu_r, sigma0 = s_r, method = "median/MAD")
+  fields <- c("reject", "q", "p", "weights", "pi0_raw", "pi0_smooth",
+              "threshold", "k", "mu0", "sigma0", "groups", "G", "m_g",
+              "alpha", "tau", "lambda")
+  structure(res[fields], class = "spatial_fdr_result")
 }
 
 #' Print Spatial FDR Results

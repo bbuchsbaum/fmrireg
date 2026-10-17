@@ -223,7 +223,7 @@ test_that("weighted BH matches a direct R implementation (with NAs)", {
   p[sample(m, 40)] <- NA
 
   for (alpha in c(0.01, 0.05, 0.2)) {
-    got <- fmrireg:::weighted_bh_cpp(p, w, alpha = alpha)
+    got <- fmrigds:::sabha_weighted_bh_cpp(p, w, alpha = alpha)
     ref <- wbh_reference(p, w, alpha)
     expect_identical(as.logical(got$reject), ref$reject)
     expect_equal(got$k, ref$k)
@@ -231,7 +231,7 @@ test_that("weighted BH matches a direct R implementation (with NAs)", {
     expect_equal(got$w_norm, ref$w_norm, tolerance = 1e-12)
     expect_equal(sum(got$w_norm[is.finite(p)]), sum(is.finite(p)))
 
-    q <- fmrireg:::bh_qvalues_scaled_cpp(p / got$w_norm)
+    q <- fmrigds:::sabha_bh_qvalues_scaled_cpp(p / got$w_norm)
     expect_equal(q, ref$q, tolerance = 1e-12)
     expect_identical(ref$reject, !is.na(q) & q <= alpha)
   }

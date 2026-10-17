@@ -98,6 +98,11 @@ of features are true signals. With fewer than 500 finite z-values (or if the
 fit fails) the median and normal-consistent MAD of all finite z-values are
 used instead; with fewer than 10 the theoretical null is used.
 
+The computation is done by \code{fmrigds::spatial_fdr_sabha()} (also
+available in fmrigds pipelines as the post-hoc \code{"fdr:sabha"}, and as
+\code{"fmrireg:fdr:spatial"}); this function keeps fmrireg's argument names,
+the \code{fmri_meta} method and the \code{spatial_fdr_result} class.
+
 The method is particularly effective for:
 \itemize{
 \item Voxelwise analyses with spatial clustering of signal
