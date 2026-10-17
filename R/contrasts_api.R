@@ -139,54 +139,33 @@ compute_lm_contrasts_from_suffstats <- function(
   XtXinv <- tryCatch(chol2inv(chol(XtX)), error = function(e) solve(XtX))
   B <- XtXinv %*% XtS
 
-  # Resolve sigma2 either from inputs or from suffstats
+  # Residual variance from the suff-stats unless sigma/sigma2 is supplied
   if (is.null(sigma2) && is.null(sigma)) {
     SSE <- StS - colSums(B * XtS)
     SSE <- pmax(SSE, 0)  # guard against tiny negative due to numerics
-    s2 <- pmax(SSE / df, .Machine$double.eps)
-  } else if (!is.null(sigma2)) {
-    s2 <- as.numeric(sigma2)
-  } else {
-    s2 <- as.numeric(sigma)^2
+    sigma2 <- pmax(SSE / df, .Machine$double.eps)
   }
-  if (length(s2) == 1L) s2 <- rep_len(s2, V)
-  if (length(s2) != V) stop("Length of sigma/sigma2 must equal ncol(XtS)")
 
-  # Derive coefficient names for name-based matching (prefer columns if given)
+  # Coefficient names come from the suff-stats (XtS rows, then XtX columns)
   if (is.null(columns)) {
     columns <- rownames(XtS)
     if (is.null(columns) || anyNA(columns)) {
       columns <- colnames(XtX)
     }
   }
-  if (!is.null(columns)) {
-    if (length(columns) != p) stop("`columns` must be length p (nrow(XtX))")
+  if (is.null(columns)) {
+    # Let compute_lm_contrasts() find no names either.
+    rownames(B) <- NULL
+    colnames(XtXinv) <- NULL
   }
 
-  norm <- .normalize_contrasts_for_engine(
-    p = p,
-    contrasts = contrasts,
-    t_contrasts = t_contrasts,
-    f_contrasts = f_contrasts,
-    columns = columns,
+  compute_lm_contrasts(
+    B = B, XtXinv = XtXinv, df = df, sigma = sigma, sigma2 = sigma2,
+    contrasts = contrasts, t_contrasts = t_contrasts,
+    f_contrasts = f_contrasts, columns = columns, output = output,
+    robust_weights = robust_weights, ar_order = ar_order,
     drop_failed = drop_failed
   )
-
-  res <- fit_lm_contrasts_fast(
-    B = B,
-    sigma2 = s2,
-    XtXinv = XtXinv,
-    conlist = norm$t_list,
-    fconlist = norm$f_list,
-    df = df,
-    robust_weights = robust_weights,
-    ar_order = ar_order
-  )
-
-  if (output == "list") {
-    return(res)
-  }
-  if (length(res)) dplyr::bind_rows(res) else empty_contrast_table()
 }
 
 

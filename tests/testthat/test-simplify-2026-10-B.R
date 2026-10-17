@@ -118,3 +118,97 @@ test_that("B10: an exactly degenerate standard error is handled alike on all pat
   expect_equal(out1$stat, unname(est1 / 0.5))
   expect_equal(out1$prob, unname(2 * stats::pt(-abs(est1 / 0.5), df)))
 })
+
+# Contrast engine refactors (pinned against lm()/anova()) -------------------
+
+.simplify_B_lm_fixture <- function(seed = 31L) {
+  set.seed(seed)
+  n <- 40L
+  X <- cbind(1, a = rnorm(n), b = rnorm(n), c = rnorm(n))
+  colnames(X) <- c("int", "a", "b", "c")
+  Y <- X %*% matrix(rnorm(4L * 3L), 4L, 3L) + matrix(rnorm(n * 3L), n, 3L)
+  list(X = X, Y = Y, n = n, p = 4L, V = 3L)
+}
+
+.simplify_B_lm_reference <- function(f) {
+  t_ab <- f_bc <- numeric(f$V)
+  p_t <- p_F <- numeric(f$V)
+  for (v in seq_len(f$V)) {
+    d <- data.frame(y = f$Y[, v], a = f$X[, "a"], b = f$X[, "b"], c = f$X[, "c"])
+    # t for a - b: refit with the contrast as a single coefficient.
+    full <- stats::lm(y ~ I(a) + I(a + b) + c, data = d)
+    t_ab[v] <- summary(full)$coefficients["I(a)", "t value"]
+    p_t[v] <- summary(full)$coefficients["I(a)", "Pr(>|t|)"]
+    # F for b = c = 0 against the reduced model.
+    av <- stats::anova(stats::lm(y ~ a, data = d), stats::lm(y ~ a + b + c, data = d))
+    f_bc[v] <- av$F[2L]
+    p_F[v] <- av$`Pr(>F)`[2L]
+  }
+  list(t = t_ab, p_t = p_t, F = f_bc, p_F = p_F)
+}
+
+test_that("compute_lm_contrasts matches lm()/anova() for t and F contrasts", {
+  f <- .simplify_B_lm_fixture()
+  ref <- .simplify_B_lm_reference(f)
+  qx <- qr(f$X)
+  B <- qr.coef(qx, f$Y)
+  s2 <- colSums(qr.resid(qx, f$Y)^2) / (f$n - f$p)
+  Fm <- rbind(c(0, 0, 1, 0), c(0, 0, 0, 1))
+  out <- compute_lm_contrasts(
+    B, solve(crossprod(f$X)), df = f$n - f$p, sigma2 = s2,
+    t_contrasts = list(a_b = c(a = 1, b = -1)),
+    f_contrasts = list(bc = Fm)
+  )
+  tt <- out$data[[which(out$name == "a_b")]]
+  FF <- out$data[[which(out$name == "bc")]]
+  expect_equal(tt$stat, ref$t, tolerance = 1e-8)
+  expect_equal(tt$prob, ref$p_t, tolerance = 1e-8)
+  expect_equal(FF$stat, ref$F, tolerance = 1e-8)
+  expect_equal(FF$prob, ref$p_F, tolerance = 1e-8)
+})
+
+test_that("compute_lm_contrasts_from_suffstats equals compute_lm_contrasts and lm()", {
+  f <- .simplify_B_lm_fixture(32L)
+  ref <- .simplify_B_lm_reference(f)
+  XtX <- crossprod(f$X)
+  XtS <- crossprod(f$X, f$Y)
+  StS <- colSums(f$Y^2)
+  Fm <- rbind(c(0, 0, 1, 0), c(0, 0, 0, 1))
+  args <- list(t_contrasts = list(a_b = c(a = 1, b = -1)),
+               f_contrasts = list(bc = Fm))
+  ss <- do.call(compute_lm_contrasts_from_suffstats,
+                c(list(XtX = XtX, XtS = XtS, StS = StS, df = f$n - f$p), args))
+  tt <- ss$data[[which(ss$name == "a_b")]]
+  FF <- ss$data[[which(ss$name == "bc")]]
+  expect_equal(tt$stat, ref$t, tolerance = 1e-8)
+  expect_equal(tt$prob, ref$p_t, tolerance = 1e-8)
+  expect_equal(FF$stat, ref$F, tolerance = 1e-8)
+  expect_equal(FF$prob, ref$p_F, tolerance = 1e-8)
+
+  XtXinv <- chol2inv(chol(XtX))
+  B <- XtXinv %*% XtS
+  s2 <- pmax(pmax(StS - colSums(B * XtS), 0) / (f$n - f$p), .Machine$double.eps)
+  direct <- do.call(compute_lm_contrasts,
+                    c(list(B = B, XtXinv = XtXinv, df = f$n - f$p, sigma2 = s2,
+                           columns = colnames(f$X)), args))
+  expect_equal(ss, direct)
+
+  # Supplied sigma takes precedence over the suff-stat residual variance.
+  ss_sigma <- do.call(compute_lm_contrasts_from_suffstats,
+                      c(list(XtX = XtX, XtS = XtS, StS = StS, df = f$n - f$p,
+                             sigma = rep(2, f$V)), args))
+  direct_sigma <- do.call(compute_lm_contrasts,
+                          c(list(B = B, XtXinv = XtXinv, df = f$n - f$p,
+                                 sigma = rep(2, f$V), columns = colnames(f$X)), args))
+  expect_equal(ss_sigma, direct_sigma)
+})
+
+test_that("reference lm-object contrast helpers match summary.lm()", {
+  f <- .simplify_B_lm_fixture(33L)
+  fit <- stats::lm(f$Y[, 1] ~ f$X - 1)
+  cu <- fmrireg:::.lm_cov_unscaled(fit, varnames = colnames(f$X))
+  expect_equal(matrix(cu, 4L), unname(summary(fit)$cov.unscaled), tolerance = 1e-10)
+  bs <- fmrireg:::beta_stats(fit, colnames(f$X))
+  expect_equal(unname(drop(bs$data[[1L]]$stat[[1L]])),
+               unname(summary(fit)$coefficients[, "t value"]), tolerance = 1e-10)
+})

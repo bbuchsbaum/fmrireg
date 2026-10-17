@@ -1,6 +1,16 @@
+#' QR decomposition stored in an `lm` fit
+#'
+#' Local equivalent of the unexported `stats:::qr.lm()` (no
+#' `getFromNamespace()`); `fmri_latent_lm.R` still calls it by this name.
 #' @keywords internal
 #' @noRd
-qr.lm <- getFromNamespace("qr.lm", "stats")
+qr.lm <- function(x, ...) {
+  qrx <- x[["qr"]]
+  if (is.null(qrx)) {
+    stop("lm object does not have a proper 'qr' component.", call. = FALSE)
+  }
+  qrx
+}
 
 #' Fit Contrasts
 #'
@@ -665,17 +675,17 @@ fit_lm_contrasts_fast <- function(B, sigma2, XtXinv, conlist, fconlist, df,
   aliased <- aliased %||% .aliased_indices(B, XtXinv)
   
   # Process t-contrasts
-  tcontrast_results <- process_t_contrasts(
-    B = B, sigma2 = sigma2, XtXinv = XtXinv, 
+  tcontrast_results <- .process_contrasts(
+    "t", B = B, sigma2 = sigma2, XtXinv = XtXinv,
     conlist = conlist, df = df,
     robust_weights = robust_weights, ar_order = ar_order,
     aliased = aliased
   )
   
   # Process F-contrasts  
-  fcontrast_results <- process_f_contrasts(
-    B = B, sigma2 = sigma2, XtXinv = XtXinv,
-    fconlist = fconlist, df = df,
+  fcontrast_results <- .process_contrasts(
+    "F", B = B, sigma2 = sigma2, XtXinv = XtXinv,
+    conlist = fconlist, df = df,
     robust_weights = robust_weights, ar_order = ar_order,
     aliased = aliased
   )
@@ -689,89 +699,52 @@ fit_lm_contrasts_fast <- function(B, sigma2, XtXinv, conlist, fconlist, df,
   return(all_results)
 }
 
-#' Process t-contrasts for fast linear model fitting
+#' Process t- or F-contrasts for fast linear model fitting
+#'
+#' One loop for both kinds: resolve `colind`, expand the weights to the full
+#' design width, compute the statistics with the shared-`XtXinv` engine and
+#' package one result tibble per contrast. Any failure is reported with the
+#' contrast's name.
 #' @keywords internal
 #' @noRd
-#' @autoglobal
-process_t_contrasts <- function(B, sigma2, XtXinv, conlist, df, 
-                                robust_weights = NULL, ar_order = 0,
-                                aliased = integer(0)) {
+.process_contrasts <- function(kind = c("t", "F"), B, sigma2, XtXinv, conlist,
+                               df, robust_weights = NULL, ar_order = 0,
+                               aliased = integer(0)) {
+  kind <- match.arg(kind)
   if (length(conlist) == 0) return(list())
-  
+
+  if (identical(kind, "t")) {
+    label <- "t-contrast"
+    expand <- create_full_contrast_vector
+    engine <- .fast_t_contrast
+    package <- package_tcontrast_result
+  } else {
+    label <- "F-contrast"
+    expand <- create_full_contrast_matrix
+    engine <- .fast_F_contrast
+    package <- package_fcontrast_result
+  }
+
   results <- vector("list", length(conlist))
   names(results) <- names(conlist)
-  
+
   for (i in seq_along(conlist)) {
     con_name <- names(conlist)[i]
-    contrast_weights <- conlist[[i]]
-    
-    tryCatch({
-      # Extract colind - this is required for proper contrast computation
-      colind <- extract_colind(contrast_weights, con_name, "t-contrast")
-      
-      # Create full contrast vector
-      full_contrast <- create_full_contrast_vector(contrast_weights, colind, nrow(XtXinv))
-      
-      # Compute contrast statistics
-      stats <- .fast_t_contrast(B, sigma2, XtXinv, full_contrast, df, 
-                               robust_weights, ar_order, aliased, con_name)
-      
-      # Package results in expected format
-      results[[i]] <- package_tcontrast_result(
-        con_name, contrast_weights, colind, df, stats
-      )
-      
+    weights <- conlist[[i]]
+    results[[i]] <- tryCatch({
+      colind <- extract_colind(weights, con_name, label)
+      full_contrast <- expand(weights, colind, nrow(XtXinv))
+      stats <- engine(B, sigma2, XtXinv, full_contrast, df,
+                      robust_weights, ar_order, aliased, con_name)
+      package(con_name, weights, colind, df, stats)
     }, error = function(e) {
       stop(sprintf(
-        "Failed to compute t-contrast '%s': %s",
-        con_name, e$message
+        "Failed to compute %s '%s': %s",
+        label, con_name, e$message
       ), call. = FALSE)
     })
   }
-  
-  results
-}
 
-#' Process F-contrasts for fast linear model fitting  
-#' @keywords internal
-#' @noRd
-#' @autoglobal
-process_f_contrasts <- function(B, sigma2, XtXinv, fconlist, df,
-                                robust_weights = NULL, ar_order = 0,
-                                aliased = integer(0)) {
-  if (length(fconlist) == 0) return(list())
-  
-  results <- vector("list", length(fconlist))
-  names(results) <- names(fconlist)
-  
-  for (i in seq_along(fconlist)) {
-    con_name <- names(fconlist)[i]
-    contrast_matrix <- fconlist[[i]]
-    
-    tryCatch({
-      # Extract colind - this is required for proper contrast computation
-      colind <- extract_colind(contrast_matrix, con_name, "F-contrast")
-      
-      # Create full contrast matrix
-      full_contrast <- create_full_contrast_matrix(contrast_matrix, colind, nrow(XtXinv))
-      
-      # Compute contrast statistics
-      stats <- .fast_F_contrast(B, sigma2, XtXinv, full_contrast, df,
-                               robust_weights, ar_order, aliased, con_name)
-      
-      # Package results in expected format
-      results[[i]] <- package_fcontrast_result(
-        con_name, contrast_matrix, colind, df, stats
-      )
-      
-    }, error = function(e) {
-      stop(sprintf(
-        "Failed to compute F-contrast '%s': %s",
-        con_name, e$message
-      ), call. = FALSE)
-    })
-  }
-  
   results
 }
 
