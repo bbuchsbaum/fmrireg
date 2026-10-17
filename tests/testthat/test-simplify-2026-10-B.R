@@ -212,3 +212,42 @@ test_that("reference lm-object contrast helpers match summary.lm()", {
   expect_equal(unname(drop(bs$data[[1L]]$stat[[1L]])),
                unname(summary(fit)$coefficients[, "t value"]), tolerance = 1e-10)
 })
+
+# Exact result-field matching ----------------------------------------------
+
+test_that("fit_contrasts.fmri_lm does not read sigma2 as sigma", {
+  # `result$sigma` partial-matches `sigma2` when `sigma` is absent, so the
+  # old code silently used the variance as the standard deviation. With
+  # exact matching a result without `sigma` (the beta table carries no
+  # sigma column) fails loudly instead.
+  fit <- suppressWarnings(fmrireg:::.demo_fmri_lm())
+  bnames <- colnames(coef(fit))
+  w <- stats::setNames(c(1, -1), bnames)
+  alt <- fit
+  sigma <- as.numeric(alt$result[["sigma"]])
+  alt$result[["sigma"]] <- NULL
+  alt$result[["sigma2"]] <- (3 * sigma)^2
+  expect_error(fit_contrasts(alt, list(d = w)), "Length of sigma")
+
+  # With `sigma` present, the stored scale is used: se = sigma * sqrt(l'XtXinv l).
+  ref <- fit_contrasts(fit, list(d = w))$d
+  XtXinv <- as.matrix(fit$result[["cov.unscaled"]])
+  ei <- fit$result[["event_indices"]]
+  if (nrow(XtXinv) != length(ei)) XtXinv <- XtXinv[ei, ei, drop = FALSE]
+  l <- c(1, -1)
+  expect_equal(ref$se, sigma * sqrt(drop(crossprod(l, XtXinv %*% l))))
+})
+
+test_that("tidy.fmri_lm does not read df.residual as the df record", {
+  # `result$df` partial-matched `df.residual` when `df` was absent and then
+  # failed on `$inference` of a number.
+  fit <- suppressWarnings(fmrireg:::.demo_fmri_lm())
+  ref <- tidy(fit)
+  alt <- fit
+  alt$result[["df"]] <- NULL
+  alt$result[["df.residual"]] <- 5
+  got <- tidy(alt)
+  expect_equal(got$estimate, ref$estimate)
+  expect_equal(got$statistic, ref$statistic)
+  expect_false("df_inference" %in% names(got))
+})

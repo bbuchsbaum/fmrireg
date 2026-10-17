@@ -1026,18 +1026,18 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   }
   .posthoc_check_supported(object)
 
-  sigma <- object$result$sigma
+  sigma <- object$result[["sigma"]]
   if (is.null(sigma)) {
-    sigma <- object$result$betas$data[[1]]$sigma[[1]]
+    sigma <- object$result[["betas"]]$data[[1]][["sigma"]][[1]]
   }
   sigma <- as.numeric(sigma)
 
   beta_mat_raw <- tryCatch(
     suppressWarnings(as.matrix(coef(object, type = "betas"))),
-    error = function(e) object$result$betas$data[[1]]$estimate[[1]]
+    error = function(e) object$result[["betas"]]$data[[1]]$estimate[[1]]
   )
 
-  event_idx_hint <- as.integer(object$result$event_indices %||% integer(0))
+  event_idx_hint <- as.integer(object$result[["event_indices"]] %||% integer(0))
   expected_p <- length(event_idx_hint)
 
   if (expected_p > 0L) {
@@ -1069,7 +1069,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   beta_names <- colnames(beta_mat_vxp)
   if (is.null(beta_names)) {
     dm_names <- tryCatch(colnames(design_matrix(object$model)), error = function(e) NULL)
-    event_idx <- as.integer(object$result$event_indices %||% integer(0))
+    event_idx <- as.integer(object$result[["event_indices"]] %||% integer(0))
     if (!is.null(dm_names) && length(event_idx) == ncol(beta_mat_vxp) && length(event_idx) > 0L &&
         max(event_idx) <= length(dm_names)) {
       beta_names <- dm_names[event_idx]
@@ -1086,16 +1086,16 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   }
   sigma2 <- sigma^2
 
-  df_residual <- object$result$rdf
+  df_residual <- object$result[["rdf"]]
   if (is.null(df_residual)) {
-    df_residual <- object$result$betas$df.residual[1]
+    df_residual <- object$result[["betas"]][["df.residual"]][1]
   }
   df_residual <- as.numeric(df_residual)[1]
-  contrast_scope <- object$result$contrast_scope %||% NULL
+  contrast_scope <- object$result[["contrast_scope"]] %||% NULL
 
-  XtXinv <- object$result$cov.unscaled
+  XtXinv <- object$result[["cov.unscaled"]]
   if (is.null(XtXinv)) {
-    XtXinv <- object$result$XtXinv
+    XtXinv <- object$result[["XtXinv"]]
   }
   if (is.null(XtXinv)) {
     fmrimod <- object$model
@@ -1109,7 +1109,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   xtx_aliased <- attr(XtXinv, "aliased", exact = TRUE) %||% integer(0)
   XtXinv <- as.matrix(XtXinv)
   if (nrow(XtXinv) != p || ncol(XtXinv) != p) {
-    event_idx <- as.integer(object$result$event_indices %||% integer(0))
+    event_idx <- as.integer(object$result[["event_indices"]] %||% integer(0))
     if (length(event_idx) == p && length(event_idx) > 0L &&
         max(event_idx) <= nrow(XtXinv) && max(event_idx) <= ncol(XtXinv)) {
       XtXinv <- XtXinv[event_idx, event_idx, drop = FALSE]
@@ -1131,7 +1131,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   attr(betas, "aliased") <- as.integer(xtx_aliased)
   attr(XtXinv, "aliased") <- as.integer(xtx_aliased)
 
-  vm <- object$result$variance_model
+  vm <- object$result[["variance_model"]]
   structured_covariance <- NULL
   df_inference <- rep(df_residual, V)
   if (inherits(vm, "fmri_lm_variance_model")) {
@@ -1142,7 +1142,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
     }
     if (identical(vm$covariance_scope, "voxel") &&
         is.list(vm$covariance) && length(vm$covariance) == V) {
-      event_idx <- as.integer(object$result$event_indices %||% integer(0))
+      event_idx <- as.integer(object$result[["event_indices"]] %||% integer(0))
       structured_covariance <- lapply(vm$covariance, function(cv) {
         cv <- as.matrix(cv)
         if (nrow(cv) == p && ncol(cv) == p) return(cv)
