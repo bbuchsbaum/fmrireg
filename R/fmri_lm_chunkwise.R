@@ -53,9 +53,7 @@ chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
   baseline_indices <- attr(tmats, "baseline_term_indices")
   
   # Global design matrix for Vu calculation
-  data_env <- list2env(tmats)
-  data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
-  modmat <- model.matrix(as.formula(form), data_env)
+  modmat <- .run_design(model, tmats = tmats)
   proj_global <- .fast_preproject(modmat)
   Vu <- proj_global$XtXinv
   

@@ -254,9 +254,8 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     Y_run <- as.matrix(.chunk_data(ym))
 
     # Build design matrix for preprocessing
-    n_time_run <- nrow(tmats[[1]])
-    data_env[[".y"]] <- rep(0, n_time_run)
-    X_run <- model.matrix(form, data_env)
+    X_run <- .run_design(model, tmats = tmats)
+    n_time_run <- nrow(X_run)
 
     # Apply preprocessing (volume weights and/or soft subspace projection)
     preproc <- preprocess_run_data(X_run, Y_run, cfg, dataset, ym$chunk_num)
@@ -353,12 +352,8 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
     
     tmats <- term_matrices(model, ym$chunk_num)
     vnames <- attr(tmats, "varnames")
-    
-    data_env <- list2env(tmats)
     Y_run <- as.matrix(.chunk_data(ym))
-    data_env$.y <- Y_run
-    form <- get_formula(model)
-    X_run <- model.matrix(form, data_env)
+    X_run <- .run_design(model, tmats = tmats)
     
     n_voxels <- ncol(Y_run)
     n_timepoints <- nrow(Y_run)

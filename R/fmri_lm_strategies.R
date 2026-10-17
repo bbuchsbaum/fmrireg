@@ -260,6 +260,18 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
   list(X = X, Y = Y, preprocess_info = preprocess_info)
 }
 
+#' Design matrix of one run, or of the whole model when `run` is NULL
+#'
+#' Evaluates the model formula on `term_matrices(model, run)`; pass `tmats`
+#' when the caller already holds them.
+#' @keywords internal
+#' @noRd
+.run_design <- function(model, run = NULL, tmats = term_matrices(model, run)) {
+  data_env <- list2env(tmats)
+  data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
+  model.matrix(get_formula(model), data_env)
+}
+
 #' Run-level design and (preprocessed) data
 #'
 #' Reads the run's data once, builds the run design from
@@ -270,11 +282,8 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
 #' @noRd
 .prepare_run_inputs <- function(run_chunk, model, cfg, dataset = NULL) {
   Y_run <- as.matrix(.chunk_data(run_chunk))
-  tmats_run <- term_matrices(model, run_chunk$chunk_num)
-  data_env_run <- list2env(tmats_run)
-  n_time_run <- nrow(tmats_run[[1]])
-  data_env_run[[".y"]] <- rep(0, n_time_run)
-  X_run <- model.matrix(get_formula(model), data_env_run)
+  X_run <- .run_design(model, run_chunk$chunk_num)
+  n_time_run <- nrow(X_run)
 
   preproc <- preprocess_run_data(X_run, Y_run, cfg, dataset, run_chunk$chunk_num)
   vw <- preproc$preprocess_info$volume_weights
@@ -631,12 +640,7 @@ process_run_ar_robust <- function(run_chunk, model, cfg, phi_fixed = NULL, sigma
 #' @keywords internal
 #' @noRd
 prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, sigma_fixed = NULL) {
-  # Get global design matrix
-  form <- get_formula(model)
-  tmats <- term_matrices(model)
-  data_env <- list2env(tmats)
-  data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
-  modmat_orig <- model.matrix(as.formula(form), data_env)
+  modmat_orig <- .run_design(model)
 
   # Run structure. Chunks are lazy: each run's data is read once, inside the
   # per-run fit below, and never retained.
@@ -688,10 +692,7 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
       info$phi_hat <- if (!is.null(phi_fixed)) {
         phi_fixed
       } else {
-        tmats_run <- term_matrices(model, rch$chunk_num)
-        data_env_run <- list2env(tmats_run)
-        data_env_run[[".y"]] <- rep(0, n_time_run)
-        X_run_orig <- model.matrix(form, data_env_run)
+        X_run_orig <- .run_design(model, rch$chunk_num)
         Y_run_full <- as.matrix(.chunk_data(rch))
         ols <- solve_glm_core(
           glm_context(X = X_run_orig, Y = Y_run_full,

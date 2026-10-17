@@ -1177,71 +1177,58 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   contrast_prep <- prepare_fmri_lm_contrasts(fmrimod)
   processed_conlist <- contrast_prep$processed
   standard_path_conlist <- contrast_prep$standard
-  contrast_objects <- processed_conlist
-  
-  # Pass the full processed contrast objects list down.
-  # The fitting function (chunkwise/runwise) will decide whether to use the objects (slow path)
-  # or extract weights (fast path).
+
+  # Global AR and global robust scale both start from per-run OLS residuals;
+  # one pass over the runs serves either or both.
   phi_global <- NULL
   sigma_global <- NULL
-  if (cfg$ar$global && cfg$ar$struct != "iid") {
-    ar_order <- .target_ar_order(cfg$ar) %||% 0L
-
+  need_global_ar <- cfg$ar$global && cfg$ar$struct != "iid"
+  need_global_scale <- .fmri_lm_robust_enabled(cfg$robust) &&
+    cfg$robust$scale_scope == "global"
+  if (need_global_ar || need_global_scale) {
     run_chunks <- .dset_run_chunks(dataset)
-    
-    form <- get_formula(fmrimod)
     resid_chunks <- vector("list", length(run_chunks))
     design_chunks <- vector("list", length(run_chunks))
-    for (ri in seq_along(run_chunks)) {
-      rch <- run_chunks[[ri]]
-      tmats_run <- term_matrices(fmrimod, rch$chunk_num)
-      data_env_run <- list2env(tmats_run)
-      n_time_run <- nrow(tmats_run[[1]])
-      data_env_run[[".y"]] <- rep(0, n_time_run)
-      X_run <- model.matrix(form, data_env_run)
-      proj_run <- .fast_preproject(X_run)
-      Y_run <- as.matrix(.chunk_data(rch))
-      ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
-      resid_chunks[[ri]] <- Y_run - ols$fitted
-      design_chunks[[ri]] <- X_run
-    }
-    resid_mat <- do.call(rbind, resid_chunks)
-    # Each run was fitted with its own coefficient vector. The exact combined
-    # residual operator is therefore block diagonal; row-binding the designs
-    # would instead describe one coefficient vector shared across runs.
-    design_mat <- .block_diagonal_design(design_chunks)
-    run_lengths <- vapply(resid_chunks, nrow, integer(1))
-    run_indices <- split(
-      seq_len(sum(run_lengths)),
-      rep(seq_along(run_lengths), run_lengths)
-    )
-    phi_global <- .estimate_shared_ar_parameters(
-      resid_mat, ar_order, cfg$ar,
-      run_indices = run_indices,
-      design = design_mat
-    )
-    cfg$ar$iter_gls <- 1L
-  }
-
-  if (.fmri_lm_robust_enabled(cfg$robust) && cfg$robust$scale_scope == "global") {
-    run_chunks <- .dset_run_chunks(dataset)
-    form <- get_formula(fmrimod)
     row_med_chunks <- vector("list", length(run_chunks))
     for (ri in seq_along(run_chunks)) {
       rch <- run_chunks[[ri]]
-      tmats_run <- term_matrices(fmrimod, rch$chunk_num)
-      data_env_run <- list2env(tmats_run)
-      n_time_run <- nrow(tmats_run[[1]])
-      data_env_run[[".y"]] <- rep(0, n_time_run)
-      X_run <- model.matrix(form, data_env_run)
-      proj_run <- .fast_preproject(X_run)
+      X_run <- .run_design(fmrimod, rch$chunk_num)
       Y_run <- as.matrix(.chunk_data(rch))
-      ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
-      row_med_chunks[[ri]] <- matrixStats::rowMedians(abs(Y_run - ols$fitted))
+      ols <- .fast_lm_matrix(X_run, Y_run, .fast_preproject(X_run), return_fitted = TRUE)
+      resid_run <- Y_run - ols$fitted
+      if (need_global_ar) {
+        resid_chunks[[ri]] <- resid_run
+        design_chunks[[ri]] <- X_run
+      }
+      if (need_global_scale) {
+        row_med_chunks[[ri]] <- matrixStats::rowMedians(abs(resid_run))
+      }
     }
-    row_med_all <- unlist(row_med_chunks, use.names = FALSE)
-    sigma_global <- 1.4826 * median(row_med_all)
-    if (sigma_global <= .Machine$double.eps) sigma_global <- .Machine$double.eps
+
+    if (need_global_ar) {
+      resid_mat <- do.call(rbind, resid_chunks)
+      # Each run was fitted with its own coefficient vector. The exact combined
+      # residual operator is therefore block diagonal; row-binding the designs
+      # would instead describe one coefficient vector shared across runs.
+      design_mat <- .block_diagonal_design(design_chunks)
+      run_lengths <- vapply(resid_chunks, nrow, integer(1))
+      run_indices <- split(
+        seq_len(sum(run_lengths)),
+        rep(seq_along(run_lengths), run_lengths)
+      )
+      phi_global <- .estimate_shared_ar_parameters(
+        resid_mat, .target_ar_order(cfg$ar) %||% 0L, cfg$ar,
+        run_indices = run_indices,
+        design = design_mat
+      )
+      cfg$ar$iter_gls <- 1L
+    }
+
+    if (need_global_scale) {
+      row_med_all <- unlist(row_med_chunks, use.names = FALSE)
+      sigma_global <- 1.4826 * median(row_med_all)
+      if (sigma_global <= .Machine$double.eps) sigma_global <- .Machine$double.eps
+    }
   }
 
   result <- switch(strategy,
