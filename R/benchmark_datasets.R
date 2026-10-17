@@ -339,9 +339,6 @@ evaluate_method_performance <- function(dataset_name, estimated_betas, method_na
   )
 }
 
-# Helper function for null coalescing
-`%||%` <- function(x, y) if (is.null(x)) y else x
-
 # Environment to store the loaded and processed benchmark datasets
 .benchmark_data_env <- new.env(parent = emptyenv())
 

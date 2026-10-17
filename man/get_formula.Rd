@@ -19,11 +19,8 @@ A formula.
 }
 \description{
 Generic used to expose the original modelling formula for fitted objects.
-
-Functions for creating and manipulating fmri_model objects
 }
 \examples{
 fm <- fmrireg:::.demo_fmri_model()
 get_formula(fm)
 }
-\keyword{internal}
