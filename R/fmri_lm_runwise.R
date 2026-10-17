@@ -137,12 +137,7 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
                            dataset = NULL) {
   
   cres <- vector("list", length(chunks))
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
-  
+
   for (i in seq_along(chunks)) {
     ym <- chunks[[i]]
     if (verbose) message("Processing run (fast path) ", ym$chunk_num)
@@ -301,7 +296,7 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     # requesting AR with use_fast_path = FALSE silently produced uncorrected
     # results. Estimate phi from the configured shared residual representation
     # and refit on the whitened design via modmat.
-    ar_order <- switch(cfg$ar$struct, ar1 = 1L, ar2 = 2L, arp = cfg$ar$p, iid = 0L)
+    ar_order <- .target_ar_order(cfg$ar) %||% 0L
     phi_hat_run <- NULL
     modmat <- NULL
     if (cfg$ar$struct != "iid" && !.fmri_lm_robust_enabled(cfg$robust)) {
@@ -363,11 +358,7 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
                                 verbose = FALSE, progress = FALSE, 
                                 parallel_voxels = FALSE) {
   
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
+  ar_order <- .target_ar_order(cfg$ar) %||% 0L
   
   if (verbose) message("Using voxelwise AR(", ar_order, ") modeling...")
   

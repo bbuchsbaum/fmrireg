@@ -426,16 +426,7 @@ NULL
     stop("q must be a nonnegative integer", call. = FALSE)
   }
   method <- if (q > 0L) "arma" else "ar"
-  p <- switch(as.character(ar_opts$struct),
-    "iid" = 0L,
-    "ar1" = 1L,
-    "ar2" = 2L,
-    "ar3" = 3L,
-    "ar4" = 4L,
-    "arp" = as.integer(ar_opts$p %||% stop("p must be specified for struct='arp'")),
-    0L  # Default to no AR
-  )
-  p <- as.integer(p)
+  p <- .target_ar_order(ar_opts) %||% 0L
   if (!is.finite(p) || p < 0L) {
     p <- 0L
   }

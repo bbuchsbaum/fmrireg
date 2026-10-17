@@ -1185,10 +1185,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   phi_global <- NULL
   sigma_global <- NULL
   if (cfg$ar$global && cfg$ar$struct != "iid") {
-    ar_order <- switch(cfg$ar$struct,
-                       ar1 = 1L,
-                       ar2 = 2L,
-                       arp = cfg$ar$p)
+    ar_order <- .target_ar_order(cfg$ar) %||% 0L
 
     run_chunks <- .dset_run_chunks(dataset)
     
