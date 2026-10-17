@@ -11,10 +11,14 @@
 #'     \item For "h5": Character vector of HDF5 file paths
 #'     \item For "nifti": List or data frame with beta/SE/variance paths
 #'     \item For "csv": Path to CSV file or data frame
-#'     \item For "fmrilm": List of fmri_lm objects
+#'     \item For "fmrilm": not supported; see below
 #'   }
 #' @param format Character string specifying the input format. One of "auto" (default),
 #'   "h5", "nifti", "csv", or "fmrilm". If "auto", attempts to detect format.
+#'   \code{format = "fmrilm"} (and a list of \code{fmri_lm} fits) is not
+#'   supported and fails immediately: write each subject's fit with
+#'   \code{\link{write_results}} and load the resulting beta/SE maps with
+#'   \code{format = "nifti"} (or HDF5 files with \code{format = "h5"}).
 #' @param ... Additional arguments passed to format-specific constructors
 #'
 #' @return A group_data object suitable for meta-analysis

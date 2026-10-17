@@ -82,3 +82,16 @@ test_that("fmrireg's spatial-FDR posthoc is available under a namespaced name", 
     expect_equal(as.numeric(q[, 1, k]), as.numeric(spatial_fdr(z = z_mat[, k], group = grp)$q))
   }
 })
+
+test_that("group_data(format = 'fmrilm') fails up front and names the working route (B4)", {
+  fit <- suppressWarnings(fmrireg:::.demo_fmri_lm())
+  # Previously: "invalid 'file' argument" from the tabular adapter.
+  err <- tryCatch(group_data(list(fit, fit), format = "fmrilm"), error = function(e) e)
+  expect_s3_class(err, "error")
+  expect_match(conditionMessage(err), "group_data(format = \"fmrilm\") is not supported", fixed = TRUE)
+  expect_match(conditionMessage(err), "write_results()", fixed = TRUE)
+  expect_match(conditionMessage(err), "format = \"nifti\"", fixed = TRUE)
+  # A list of fits passed with format = "auto" gets the same message.
+  err2 <- tryCatch(group_data(list(fit, fit)), error = function(e) e)
+  expect_identical(conditionMessage(err2), conditionMessage(err))
+})
