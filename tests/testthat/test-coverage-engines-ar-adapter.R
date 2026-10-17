@@ -142,16 +142,12 @@ test_that(".rrr extract/ar-order/whiten/build-beta-stats cover", {
   Y <- fmrireg:::.rrr_extract_response_matrix(fx$dataset)
   expect_equal(dim(Y), dim(fx$Y))
 
-  runs <- fmrireg:::.rrr_derive_run_indices(fx$model, nrow(Y))
+  runs <- fmrireg:::.model_run_indices(fx$model, nrow(Y))
   expect_equal(length(runs), 2L)
   expect_equal(sum(lengths(runs)), nrow(Y))
 
   cfg <- fmri_lm_control()
-  expect_equal(fmrireg:::.rrr_ar_order_from_cfg(cfg), 0L)
   cfg_ar <- fmri_lm_control(ar_options = list(struct = "ar1"))
-  expect_equal(fmrireg:::.rrr_ar_order_from_cfg(cfg_ar), 1L)
-  cfg_arp <- list(ar = list(struct = "arp", p = 3L))
-  expect_equal(fmrireg:::.rrr_ar_order_from_cfg(cfg_arp), 3L)
 
   X_task <- as.matrix(design_matrix(fx$model))[, 1:2, drop = FALSE]
   Z_nuis <- as.matrix(design_matrix(fx$model))[, -(1:2), drop = FALSE]

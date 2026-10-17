@@ -781,16 +781,7 @@ fit_glm_with_config <- function(model, Y, cfg = NULL, dataset = NULL,
   baseline_indices <- attr(tmats, "baseline_term_indices")
   vnames <- attr(tmats, "varnames")
 
-  # Derive run indices from sampling frame when available
-  run_indices <- NULL
-  sframe <- tryCatch(model$event_model$sampling_frame, error = function(e) NULL)
-  if (!is.null(sframe)) {
-    runs <- tryCatch(fmrihrf::blockids(sframe), error = function(e) NULL)
-    if (is.numeric(runs) && length(runs) == nrow(X)) {
-      split_idx <- split(seq_len(nrow(X)), runs)
-      run_indices <- lapply(split_idx, as.integer)
-    }
-  }
+  run_indices <- .model_run_indices(model, nrow(X))
 
   fit <- solve_integrated_glm(X, Y, cfg, run_indices = run_indices)
 

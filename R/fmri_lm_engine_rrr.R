@@ -50,7 +50,7 @@
     NULL
   }
 
-  run_indices <- .rrr_derive_run_indices(model, nrow(X_full))
+  run_indices <- .model_run_indices(model, nrow(X_full))
   white <- .rrr_whiten_data(
     X_task = X_task,
     Z_nuisance = Z_nuisance,
@@ -384,49 +384,16 @@
 }
 
 
-#' Internal: derive run indices from model sampling frame
-#' @keywords internal
-#' @noRd
-.rrr_derive_run_indices <- function(model, n) {
-  .model_run_indices(model, n)
-}
-
-
-#' Internal: map cfg$ar into AR order
-#' @keywords internal
-#' @noRd
-.rrr_ar_order_from_cfg <- function(cfg) {
-  ar_struct <- as.character(cfg$ar$struct %||% "iid")
-  order <- switch(
-    ar_struct,
-    iid = 0L,
-    ar1 = 1L,
-    ar2 = 2L,
-    ar3 = 3L,
-    ar4 = 4L,
-    arp = as.integer(cfg$ar$p %||% 0L),
-    0L
-  )
-  if (!is.finite(order)) {
-    0L
-  } else {
-    as.integer(order)
-  }
-}
-
-
 #' Internal: apply global AR whitening to design and data
+#'
+#' The shared AR model is estimated once from the initial OLS residuals of the
+#' full (task + nuisance) design and held fixed, exactly as in the low-rank
+#' engine (`.lowrank_whiten_initial_ols()`).
 #' @keywords internal
 #' @noRd
 .rrr_whiten_data <- function(X_task, Z_nuisance, Y, cfg, run_indices = NULL,
                              censor = NULL) {
-  X_ref <- if (!is.null(Z_nuisance) && ncol(Z_nuisance) > 0L) {
-    cbind(X_task, Z_nuisance)
-  } else {
-    X_task
-  }
-
-  ar_order <- .rrr_ar_order_from_cfg(cfg)
+  ar_order <- .target_ar_order(.normalize_ar_options(cfg$ar)) %||% 0L
   if (ar_order <= 0L) {
     return(list(
       Xw_task = X_task,
@@ -437,38 +404,20 @@
     ))
   }
 
-  exact_first <- isTRUE(cfg$ar$exact_first)
-
-  estimate_phi <- function(resid) {
-    correction_design <- .shared_ar_correction_design(resid, cfg$ar, X_ref)
-    plan <- .estimate_ar_via_fmriAR(
-      residuals = .shared_ar_residual_input(resid, cfg$ar),
-      cfg = cfg$ar,
-      run_indices = run_indices,
-      censor = censor,
-      design = correction_design
-    )
-    phi <- plan$phi %||% plan$phi_by_parcel
-    if (is.null(phi) || !length(phi)) return(rep(0, ar_order))
-    if (length(phi) == 1L) as.numeric(phi[[1L]]) else lapply(phi, as.numeric)
+  X_ref <- if (!is.null(Z_nuisance) && ncol(Z_nuisance) > 0L) {
+    cbind(X_task, Z_nuisance)
+  } else {
+    X_task
   }
-
-  proj <- .fast_preproject(X_ref)
-  beta <- proj$Pinv %*% Y
-  phi <- estimate_phi(Y - X_ref %*% beta)
-
-  # Hold the initial OLS estimate fixed. Any design correction is specific to
-  # that operator; a later RRR/GLS residual cannot reuse design = X_ref alone.
-  tmp <- ar_whiten_transform(
+  white <- .lowrank_whiten_initial_ols(
     X = X_ref,
-    Y = Y,
-    phi = phi,
-    exact_first = exact_first,
-    censor = censor,
-    run_indices = run_indices
+    Z = Y,
+    ar_order = ar_order,
+    ar_opts = cfg$ar,
+    run_indices = run_indices,
+    censor = censor
   )
-  Xw_ref <- as.matrix(tmp$X)
-  Yw <- as.matrix(tmp$Y)
+  Xw_ref <- as.matrix(white$X)
 
   p_task <- ncol(X_task)
   Xw_task <- Xw_ref[, seq_len(p_task), drop = FALSE]
@@ -481,8 +430,8 @@
   list(
     Xw_task = Xw_task,
     Zw = Zw,
-    Yw = Yw,
-    phi = phi,
+    Yw = as.matrix(white$Y),
+    phi = white$phi,
     ar_order = ar_order
   )
 }

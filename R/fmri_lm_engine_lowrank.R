@@ -321,16 +321,7 @@
 
   # --- AR prewhitening options ---
   by_cluster <- isTRUE(ar_opts$by_cluster)
-  ar_struct <- ar_opts$struct %||% "iid"
-  ar_order <- switch(as.character(ar_struct),
-                     "iid" = 0L,
-                     "ar1" = 1L,
-                     "ar2" = 2L,
-                     "ar3" = 3L,
-                     "ar4" = 4L,
-                     "arp" = as.integer(ar_opts$p %||% 0L),
-                     0L)
-  ar_order <- if (is.finite(ar_order)) ar_order else 0L
+  ar_order <- .target_ar_order(.normalize_ar_options(ar_opts)) %||% 0L
   exact_first <- isTRUE(ar_opts$exact_first)
   shrink_c0 <- as.integer(ar_opts$shrink_c0 %||% 100L)
   no_whiten <- ar_order <= 0L
