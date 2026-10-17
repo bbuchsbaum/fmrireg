@@ -177,7 +177,7 @@ fmri_meta.group_data_h5 <- function(data,
       # Named numeric vector
       w <- rep(0, ncol(model_info$X)); names(w) <- colnames(model_info$X)
       if (!is.null(names(contrasts))) {
-        w[names(contrasts)] <- contrasts
+        w <- .meta_named_contrast_weights(contrasts, colnames(model_info$X))
       } else if (length(contrasts) == length(w)) {
         w <- contrasts
       } else {
@@ -376,7 +376,7 @@ fmri_meta.group_data_nifti <- function(data,
     } else if (is.numeric(contrasts)) {
       w <- rep(0, ncol(model_info$X)); names(w) <- colnames(model_info$X)
       if (!is.null(names(contrasts))) {
-        w[names(contrasts)] <- contrasts
+        w <- .meta_named_contrast_weights(contrasts, colnames(model_info$X))
       } else if (length(contrasts) == length(w)) {
         w <- contrasts
       } else {
