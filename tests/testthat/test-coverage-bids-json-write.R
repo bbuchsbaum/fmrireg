@@ -20,108 +20,77 @@ make_contrast_tbl_bids <- function(V = 4L) {
   )
 }
 
-test_that(".save_*_json_metadata write betas/contrasts/single-contrast sidecars", {
+test_that("JSON metadata builders describe betas/contrasts/single contrasts", {
   fit <- suppressWarnings(fmrireg:::.demo_fmri_lm())
-  td <- tempfile("bids-json-")
-  dir.create(td)
-  on.exit(unlink(td, recursive = TRUE), add = TRUE)
   ent <- list(subject = "01", task = "demo", space = "MNI152NLin2009cAsym")
 
-  betas_json <- fmrireg:::.save_betas_json_metadata(
-    fit, td, ent, "GLM", c("conditionA", "conditionB"),
-    file.path(td, "betas.h5"), output_formats = c("h5", "nifti")
+  meta <- fmrireg:::.betas_json_metadata(
+    fit, ent, c("conditionA", "conditionB"), output_formats = c("h5", "nifti")
   )
-  expect_true(file.exists(betas_json))
-  meta <- jsonlite::fromJSON(betas_json)
-  expect_true(!is.null(meta$RegressorOrder))
+  expect_identical(meta$RegressorOrder, c("conditionA", "conditionB"))
+  expect_identical(meta$ModelInfo$NumRegressors, 2L)
+  expect_identical(meta$DataInfo$FileFormat, c("HDF5", "NIfTI"))
   expect_equal(meta$SpatialReference, ent$space)
 
   ctab <- make_contrast_tbl_bids()
-  cons_json <- fmrireg:::.save_contrasts_json_metadata(
-    fit, td, ent, "GLM", "tstat", c("A_vs_B"), ctab[1, , drop = FALSE],
-    file.path(td, "tstat.h5"), output_formats = "h5"
+  cmeta <- fmrireg:::.contrasts_json_metadata(
+    fit, ent, "tstat", c("A_vs_B"), ctab, output_formats = "h5"
   )
-  expect_true(file.exists(cons_json))
-  cmeta <- jsonlite::fromJSON(cons_json)
-  expect_equal(toupper(cmeta$StatisticType), "TSTAT")
-  expect_true("A_vs_B" %in% names(cmeta$ContrastDefinitions) ||
-                identical(cmeta$ContrastOrder, "A_vs_B") ||
-                "A_vs_B" %in% cmeta$ContrastOrder)
+  expect_identical(cmeta$StatisticType, "TSTAT")
+  expect_identical(cmeta$ContrastOrder, "A_vs_B")
+  # only contrasts in the map are defined
+  expect_identical(names(cmeta$ContrastDefinitions), "A_vs_B")
+  expect_identical(cmeta$ContrastDefinitions$A_vs_B$Type, "t-contrast")
+  expect_identical(cmeta$DataInfo$Units, "t-statistic")
 
-  single_json <- fmrireg:::.save_single_contrast_json_metadata(
-    fit, td, ent, "GLM", "A_vs_B", c("beta", "tstat"),
-    ctab[1, , drop = FALSE], file.path(td, "con.h5"),
+  smeta <- fmrireg:::.single_contrast_json_metadata(
+    fit, ent, "main", c("fstat", "fpval"), ctab[2, , drop = FALSE],
     output_formats = "nifti"
   )
-  expect_true(file.exists(single_json))
-  smeta <- jsonlite::fromJSON(single_json)
-  expect_equal(smeta$ContrastName, "A_vs_B")
-  expect_true(!is.null(smeta$ContrastInfo$Type))
+  expect_identical(smeta$ContrastName, "main")
+  expect_identical(smeta$ContrastInfo$Type, "F-contrast")
+  expect_identical(smeta$StatisticOrder, c("fstat", "fpval"))
+  expect_identical(smeta$DataInfo$FileFormat, "NIfTI")
 })
 
-test_that(".write_beta_outputs and .write_contrast_outputs cover empty/gds/no-match", {
+test_that(".bids_output_plan covers no-betas/gds/no-contrast/no-match cases", {
   fit <- suppressWarnings(fmrireg:::.demo_fmri_lm())
-  td <- tempfile("bids-write-")
-  dir.create(td)
-  on.exit(unlink(td, recursive = TRUE), add = TRUE)
   ent <- list(subject = "02", task = "task", space = "MNI")
+  plan_for <- function(fit, format = "h5", save_betas = TRUE, contrasts = NULL,
+                       contrast_stats = c("beta", "tstat"), contrast_match = "auto") {
+    fmrireg:::.bids_output_plan(fit, ent, "GLM", format, "by_stat", save_betas,
+                                contrasts, contrast_match, contrast_stats)
+  }
+  empty <- list(betas = list(), contrasts = list())
 
-  expect_equal(
-    fmrireg:::.write_beta_outputs(fit, td, ent, "GLM", "h5", save_betas = FALSE, overwrite = TRUE),
-    list()
-  )
-  expect_equal(
-    fmrireg:::.write_beta_outputs(fit, td, ent, "GLM", "gds", save_betas = TRUE, overwrite = TRUE),
-    list()
-  )
+  expect_length(plan_for(fit, save_betas = FALSE)$betas, 0L)
+  expect_identical(plan_for(fit, format = "gds"), empty)
+  expect_identical(fmrireg:::.write_bids_plan(plan_for(fit)$betas, tempdir(), "gds"), list())
 
   # No contrasts table
   fit0 <- fit
   fit0$result$contrasts <- fit$result$contrasts[0, ]
-  expect_equal(
-    fmrireg:::.write_contrast_outputs(
-      fit0, td, ent, "GLM", "h5", "by_stat",
-      contrasts = NULL, contrast_match = "auto",
-      contrast_stats = c("beta", "tstat"), overwrite = TRUE
-    ),
-    list()
-  )
+  expect_length(plan_for(fit0)$contrasts, 0L)
 
-  # Requested contrast not present. This needs a fit that actually HAS
-  # contrasts: since #220 a fit with none returns an empty list before the
-  # name check is reached, which is what the fit0 case above covers. The demo
-  # fit requests no contrasts, so give it a real table here.
+  # Requested contrast not present
   fitc <- fit
   fitc$result$contrasts <- make_contrast_tbl_bids()
   expect_warning(
-    out_none <- fmrireg:::.write_contrast_outputs(
-      fitc, td, ent, "GLM", "h5", "by_stat",
-      contrasts = "DOES_NOT_EXIST", contrast_match = "exact",
-      contrast_stats = c("beta", "tstat"), overwrite = TRUE
-    ),
+    out_none <- plan_for(fitc, contrasts = "DOES_NOT_EXIST", contrast_match = "exact"),
     "None of the specified contrasts"
   )
-  expect_equal(out_none, list())
+  expect_length(out_none$contrasts, 0L)
 
-  # gds-only format yields no image outputs
-  expect_equal(
-    fmrireg:::.write_contrast_outputs(
-      fit, td, ent, "GLM", "gds", "by_stat",
-      contrasts = NULL, contrast_match = "auto",
-      contrast_stats = c("beta", "tstat"), overwrite = TRUE
-    ),
-    list()
-  )
+  # t-family stats plus the F statistic for the F-contrast
+  stems <- vapply(plan_for(fitc)$contrasts, `[[`, "", "stem")
+  expect_identical(stems, c("sub-02_task-task_space-MNI_desc-beta_bold",
+                            "sub-02_task-task_space-MNI_desc-tstat_bold",
+                            "sub-02_task-task_space-MNI_desc-fstat_bold"))
 
-  # Inapplicable stats for family -> empty
-  expect_equal(
-    fmrireg:::.write_contrast_outputs(
-      fit, td, ent, "GLM", "h5", "by_stat",
-      contrasts = NULL, contrast_match = "auto",
-      contrast_stats = c("fstat"), overwrite = TRUE
-    ),
-    list()
-  )
+  # Inapplicable stats for every family -> no contrast entries
+  fit_t <- fitc
+  fit_t$result$contrasts <- make_contrast_tbl_bids()[1, ]
+  expect_length(plan_for(fit_t, contrast_stats = "fstat")$contrasts, 0L)
 })
 
 test_that(".save_gds_outputs builds assays when spatial mask available", {

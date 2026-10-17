@@ -34,33 +34,14 @@ test_that(".extract_contrast_type and .extract_degrees_of_freedom branches", {
     name = "A_vs_B",
     data = list(tibble::tibble(estimate = 1, se = 0.1, stat = 2, prob = 0.05))
   )
-  expect_equal(fmrireg:::.extract_contrast_type(row_t, list()), "t-contrast")
+  expect_equal(fmrireg:::.extract_contrast_type(row_t), "t-contrast")
 
   row_f <- tibble::tibble(
     type = "Fcontrast",
     name = "main",
     data = list(tibble::tibble(estimate = 1, se = 1, stat = 3, prob = 0.01))
   )
-  expect_equal(fmrireg:::.extract_contrast_type(row_f, list()), "F-contrast")
-
-  # Infer from data fields when type missing
-  row_infer_f <- tibble::tibble(
-    name = "omnibus",
-    data = list(list(fstat = 2.5, estimate = 1))
-  )
-  expect_equal(fmrireg:::.extract_contrast_type(row_infer_f, list()), "F-contrast")
-
-  row_infer_t <- tibble::tibble(
-    name = "A_vs_B",
-    data = list(list(tstat = 2, estimate = 1))
-  )
-  expect_equal(fmrireg:::.extract_contrast_type(row_infer_t, list()), "t-contrast")
-
-  row_name <- tibble::tibble(
-    name = "Faces_vs_Places",
-    data = list(list(estimate = 1))
-  )
-  expect_equal(fmrireg:::.extract_contrast_type(row_name, list()), "t-contrast")
+  expect_equal(fmrireg:::.extract_contrast_type(row_f), "F-contrast")
 
   expect_equal(
     fmrireg:::.extract_degrees_of_freedom(list(result = list(df = list(inference = 40)))),

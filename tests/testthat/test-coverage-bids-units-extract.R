@@ -50,26 +50,14 @@ test_that(".extract_source_files and .extract_contrast_type cover branches", {
     name = "A_vs_B",
     data = list(tibble::tibble(estimate = 1, se = 0.2, tstat = 2, prob = 0.05))
   )
-  expect_equal(fmrireg:::.extract_contrast_type(t_row, fit), "t-contrast")
+  expect_equal(fmrireg:::.extract_contrast_type(t_row), "t-contrast")
 
   f_row <- tibble::tibble(
     type = "Fcontrast",
     name = "main",
     data = list(tibble::tibble(estimate = 1, fstat = 3, prob = 0.01))
   )
-  expect_equal(fmrireg:::.extract_contrast_type(f_row, fit), "F-contrast")
-
-  infer_f <- tibble::tibble(
-    name = "main",
-    data = list(tibble::tibble(fstat = 4, prob = 0.02))
-  )
-  expect_equal(fmrireg:::.extract_contrast_type(infer_f, fit), "F-contrast")
-
-  infer_t <- tibble::tibble(
-    name = "t1",
-    data = list(tibble::tibble(tstat = 2, beta = 0.1))
-  )
-  expect_equal(fmrireg:::.extract_contrast_type(infer_t, fit), "t-contrast")
+  expect_equal(fmrireg:::.extract_contrast_type(f_row), "F-contrast")
 })
 
 test_that(".extract_degrees_of_freedom and beta volume validation errors", {

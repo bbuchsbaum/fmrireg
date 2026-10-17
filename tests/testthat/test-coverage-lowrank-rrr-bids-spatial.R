@@ -69,55 +69,6 @@ test_that(".rrr_whiten_data covers iid and ar1 with nuisance", {
   expect_null(wh2$Zw)
 })
 
-test_that(".write_beta_outputs and .write_contrast_outputs succeed on spatial nifti", {
-  skip_if_not_installed("neuroim2")
-  skip_if_not_installed("fmridataset")
-  set.seed(103)
-  dims <- c(2L, 2L, 1L)
-  n_time <- 36L
-  arr <- array(rnorm(prod(dims) * n_time), c(dims, n_time))
-  scan <- neuroim2::NeuroVec(arr, neuroim2::NeuroSpace(dim = c(dims, n_time)))
-  mask <- neuroim2::LogicalNeuroVol(array(TRUE, dims), neuroim2::NeuroSpace(dim = dims))
-  etab <- data.frame(
-    onset = c(5, 12, 20, 28),
-    condition = factor(c("A", "B", "A", "B")),
-    run = 1L
-  )
-  dset <- neurovec_frame(
-    scans = list(scan), mask = mask, TR = 1, event_table = etab
-  )
-  con <- contrast_set(pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B"))
-  fit <- fmri_lm(
-    onset ~ hrf(condition, contrasts = con),
-    block = ~ run, dataset = dset
-  )
-  td <- tempfile("bids-spatial-")
-  dir.create(td)
-  on.exit(unlink(td, recursive = TRUE), add = TRUE)
-  ent <- list(subject = "01", task = "demo", space = "T1w")
-
-  betas <- fmrireg:::.write_beta_outputs(
-    fit, td, ent, "GLM", format = "nifti", save_betas = TRUE, overwrite = TRUE
-  )
-  expect_true(is.list(betas))
-  expect_true(!is.null(betas$betas) || length(list.files(td, pattern = "betas")) >= 1L)
-
-  cons <- fmrireg:::.write_contrast_outputs(
-    fit, td, ent, "GLM", format = "nifti", strategy = "by_contrast",
-    contrasts = NULL, contrast_match = "auto",
-    contrast_stats = c("beta", "tstat", "se"), overwrite = TRUE
-  )
-  expect_true(is.list(cons))
-  expect_true(length(list.files(td, pattern = "nii|json")) >= 1L)
-
-  cons2 <- fmrireg:::.write_contrast_outputs(
-    fit, td, ent, "GLM", format = "nifti", strategy = "by_stat",
-    contrasts = "A_vs_B", contrast_match = "exact",
-    contrast_stats = c("beta", "tstat"), overwrite = TRUE
-  )
-  expect_true(is.list(cons2))
-})
-
 test_that("fit_contrasts.fmri_lm structured voxel F-path and matrix L", {
   fit <- suppressWarnings(fmrireg:::.demo_fmri_lm())
   V <- length(fit$result$sigma %||% fit$result$betas$data[[1]]$sigma[[1]])
