@@ -24,7 +24,6 @@
 #'
 #' @return A Shiny app that displays the design plot.
 #'
-#' @importFrom tidyr pivot_longer
 #' @export
 #'
 #' @examples
@@ -127,12 +126,7 @@ design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
     }
     if (!is.null(cn) && length(cn)==ncol(dm)-2) names(dm)[1:(ncol(dm)-2)] <- cn
 
-    tidyr::pivot_longer(
-      dm,
-      cols = -c(".time", ".block"),
-      names_to = "condition",
-      values_to = "value"
-    )
+    .pivot_design_long(dm)
   }
   df_long <- Map(longify, terms_all, term_names)
   names(df_long) <- term_names
@@ -198,4 +192,26 @@ design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
   }
 
   shiny::shinyApp(ui, server)
+}
+
+# Reshape a wide design tibble (regressor columns plus `.time`/`.block`) to the
+# long form used by design_plot(): the id columns in their original order, then
+# `condition` (regressor name) and `value`, with rows ordered by time point and
+# regressors in column order within each time point. Equivalent to
+# tidyr::pivot_longer(dm, -c(".time", ".block"), names_to = "condition",
+# values_to = "value") for numeric design columns.
+#' @keywords internal
+#' @noRd
+.pivot_design_long <- function(dm) {
+  is_id <- names(dm) %in% c(".time", ".block")
+  value_idx <- which(!is_id)
+  n_rows <- nrow(dm)
+  n_cols <- length(value_idx)
+  out <- lapply(unclass(dm)[is_id], rep, each = n_cols)
+  out$condition <- rep(names(dm)[value_idx], times = n_rows)
+  values <- unlist(unclass(dm)[value_idx], use.names = FALSE)
+  if (is.null(values)) values <- logical()
+  # Column-major storage to row-major order (time point, then regressor).
+  out$value <- values[as.vector(t(matrix(seq_len(n_rows * n_cols), n_rows, n_cols)))]
+  tibble::as_tibble(out)
 }
