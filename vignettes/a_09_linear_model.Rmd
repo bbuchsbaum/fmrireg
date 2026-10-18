@@ -38,15 +38,21 @@ load_vignette_package <- function(package) {
     }
   )
 }
+has_tidyr <- requireNamespace("tidyr", quietly = TRUE)
 invisible(lapply(
-  c("fmrireg", "fmrihrf", "ggplot2", "dplyr", "tidyr", "knitr"),
+  c("fmrireg", "fmrihrf", "ggplot2", "dplyr", if (has_tidyr) "tidyr", "knitr"),
   load_vignette_package
 ))
 
 set.seed(42)  # For reproducible examples
 
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = has_tidyr)
+# Inline results depend on chunks that only run when tidyr is available.
+iv <- function(x) if (has_tidyr) x else "(not computed)"
 ```
+
+> **Note:** this vignette reshapes results with the suggested package
+> **tidyr**. When tidyr is not installed, the code is shown but not run.
 
 ```{r albers-classes, echo=FALSE, results='asis'}
 cat(sprintf(
@@ -473,10 +479,10 @@ stopifnot(
 
 The t-statistics quantify the reliability of the estimated effects. Higher
 absolute t-values indicate more precise estimates relative to their standard
-errors. Here `r sum(estimate_stats$p_value < 0.05)` of the six condition-by-voxel
+errors. Here `r iv(sum(estimate_stats$p_value < 0.05))` of the six condition-by-voxel
 tests are below 0.05. The weakest simulated signal, condition 1 in voxel 3, is
-correspondingly the least certain (t = `r sprintf("%.2f", estimate_stats$statistic[weakest_row])`,
-p = `r sprintf("%.3f", estimate_stats$p_value[weakest_row])`); this is why the
+correspondingly the least certain (t = `r iv(sprintf("%.2f", estimate_stats$statistic[weakest_row]))`,
+p = `r iv(sprintf("%.3f", estimate_stats$p_value[weakest_row]))`); this is why the
 table reports both effect size and uncertainty rather than reducing the result
 to a binary label.
 
@@ -753,10 +759,10 @@ ggplot(
 ```
 
 Across the four condition-by-ROI curves, correlation with the known response is
-between `r sprintf("%.3f", min(hrf_recovery_metrics$correlation))` and
-`r sprintf("%.3f", max(hrf_recovery_metrics$correlation))`; the largest
+between `r iv(sprintf("%.3f", min(hrf_recovery_metrics$correlation)))` and
+`r iv(sprintf("%.3f", max(hrf_recovery_metrics$correlation)))`; the largest
 normalized RMSE is
-`r sprintf("%.3f", max(hrf_recovery_metrics$normalized_rmse))`. More
+`r iv(sprintf("%.3f", max(hrf_recovery_metrics$normalized_rmse)))`. More
 importantly, the estimates recover the later Condition B peak in both ROIs.
 These are executable checks for this controlled example, not an accuracy
 guarantee for arbitrary event schedules or real fMRI noise.

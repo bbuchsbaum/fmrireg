@@ -31,9 +31,13 @@ knitr::opts_chunk$set(
   fig.width = 7,
   fig.height = 5,
   message = FALSE,
-  warning = TRUE
+  warning = TRUE,
+  eval = requireNamespace("tidyr", quietly = TRUE)
 )
 ```
+
+> **Note:** this vignette reshapes results with the suggested package
+> **tidyr**. When tidyr is not installed, the code is shown but not run.
 
 ```{r albers-classes, echo=FALSE, results='asis'}
 cat(sprintf(
