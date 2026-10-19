@@ -256,7 +256,7 @@ performance_table <- data.frame(
 
 cat("Noiseless oracle maximum absolute beta error:",
     format(oracle_max_error, scientific = TRUE, digits = 3), "\n")
-#> Noiseless oracle maximum absolute beta error: 2.22e-15
+#> Noiseless oracle maximum absolute beta error: 2.44e-15
 
 knitr::kable(
   performance_table,
@@ -364,8 +364,8 @@ results_df <- data.frame(
 
 print(results_df)
 #>                                   Dataset Correlation  RMSE Noiseless_Max_Error
-#> BM_Canonical_HighSNR BM_Canonical_HighSNR       0.991 0.041        2.220446e-15
-#> BM_Canonical_LowSNR   BM_Canonical_LowSNR       0.621 0.381        7.771561e-15
+#> BM_Canonical_HighSNR BM_Canonical_HighSNR       0.991 0.041        2.442491e-15
+#> BM_Canonical_LowSNR   BM_Canonical_LowSNR       0.621 0.381        7.660539e-15
 #>                      Target_SNR
 #> BM_Canonical_HighSNR        4.0
 #> BM_Canonical_LowSNR         0.5

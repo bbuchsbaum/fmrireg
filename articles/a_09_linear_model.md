@@ -1,5 +1,8 @@
 # fMRI Linear Model (GLM)
 
+> **Note:** this vignette reshapes results with the suggested package
+> **tidyr**. When tidyr is not installed, the code is shown but not run.
+
 ## Introduction to fMRI Linear Models
 
 Statistical analysis of fMRI data typically involves fitting a linear

@@ -1,5 +1,8 @@
 # Simulating fMRI Data
 
+> **Note:** this vignette reshapes results with the suggested package
+> **tidyr**. When tidyr is not installed, the code is shown but not run.
+
 ## Introduction to fMRI Data Simulation
 
 When checking an fMRI analysis pipeline, it is useful to have data where
