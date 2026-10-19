@@ -195,6 +195,18 @@
     },
     {
       "@type": "SoftwareApplication",
+      "identifier": "tidyr",
+      "name": "tidyr",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=tidyr"
+    },
+    {
+      "@type": "SoftwareApplication",
       "identifier": "sandwich",
       "name": "sandwich",
       "provider": {
@@ -438,18 +450,6 @@
     },
     "17": {
       "@type": "SoftwareApplication",
-      "identifier": "tidyr",
-      "name": "tidyr",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=tidyr"
-    },
-    "18": {
-      "@type": "SoftwareApplication",
       "identifier": "matrixStats",
       "name": "matrixStats",
       "provider": {
@@ -460,7 +460,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=matrixStats"
     },
-    "19": {
+    "18": {
       "@type": "SoftwareApplication",
       "identifier": "rlang",
       "name": "rlang",
@@ -473,7 +473,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=rlang"
     },
-    "20": {
+    "19": {
       "@type": "SoftwareApplication",
       "identifier": "neuroim2",
       "name": "neuroim2",
@@ -485,7 +485,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=neuroim2"
     },
-    "21": {
+    "20": {
       "@type": "SoftwareApplication",
       "identifier": "Rcpp",
       "name": "Rcpp",
@@ -497,19 +497,19 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=Rcpp"
     },
-    "22": {
+    "21": {
       "@type": "SoftwareApplication",
       "identifier": "methods",
       "name": "methods"
     },
-    "23": {
+    "22": {
       "@type": "SoftwareApplication",
       "identifier": "fmridataset",
       "name": "fmridataset",
       "version": ">= 0.11.0.9000",
       "sameAs": "https://github.com/bbuchsbaum/fmridataset"
     },
-    "24": {
+    "23": {
       "@type": "SoftwareApplication",
       "identifier": "cli",
       "name": "cli",
@@ -521,7 +521,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=cli"
     },
-    "25": {
+    "24": {
       "@type": "SoftwareApplication",
       "identifier": "future.apply",
       "name": "future.apply",
@@ -533,7 +533,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=future.apply"
     },
-    "26": {
+    "25": {
       "@type": "SoftwareApplication",
       "identifier": "jsonlite",
       "name": "jsonlite",
@@ -545,7 +545,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=jsonlite"
     },
-    "27": {
+    "26": {
       "@type": "SoftwareApplication",
       "identifier": "magrittr",
       "name": "magrittr",
@@ -559,7 +559,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "4120.562KB",
+  "fileSize": "4124.987KB",
   "citation": [
     {
       "@type": "SoftwareSourceCode",
