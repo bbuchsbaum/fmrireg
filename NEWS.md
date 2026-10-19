@@ -1,5 +1,12 @@
 # fmrireg (development version)
 
+## Dependencies
+
+* `tidyr` moved from Imports to Suggests (it is still used by vignettes).
+  `design_plot()` now reshapes the design matrix with an internal helper that
+  returns the same long tibble `tidyr::pivot_longer()` produced, which trims
+  the install footprint, notably under webR.
+
 ## Bug fixes
 
 * `fmri_lm_control()` now defaults `estimation` to
