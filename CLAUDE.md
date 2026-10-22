@@ -255,6 +255,10 @@ over an fmrigds name. The gds path of
 [`fmri_meta()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_meta.md)
 is reduce -\>
 [`fmrigds::coef_contrast()`](https://rdrr.io/pkg/fmrigds/man/coef_contrast.html)
--\> wrap; reducer options are read with `[[` (fmrigds’s
-`options$weights` partially matches a `weights_custom` element, hence
-the option name `custom_weights`).
+-\> wrap; since P2,
+[`fmri_ttest()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_ttest.md)
+normalises every input with `.fmri_ttest_input()` and its classic /
+Welch engines call fmrigds’s `"ols:voxelwise"` / `"ttest:welch"` kernels
+(`.fmri_ttest_ols()`, `.fmri_ttest_welch()`); reducer options are read
+with `[[` (fmrigds’s `options$weights` partially matches a
+`weights_custom` element, hence the option name `custom_weights`).

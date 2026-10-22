@@ -100,7 +100,6 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_ols_fit.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_rlm.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_template.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_ttest.group_data_gds.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_ttest.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmrireg-package.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmrireg_cli.html</loc></url>
@@ -139,7 +138,6 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/neurovec_frame.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/nifti_frame.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/noise_spec.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/ols_t_cpp.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/ols_t_vcov_cpp.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/p_values.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/paired_diff_block.html</loc></url>
@@ -204,6 +202,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/tidy.fmri_meta.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/tidy.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/tidy_fitted_hrf.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/ttest-kernels-deprecated.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/validate_job.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/validate_template.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/variance_model.html</loc></url>
@@ -211,7 +210,6 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/volume_quality.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/volume_weights.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/weights_spec.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/welch_t_cpp.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/wide_to_long_format.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/write_results.fmri_lm.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/write_results.fmri_meta.html</loc></url>

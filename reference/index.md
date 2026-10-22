@@ -314,9 +314,6 @@
 - [`noise_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/noise_spec.md)
   : Temporal-noise specification
 
-- [`ols_t_cpp()`](https://bbuchsbaum.github.io/fmrireg/reference/ols_t_cpp.md)
-  : OLS t-test / ANCOVA across features
-
 - [`ols_t_vcov_cpp()`](https://bbuchsbaum.github.io/fmrireg/reference/ols_t_vcov_cpp.md)
   : OLS with ONE voxelwise covariate
 
@@ -498,9 +495,6 @@
 
 - [`weights_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/weights_spec.md)
   : Volume-weight specification
-
-- [`welch_t_cpp()`](https://bbuchsbaum.github.io/fmrireg/reference/welch_t_cpp.md)
-  : Welch two-sample t-test across features
 
 - [`write_results()`](https://bbuchsbaum.github.io/fmrireg/reference/write_results.md)
   : Write Results from fMRI Analysis
