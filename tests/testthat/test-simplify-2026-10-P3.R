@@ -62,3 +62,27 @@ test_that("P3: t-only NIfTI maps are read by fmrigds and combine as before", {
   fit_eq <- fmri_meta(gd, ~ 1, combine = "stouffer", weights = "equal", verbose = FALSE)
   expect_equal(fit_ivw$coefficients, fit_eq$coefficients)
 })
+
+test_that("P3: a legacy group_data_nifti object converts to gds with the same fit", {
+  m <- p3_maps(withr::local_tempdir())
+  legacy_var <- suppressWarnings(group_data_from_nifti(
+    beta_paths = m$beta, var_paths = m$var, subjects = m$subjects
+  ))
+  gd_var <- group_data(legacy_var, format = "nifti", subjects = m$subjects)
+  expect_s3_class(gd_var, "group_data_gds")
+  expect_equal(
+    unname(fmri_meta(gd_var, ~ 1, verbose = FALSE)$coefficients),
+    unname(suppressWarnings(fmri_meta(legacy_var, ~ 1, verbose = FALSE))$coefficients),
+    tolerance = 1e-10
+  )
+
+  legacy_t <- suppressWarnings(group_data_from_nifti(t_paths = m$t, df = 20, subjects = m$subjects))
+  gd_t <- group_data(legacy_t, format = "nifti", subjects = m$subjects)
+  expect_s3_class(gd_t, "group_data_gds")
+  expect_equal(
+    unname(fmri_meta(gd_t, ~ 1, combine = "stouffer", weights = "equal", verbose = FALSE)$coefficients),
+    unname(suppressWarnings(fmri_meta(legacy_t, ~ 1, combine = "stouffer", weights = "equal",
+                                      verbose = FALSE))$coefficients),
+    tolerance = 1e-10
+  )
+})
