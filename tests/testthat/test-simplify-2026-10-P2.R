@@ -94,6 +94,16 @@ test_that("P2: voxelwise_cov with a group contrast is the signed group coefficie
   expect_equal(unname(fit$beta_contrast), 2 * unname(ref$beta["group", ]), tolerance = 1e-12)
   expect_equal(unname(fit$se_contrast), 2 * unname(ref$se["group", ]), tolerance = 1e-12)
   expect_equal(unname(fit$t_contrast), unname(ref$t["group", ]), tolerance = 1e-12)
+
+  # The voxelwise coefficient itself can be the contrast, by name or by a
+  # full-length weight vector.
+  fit_v <- fmri_ttest(gd, ~ 1 + group, engine = "classic", voxelwise_cov = C,
+                      contrast = c(voxel_cov = 1))
+  fit_u <- fmri_ttest(gd, ~ 1 + group, engine = "classic", voxelwise_cov = C,
+                      contrast = c(0, 0, 1))
+  expect_equal(unname(fit_v$beta_contrast), unname(ref$beta["voxel_cov", ]), tolerance = 1e-12)
+  expect_equal(unname(fit_v$t_contrast), unname(ref$t["voxel_cov", ]), tolerance = 1e-12)
+  expect_equal(fit_u$beta_contrast, fit_v$beta_contrast)
 })
 
 test_that("P2: paired and mu0 work on gds data (vs t.test)", {

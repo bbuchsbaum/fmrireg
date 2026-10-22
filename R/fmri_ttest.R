@@ -163,15 +163,18 @@ fmri_ttest <- function(gd,
   # first); results are reported in `sign`. Contrast weights are mapped onto
   # the raw coefficients and into that convention once, here.
   source_sign <- "BminusA"
+  # The classic engine with a voxelwise covariate fits one more coefficient.
+  coef_names <- colnames(X)
+  if (!use_meta && !is.null(voxelwise_cov)) coef_names <- c(coef_names, voxel_name)
   raw_weights <- NULL
   if (!is.null(contrast)) {
     canonical <- .fmri_ttest_resolve_contrast(
       contrast,
-      coef_names = .fmri_ttest_canonical_coef_names(colnames(X), group_info),
+      coef_names = .fmri_ttest_canonical_coef_names(coef_names, group_info),
       group_info = group_info
     )
     raw_weights <- .fmri_ttest_raw_contrast_weights(
-      canonical, coef_names = colnames(X), group_info = group_info,
+      canonical, coef_names = coef_names, group_info = group_info,
       target_sign = sign, source_sign = source_sign
     )
   }
