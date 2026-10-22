@@ -21,21 +21,8 @@ static inline bool inv_sympd_safe(mat& out, const mat& A) {
   }
 }
 
-//' OLS t-test / ANCOVA across features
-//'
-//' Subjects with a non-finite outcome for a feature are dropped from that
-//' feature only (complete-case analysis per feature); a feature with no more
-//' usable subjects than predictors, or whose remaining design is rank
-//' deficient, returns NaN.
-//'
-//' @param Y S x P matrix (subjects x features)
-//' @param X S x K design matrix with intercept if desired
-//' @return List with beta (K x P), se (K x P), t (K x P), df (the residual
-//'   degrees of freedom: a scalar when every feature uses all S subjects,
-//'   otherwise a length-P vector), n_obs (length P, subjects used per
-//'   feature), ok (P)
-//' @export
-// [[Rcpp::export]]
+// Deprecated R entry point: ols_t_cpp() in R/fmri_ttest_helpers.R.
+// [[Rcpp::export(.ols_t_cpp_impl)]]
 List ols_t_cpp(const arma::mat& Y, const arma::mat& X) {
   const uword S = Y.n_rows, K = X.n_cols, P = Y.n_cols;
 
@@ -129,13 +116,8 @@ List ols_t_cpp(const arma::mat& Y, const arma::mat& X) {
   );
 }
 
-//' Welch two-sample t-test across features
-//' 
-//' @param Y S x P matrix
-//' @param g_in Length S vector of group indicators (1/2 or 0/1)
-//' @return List with muA, muB, t, df (Welch), nA, nB
-//' @export
-// [[Rcpp::export]]
+// Deprecated R entry point: welch_t_cpp() in R/fmri_ttest_helpers.R.
+// [[Rcpp::export(.welch_t_cpp_impl)]]
 List welch_t_cpp(const arma::mat& Y, const IntegerVector& g_in) {
   const uword S = Y.n_rows, P = Y.n_cols;
   

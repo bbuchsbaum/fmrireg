@@ -75,10 +75,8 @@ test_that("fmri_ttest.gds computes meta contrasts and rejects unsupported args",
   expect_true(all(is.finite(fit_contrast$z_contrast)))
   expect_equal(length(fit_contrast$z_contrast), ncol(fit_contrast$beta))
 
-  expect_error(
-    fmri_ttest(gd_gds, paired = TRUE),
-    "paired=TRUE is not supported"
-  )
+  # paired = TRUE runs the classic one-sample engine on gds data too (P2).
+  expect_identical(suppressMessages(fmri_ttest(gd_gds, paired = TRUE))$engine, "classic")
   expect_error(
     fmri_ttest(gd_gds, mu0 = 1),
     "mu0 is not supported"

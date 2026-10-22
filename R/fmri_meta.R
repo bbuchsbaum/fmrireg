@@ -342,6 +342,11 @@ fmri_meta.group_data_gds <- function(data,
   )
 }
 
+# A gds built directly with fmrigds (as_gds(), gds()) rather than through
+# group_data() has class "gds" only.
+#' @export
+fmri_meta.gds <- fmri_meta.group_data_gds
+
 #' @export
 fmri_meta.group_data_nifti <- function(data,
                                        formula = ~ 1,

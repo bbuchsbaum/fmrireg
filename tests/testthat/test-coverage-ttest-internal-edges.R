@@ -1,6 +1,6 @@
 # More ttest helpers + lm_internal meta/chunk edges.
 
-test_that(".fmri_ttest_exact_ols_contrast and normalize_group_rows", {
+test_that(".fmri_ttest_t_contrast and normalize_group_rows", {
   set.seed(111)
   S <- 10L
   P <- 3L
@@ -8,9 +8,9 @@ test_that(".fmri_ttest_exact_ols_contrast and normalize_group_rows", {
   X <- cbind(Intercept = 1, groupB = rep(c(0, 1), each = 5))
   ols <- fmrireg:::fmri_ols_fit(Y, X)
   raw_w <- c(Intercept = 0, groupB = 1)
-  exact <- fmrireg:::.fmri_ttest_exact_ols_contrast(ols, X, raw_w)
-  expect_true(is.list(exact))
-  expect_equal(length(exact$estimate), P)
+  exact <- fmrireg:::.fmri_ttest_t_contrast(colSums(ols$beta * raw_w), ols$se["groupB", ], ols$df)
+  expect_equal(exact$t, unname(ols$t["groupB", ]))
+  expect_equal(exact$df, rep(S - 2, P))
 
   res <- list(
     beta = ols$beta,

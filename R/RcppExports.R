@@ -30,31 +30,11 @@ meta_fit_vcov_cpp <- function(Y, V, X, C, method, robust, huber_c = 1.345, robus
     .Call('_fmrireg_meta_fit_vcov_cpp', PACKAGE = 'fmrireg', Y, V, X, C, method, robust, huber_c, robust_iter, n_threads)
 }
 
-#' OLS t-test / ANCOVA across features
-#'
-#' Subjects with a non-finite outcome for a feature are dropped from that
-#' feature only (complete-case analysis per feature); a feature with no more
-#' usable subjects than predictors, or whose remaining design is rank
-#' deficient, returns NaN.
-#'
-#' @param Y S x P matrix (subjects x features)
-#' @param X S x K design matrix with intercept if desired
-#' @return List with beta (K x P), se (K x P), t (K x P), df (the residual
-#'   degrees of freedom: a scalar when every feature uses all S subjects,
-#'   otherwise a length-P vector), n_obs (length P, subjects used per
-#'   feature), ok (P)
-#' @export
-ols_t_cpp <- function(Y, X) {
+.ols_t_cpp_impl <- function(Y, X) {
     .Call('_fmrireg_ols_t_cpp', PACKAGE = 'fmrireg', Y, X)
 }
 
-#' Welch two-sample t-test across features
-#' 
-#' @param Y S x P matrix
-#' @param g_in Length S vector of group indicators (1/2 or 0/1)
-#' @return List with muA, muB, t, df (Welch), nA, nB
-#' @export
-welch_t_cpp <- function(Y, g_in) {
+.welch_t_cpp_impl <- function(Y, g_in) {
     .Call('_fmrireg_welch_t_cpp', PACKAGE = 'fmrireg', Y, g_in)
 }
 

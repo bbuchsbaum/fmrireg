@@ -2,9 +2,16 @@
 #'
 #' Performs group-level t-tests on fMRI data with support for one-sample, two-sample,
 #' paired, and ANCOVA designs. Provides both meta-analysis and classical t-test engines,
-#' mirroring AFNI 3dttest++ functionality within the fmrireg framework.
+#' mirroring AFNI 3dttest++ functionality within the fmrireg framework. The
+#' classic and Welch engines are fmrigds's `"ols:voxelwise"` and
+#' `"ttest:welch"` reducers; the meta engine is fmrireg's meta-regression
+#' (see [fmri_meta()]).
 #'
-#' @param gd A group_data object or data frame with subject data
+#' @param gd A gds-backed `group_data()` object (or an fmrigds `gds`), a legacy
+#'   group_data object, or a data frame accepted by [group_data()]. gds data
+#'   must hold one subject-level contrast; every engine and option works on it,
+#'   except that the meta engine on gds data supports neither `mu0` nor
+#'   `voxelwise_cov`.
 #' @param formula R formula for between-subjects design. Examples:
 #'   \itemize{
 #'     \item ~ 1: One-sample t-test
@@ -13,14 +20,19 @@
 #'   }
 #' @param engine Character string; analysis engine to use:
 #'   \itemize{
-#'     \item "auto": Automatically select based on data (default)
+#'     \item "auto": "meta" when sampling variances are available (always for
+#'       gds data), otherwise "classic" (default). The fit records the engine
+#'       that ran.
 #'     \item "meta": Use inverse-variance meta-analysis (requires SE)
 #'     \item "classic": Use OLS/Student t-test. A subject with a non-finite
 #'       value for a feature is dropped from that feature only, so degrees of
 #'       freedom can differ between features.
-#'     \item "welch": Use Welch t-test for unequal variances
+#'     \item "welch": Welch t-test for unequal variances; needs
+#'       `formula = ~ 1 + group` with a two-level factor `group`. Non-finite
+#'       subjects are dropped per feature.
 #'   }
-#' @param paired Logical; if TRUE, perform paired t-test on differences (default: FALSE)
+#' @param paired Logical; if TRUE, the effects are within-subject differences and
+#'   are tested against `mu0` with the classic one-sample engine (default: FALSE)
 #' @param mu0 Numeric scalar; constant to test against for one-sample tests (default: 0)
 #' @param contrast Optional named numeric vector for linear combination of coefficients
 #' @param mc Character string or NULL; multiple comparisons correction:
@@ -100,192 +112,119 @@ fmri_ttest <- function(gd,
                       weights = c("ivw", "equal", "custom"),
                       weights_custom = NULL,
                       combine = NULL) {
-  # Fast-path for gds-backed objects: delegate to fmrigds reducers
-  if (inherits(gd, "gds") || inherits(gd, "group_data_gds")) {
-    gds_fn <- get0("fmri_ttest.group_data_gds", envir = asNamespace("fmrireg"),
-                   ifnotfound = NULL)
-    if (is.null(gds_fn) && requireNamespace("fmrigds", quietly = TRUE)) {
-      gds_fn <- get0("fmri_ttest.group_data_gds",
-                     envir = asNamespace("fmrigds"), ifnotfound = NULL)
-    }
-    if (!is.null(gds_fn)) {
-      return(gds_fn(gd,
-                    formula = formula,
-                    engine = match.arg(engine),
-                    paired = paired,
-                    mu0 = mu0,
-                    contrast = contrast,
-                    mc = mc,
-                    alpha = alpha,
-                    sign = match.arg(sign),
-                    mask = mask,
-                    voxelwise_cov = voxelwise_cov,
-                    center_voxelwise = center_voxelwise,
-                    voxel_name = voxel_name,
-                    weights = match.arg(weights),
-                    weights_custom = weights_custom,
-                    combine = combine))
-    }
-    stop("GDS-backed group_data requires the 'fmrigds' package.", call. = FALSE)
-  }
-  
   engine <- match.arg(engine)
   sign <- match.arg(sign)
   weights <- match.arg(weights)
-  
   if (!is.null(mc)) {
     mc <- match.arg(mc, c("bh", "by", "spatial_fdr"))
   }
-  
-  # 1) Normalize input to matrices Y (S x P), optional V (S x P), covars
-  if (inherits(gd, "group_data")) {
-    if (!is.null(gd$blocks)) {
-      if (length(gd$blocks) != 1) {
-        stop("fmri_ttest expects a single contrast block", call. = FALSE)
-      }
-      B <- gd$blocks[[1]]
-      Y <- B$Y  # S x P effects (betas or derived)
-      V <- if (!is.null(B$V)) B$V else NULL  # S x P sampling variances if available
-      covars <- B$covars
-      feature_group <- .fmri_ttest_feature_group(gd, B)
-    } else {
-      # Modern group_data_* path: leave Y/V unset and use stored covariates
-      B <- NULL
-      Y <- NULL
-      V <- NULL
-      covars <- gd$covariates
-      feature_group <- .fmri_ttest_feature_group(gd, NULL)
-    }
-  } else {
-    # Convert data frame to group_data
-    if (!inherits(gd, "data.frame")) {
-      stop("gd must be a group_data object or data frame", call. = FALSE)
-    }
-    gd <- group_data(gd, mask = mask)
-    B <- gd$blocks[[1]]
-    Y <- B$Y
-    V <- if (!is.null(B$V)) B$V else NULL
-    covars <- B$covars
-    feature_group <- .fmri_ttest_feature_group(gd, B)
-  }
-  
-  # 2) Subtract mu0 from Y for testing against constant
-  if (!is.null(Y)) Y <- Y - mu0
-  
-  # 3) Build design matrix X from formula
-  if (is.null(covars)) {
-    covars <- data.frame(intercept = rep(1, if (!is.null(Y)) nrow(Y) else n_subjects(gd)))
-  }
-  
-  X <- stats::model.matrix(stats::as.formula(formula), data = covars)
-  storage.mode(X) <- "double"
-  group_info <- .fmri_ttest_group_term(X, covars)
-  K <- ncol(X)
+  formula <- stats::as.formula(formula)
+
+  inp <- .fmri_ttest_input(gd, formula, mask)
+  gd <- inp$gd
+  Y <- inp$Y
+  V <- inp$V
+  X <- inp$X
   S <- nrow(X)
-  P <- if (!is.null(Y)) ncol(Y) else NA_integer_
-  
-  if (!is.null(Y) && S != nrow(Y)) {
+  if (!is.null(Y) && nrow(Y) != S) {
     stop("Design matrix rows must match data rows", call. = FALSE)
   }
-  
-  # 4) Choose engine
-  use_meta <- if (engine == "auto") {
-    !is.null(V) || (inherits(gd, "group_data") && is.null(Y))
-  } else {
-    engine == "meta"
+  if (qr(X)$rank < ncol(X)) {
+    stop("The design matrix for `formula` is rank deficient (", qr(X)$rank,
+         " of ", ncol(X), " columns are estimable).", call. = FALSE)
   }
-  # Sign convention of the group coefficient as each engine estimates it;
-  # results are reported in `sign`.
-  source_sign <- if (use_meta || (!paired && engine != "welch")) "BminusA" else "AminusB"
+  group_info <- .fmri_ttest_group_term(X, inp$covars)
 
-  res <- list()
-  raw_contrast_weights <- NULL
-  canonical_contrast_weights <- NULL
-  exact_contrast <- NULL
-  analysis_method <- NULL
-  out <- NULL
-  
-  if (paired) {
-    # Paired: assume Y contains within-subject differences
-    message("paired=TRUE: performing one-sample test on differences vs mu0")
-    if (is.null(Y)) {
-      Y <- .fmri_ttest_materialize_effects(gd, "paired analyses")
-      P <- ncol(Y)
-      Y <- Y - mu0
+  # File-backed sources (gds, group_data_*) are read on demand; the meta engine
+  # hands them to fmri_meta(). Every other engine works on the subjects x
+  # features effect matrix.
+  file_backed <- is.null(Y)
+  use_meta <- !isTRUE(paired) &&
+    (engine == "meta" || (engine == "auto" && (file_backed || !is.null(V))))
+  if (!use_meta && engine == "meta") engine <- "classic"
+  if (!use_meta && engine == "auto") engine <- "classic"
+  if (isTRUE(paired)) {
+    if (engine == "welch") {
+      stop("paired = TRUE tests within-subject differences; it cannot use engine = 'welch'.",
+           call. = FALSE)
     }
-    
-    # One-sample test (intercept only)
-    Xp <- matrix(1, nrow = nrow(Y), ncol = 1, dimnames = list(NULL, "(Intercept)"))
-    
-    # fmri_ols_fit names the rows: "(Intercept)" plus, with a voxelwise
-    # covariate, `voxel_name`.
-    ols <- fmri_ols_fit(Y, Xp, voxelwise = voxelwise_cov,
-                        center_voxelwise = center_voxelwise,
-                        voxel_name = voxel_name)
-    res <- c(res, .fmri_ttest_ols_stats(ols, P))
+    message("paired=TRUE: performing one-sample test on differences vs mu0")
+    X <- matrix(1, nrow = S, ncol = 1L, dimnames = list(NULL, "(Intercept)"))
+    group_info <- NULL
+  }
+  if (!use_meta && file_backed) {
+    Y <- .fmri_ttest_materialize_effects(gd, paste(engine, "engine"))
+    if (nrow(Y) != S) stop("Design matrix rows must match data rows", call. = FALSE)
+  }
+  if (!is.null(Y)) Y <- Y - mu0
+  P <- if (!is.null(Y)) ncol(Y) else NA_integer_
 
-  } else if (use_meta) {
-    # Meta-regression using existing infrastructure
+  # Every engine estimates the group coefficient as B - A (second level minus
+  # first); results are reported in `sign`. Contrast weights are mapped onto
+  # the raw coefficients and into that convention once, here.
+  source_sign <- "BminusA"
+  raw_weights <- NULL
+  if (!is.null(contrast)) {
+    canonical <- .fmri_ttest_resolve_contrast(
+      contrast,
+      coef_names = .fmri_ttest_canonical_coef_names(colnames(X), group_info),
+      group_info = group_info
+    )
+    raw_weights <- .fmri_ttest_raw_contrast_weights(
+      canonical, coef_names = colnames(X), group_info = group_info,
+      target_sign = sign, source_sign = source_sign
+    )
+  }
+
+  exact_contrast <- NULL
+  analysis_method <- engine
+  if (use_meta) {
     method <- .meta_resolve_method(getOption("fmrireg.meta.method", "pm"))
     robust <- getOption("fmrireg.meta.robust", "none")
     analysis_method <- if (!is.null(combine)) paste0("combine:", combine) else method
-    
-    if (inherits(gd, "group_data") && is.null(Y)) {
-      # Delegate to fmri_meta for group_data_* inputs
-      if (!is.null(voxelwise_cov) && !is.null(contrast)) {
-        stop("contrast is not supported with voxelwise_cov in meta analyses", call. = FALSE)
+    if (!is.null(voxelwise_cov) && !is.null(contrast)) {
+      stop("contrast is not supported with voxelwise_cov in meta analyses", call. = FALSE)
+    }
+
+    if (file_backed) {
+      if (!isTRUE(all.equal(mu0, 0))) {
+        stop("mu0 is not supported by the meta engine for file-backed group data; ",
+             "use engine = 'classic'.", call. = FALSE)
       }
-      if (!is.null(contrast)) {
-        canonical_contrast_weights <- .fmri_ttest_resolve_contrast(
-          contrast,
-          coef_names = .fmri_ttest_canonical_coef_names(colnames(X), group_info),
-          group_info = group_info
-        )
-        raw_contrast_weights <- .fmri_ttest_raw_contrast_weights(
-          canonical_contrast_weights,
-          coef_names = colnames(X),
-          group_info = group_info,
-          target_sign = sign,
-          source_sign = source_sign
-        )
+      if (!is.null(voxelwise_cov)) {
+        stop("voxelwise_cov is not supported by the meta engine for file-backed group data; ",
+             "use engine = 'classic'.", call. = FALSE)
       }
       meta_fit <- fmri_meta(
-        gd, formula = stats::as.formula(formula),
+        gd, formula = formula,
         method = method, robust = robust,
         weights = weights, weights_custom = weights_custom,
-        contrasts = if (!is.null(raw_contrast_weights)) matrix(raw_contrast_weights, ncol = 1) else NULL,
         combine = combine,
+        contrasts = if (!is.null(raw_weights)) {
+          matrix(raw_weights, nrow = 1L, dimnames = list("contrast1", colnames(X)))
+        },
         verbose = FALSE
       )
-      P <- nrow(meta_fit$coefficients)
-      res$beta <- t(meta_fit$coefficients)
-      res$se   <- t(meta_fit$se)
-      res$z    <- res$beta / res$se
-      res$p    <- 2 * stats::pnorm(abs(res$z), lower.tail = FALSE)
-      res$df   <- matrix(Inf, nrow = nrow(res$z), ncol = ncol(res$z))
-      rownames(res$beta) <- colnames(X)
-      rownames(res$se) <- colnames(X)
-      rownames(res$z) <- colnames(X)
-      rownames(res$df) <- colnames(X)
+      if (inherits(meta_fit, "fmri_meta_list")) {
+        stop("fmri_ttest(engine = 'meta') tests one subject-level contrast; these data have ",
+             length(meta_fit), " (", paste(names(meta_fit), collapse = ", "),
+             "). Use fmri_meta(), which fits each of them.", call. = FALSE)
+      }
+      fit <- list(beta = t(meta_fit$coefficients), se = t(meta_fit$se))
       if (!is.null(meta_fit$contrasts)) {
-        exact_contrast <- list(
-          estimate = as.numeric(meta_fit$contrasts$estimate[, 1]),
-          se = as.numeric(meta_fit$contrasts$se[, 1]),
-          z = as.numeric(meta_fit$contrasts$z[, 1]),
-          p = 2 * stats::pnorm(abs(meta_fit$contrasts$z[, 1]), lower.tail = FALSE),
-          df = rep(Inf, nrow(meta_fit$contrasts$estimate))
+        exact_contrast <- .fmri_ttest_z_contrast(
+          meta_fit$contrasts$estimate[, 1], meta_fit$contrasts$se[, 1]
         )
       }
     } else if (!is.null(voxelwise_cov)) {
-      if (!is.null(contrast)) {
-        stop("contrast is not supported with voxelwise_cov in meta analyses", call. = FALSE)
-      }
       if (!identical(weights, "ivw")) {
         stop("weights = '", weights, "' is not supported with voxelwise_cov in meta analyses",
              call. = FALSE)
       }
-      # Update meta_fit wrapper to handle voxelwise
-      out <- fmri_meta_fit_extended(
+      if (is.null(V)) {
+        stop("engine = 'meta' with voxelwise_cov requires sampling variances", call. = FALSE)
+      }
+      fit <- fmri_meta_fit_extended(
         Y = Y, V = V, X = X,
         method = method, robust = robust,
         voxelwise = voxelwise_cov,
@@ -300,172 +239,90 @@ fmri_ttest <- function(gd,
       if (is.null(V) && identical(weights, "ivw")) {
         stop("engine = 'meta' with weights = 'ivw' requires sampling variances", call. = FALSE)
       }
-      out <- .meta_fit_core(
+      fit <- .meta_fit_core(
         Y = Y, V = if (is.null(V)) matrix(1, nrow(Y), ncol(Y)) else V, X = X,
         method = method, robust = robust,
         weights = weights, weights_custom = weights_custom,
         n_threads = .fmrireg_num_threads()
       )
-      rownames(out$beta) <- rownames(out$se) <- rownames(out$z) <- colnames(X)
-      if (!is.null(contrast)) {
-        canonical_contrast_weights <- .fmri_ttest_resolve_contrast(
-          contrast,
-          coef_names = .fmri_ttest_canonical_coef_names(colnames(X), group_info),
-          group_info = group_info
-        )
-        raw_contrast_weights <- .fmri_ttest_raw_contrast_weights(
-          canonical_contrast_weights,
-          coef_names = colnames(X),
-          group_info = group_info,
-          target_sign = sign,
-          source_sign = source_sign
-        )
-        cs <- .meta_contrasts_from_tri(out$beta, out$cov_tri,
-                                       matrix(raw_contrast_weights, ncol = 1))
-        exact_contrast <- list(
-          estimate = as.numeric(cs$estimate[1, ]),
-          se = as.numeric(cs$se[1, ]),
-          z = as.numeric(cs$z[1, ]),
-          p = 2 * stats::pnorm(abs(cs$z[1, ]), lower.tail = FALSE),
-          df = rep(Inf, ncol(cs$estimate))
-        )
+      if (!is.null(raw_weights)) {
+        cs <- .meta_contrasts_from_tri(fit$beta, fit$cov_tri, matrix(raw_weights, ncol = 1))
+        exact_contrast <- .fmri_ttest_z_contrast(cs$estimate[1, ], cs$se[1, ])
       }
     }
-    
-    if (!is.null(out)) {
-      res$beta <- out$beta
-      res$se <- out$se
-      res$z <- out$z
-      res$p <- 2 * stats::pnorm(abs(out$z), lower.tail = FALSE)
-      res$df <- matrix(Inf, nrow = nrow(out$z), ncol = ncol(out$z))
-      if (is.null(rownames(res$beta))) rownames(res$beta) <- rownames(out$z) %||% colnames(X)
-      if (is.null(rownames(res$se))) rownames(res$se) <- rownames(res$beta)
-      if (is.null(rownames(res$z))) rownames(res$z) <- rownames(res$beta)
-      rownames(res$df) <- rownames(res$beta)
+    rn <- rownames(fit$beta) %||% colnames(X)
+    res <- list(beta = fit$beta, se = fit$se)
+    res$z <- res$beta / res$se
+    res$p <- 2 * stats::pnorm(abs(res$z), lower.tail = FALSE)
+    res$df <- matrix(Inf, nrow = nrow(res$z), ncol = ncol(res$z))
+    for (nm in c("beta", "se", "z", "p", "df")) rownames(res[[nm]]) <- rn
+    P <- ncol(res$beta)
+
+  } else if (engine == "welch") {
+    if (is.null(group_info) || ncol(X) != 2L) {
+      stop("engine = 'welch' requires a two-level factor named 'group' and no ",
+           "other terms (formula = ~ 1 + group).", call. = FALSE)
     }
-    
+    if (!is.null(voxelwise_cov)) {
+      stop("voxelwise_cov is not supported by engine = 'welch'", call. = FALSE)
+    }
+    res <- .fmri_ttest_welch(Y, inp$covars$group, coef_names = colnames(X))
+    if (!is.null(raw_weights)) {
+      if (raw_weights[[1]] != 0) {
+        stop("Welch contrasts currently support only the group coefficient", call. = FALSE)
+      }
+      exact_contrast <- .fmri_ttest_single_coef_contrast(res, raw_weights)
+    }
+
   } else {
-    # Classic Student t or Welch
-    # If Y is not yet materialized (e.g., group_data_nifti/h5), load betas
-    if (is.null(Y)) {
-      Y <- .fmri_ttest_materialize_effects(gd, "classic/welch engines")
-      P <- ncol(Y)
-      Y <- Y - mu0
-    }
-    has_group <- "group" %in% colnames(covars) && 
-                 is.factor(covars$group) && 
-                 nlevels(covars$group) == 2
-    
-    if (engine == "welch" && has_group && K <= 2) {
-      # Welch t-test
-      g <- as.integer(covars$group)
-      w <- welch_t_cpp(Y, g)
-      
-      T <- as.numeric(w$t)
-      df <- as.numeric(w$df)
-      Pval <- 2 * stats::pt(abs(T), df = df, lower.tail = FALSE)
-      Z <- .t_to_z(T, df)
-      
-      res$beta <- rbind(
-        "(Intercept)" = (w$muA + w$muB) / 2,
-        group = w$muA - w$muB
-      )
-      rownames(res$beta) <- c("(Intercept)", "group")
-      res$se <- matrix(NA_real_, nrow = 2, ncol = P,
-                       dimnames = list(c("(Intercept)", "group"), NULL))
-      res$t <- rbind("(Intercept)" = NA_real_, group = T)
-      res$df <- rbind("(Intercept)" = NA_real_, group = df)
-      res$z <- rbind("(Intercept)" = NA_real_, group = Z)
-      res$p <- rbind("(Intercept)" = NA_real_, group = Pval)
-      if (!is.null(contrast)) {
-        canonical_contrast_weights <- .fmri_ttest_resolve_contrast(
-          contrast,
-          coef_names = rownames(res$beta),
-          group_info = list(raw_name = "group", canonical_name = "group")
-        )
-        nz <- which(abs(canonical_contrast_weights) > 0)
-        if (length(nz) > 1L || !identical(names(canonical_contrast_weights)[nz], "group")) {
-          stop("Welch contrasts currently support only the group coefficient", call. = FALSE)
-        }
-        exact_contrast <- .fmri_ttest_target_single_coef_contrast(
-          res, canonical_contrast_weights,
-          group_info = list(raw_name = "group", canonical_name = "group"),
-          target_sign = sign, source_sign = source_sign
-        )
-      }
-      
+    # Student t / ANCOVA: fmrigds's voxelwise OLS, or fmrireg's fitter when a
+    # voxelwise covariate adds a per-feature design column.
+    if (!is.null(voxelwise_cov)) {
+      ols <- fmri_ols_fit(Y, X, voxelwise = voxelwise_cov,
+                          center_voxelwise = center_voxelwise,
+                          voxel_name = voxel_name)
     } else {
-      # General OLS t-test/ANCOVA
-      if (!is.null(voxelwise_cov)) {
-        ols <- fmri_ols_fit(Y, X, voxelwise = voxelwise_cov,
-                           center_voxelwise = center_voxelwise,
-                           voxel_name = voxel_name)
+      ols <- .fmri_ttest_ols(Y, X)
+    }
+    res <- .fmri_ttest_ols_stats(ols, P)
+    if (!is.null(raw_weights)) {
+      if (is.null(voxelwise_cov)) {
+        cs <- .meta_contrasts_from_tri(ols$beta, ols$cov_tri, matrix(raw_weights, ncol = 1))
+        exact_contrast <- .fmri_ttest_t_contrast(cs$estimate[1, ], cs$se[1, ], ols$df)
       } else {
-        ols <- ols_t_cpp(Y, X)
-        rownames(ols$beta) <- colnames(X)
-        rownames(ols$se) <- colnames(X)
-        rownames(ols$t) <- colnames(X)
-      }
-
-      # Convert t to z and p (df may differ per voxel when subjects are missing)
-      res <- c(res, .fmri_ttest_ols_stats(ols, P))
-      if (!is.null(contrast)) {
-        canonical_coef_names <- rownames(res$beta)
-        if (!is.null(group_info)) {
-          canonical_coef_names[canonical_coef_names == group_info$raw_name] <- group_info$canonical_name
+        if (sum(raw_weights != 0) > 1L) {
+          stop("contrast with multiple coefficients is not supported when voxelwise_cov is used",
+               call. = FALSE)
         }
-        canonical_contrast_weights <- .fmri_ttest_resolve_contrast(
-          contrast,
-          coef_names = canonical_coef_names,
-          group_info = group_info
-        )
-        if (!is.null(voxelwise_cov) && sum(abs(canonical_contrast_weights) > 0) > 1L) {
-          stop("contrast with multiple coefficients is not supported when voxelwise_cov is used", call. = FALSE)
-        }
-        if (is.null(voxelwise_cov)) {
-          raw_contrast_weights <- .fmri_ttest_raw_contrast_weights(
-            canonical_contrast_weights,
-            coef_names = rownames(ols$beta),
-            group_info = group_info,
-            target_sign = sign,
-            source_sign = source_sign
-          )
-          exact_contrast <- .fmri_ttest_exact_ols_contrast(ols, X, raw_contrast_weights, Y = Y)
-        } else {
-          exact_contrast <- .fmri_ttest_target_single_coef_contrast(
-            res,
-            stats::setNames(canonical_contrast_weights, canonical_coef_names),
-            group_info = group_info, target_sign = sign, source_sign = source_sign
-          )
-        }
+        exact_contrast <- .fmri_ttest_single_coef_contrast(res, raw_weights)
       }
     }
   }
-  
-  res <- .fmri_ttest_normalize_group_rows(res, group_info)
-  if (!is.null(exact_contrast)) {
-    res <- .fmri_ttest_store_contrast(res, exact_contrast)
+
+  if (!is.null(inp$sample_labels) && length(inp$sample_labels) == P) {
+    for (nm in c("beta", "se", "t", "z", "p", "df")) {
+      if (!is.null(res[[nm]])) colnames(res[[nm]]) <- inp$sample_labels
+    }
   }
+  res <- .fmri_ttest_normalize_group_rows(res, group_info)
+  res <- .fmri_ttest_store_contrast(res, exact_contrast)
   res <- .fmri_ttest_apply_group_sign(res, group_info, target_sign = sign, source_sign = source_sign)
+  res <- .fmri_ttest_apply_mc(res, mc, alpha, inp$feature_group)
 
-  res <- .fmri_ttest_apply_mc(res, mc, alpha, feature_group)
-
-  # Store metadata
   res$call <- match.call()
   res$formula <- formula
   res$engine <- if (use_meta) "meta" else engine
-  res$method <- if (use_meta) analysis_method else engine
+  res$method <- analysis_method
   res$combine <- if (use_meta) combine else NULL
   res$weights <- if (use_meta) weights else NULL
   res$n_subjects <- S
   res$n_features <- P
   res$mc <- mc
   res$alpha <- alpha
-  if (!is.null(group_info)) {
-    res$group_levels <- group_info$levels
-    res$sign <- sign
-  }
-  
+  res$sign <- sign
+  res$roi_names <- inp$sample_labels
+  if (!is.null(group_info)) res$group_levels <- group_info$levels
+
   class(res) <- c("fmri_ttest_fit", "list")
   res
 }

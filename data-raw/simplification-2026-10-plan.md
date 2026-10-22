@@ -37,6 +37,24 @@ of C++, 41k lines of tests (265 files), 205 Rd pages, 1,196 tracked files /
   reach fmrireg. Left for P2: `fmri_ttest` delegation (its classic/Welch
   engines still use only the first subject-level contrast), the meta C++
   wrapper consolidation, the legacy stack (P3).
+- **Step P2** (branch `claude/group-delegation-p2`): fmrigds required at
+  `>= 0.1.0.9001`. `fmri_ttest()` normalises every input once
+  (`.fmri_ttest_input()`) and its classic / Welch engines are fmrigds's
+  `"ols:voxelwise"` / `"ttest:welch"` kernels on the subjects x features
+  matrix; classic contrasts come from the reducer's per-feature `cov_tri`.
+  `fmri_ttest_gds.R` is deleted; `fmri_meta.gds` added. 1,032 configurations
+  (in-memory blocks with / without V and with missing subjects, `group_data`
+  gds, plain fmrigds gds; every engine, formula, contrast, sign, mc, paired,
+  mu0, voxelwise_cov, weights, combine) pinned against master: classic and
+  meta results identical at 1e-10; differences only where intended (Welch SE
+  and per-feature deletion, recorded engine/sign); gds and in-memory results
+  agree in all 328 comparable configurations; 189 configurations that errored
+  now run. `ols_t_cpp()` / `welch_t_cpp()` are deprecated (remove next
+  minor, with their C++). fmrigds#33 batches `"ols:voxelwise"` over complete
+  features (4x faster) so the classic engine stays fast on whole-brain data.
+  Left: meta C++ wrapper consolidation; `ols_t_vcov_cpp` / `fmri_ols_fit`
+  voxelwise covariates and `fmri_meta_fit_extended` stay in fmrireg until
+  fmrigds has a per-feature covariate reducer; the legacy stack (P3).
 - Kept on purpose: `as.array.NeuroVec` (fmristore's `LatentNeuroVec` needs it),
   the `.estimate_ar` fallback (live when fmriAR fails, now with a warning),
   plotting's `.ar_whiten` (differs from `ar_whiten_transform` on the first p

@@ -226,6 +226,9 @@ Group analysis is moving to fmrigds (plan Phase 4 item 1). Since P1:
 fmrireg registers exactly one fmrigds reducer, `"fmrireg:meta_reg"` (the
 `.meta_fit_core()` estimator), plus the post-hoc alias `"fmrireg:fdr:spatial"`
 (= fmrigds `"fdr:sabha"`), at load and never over an fmrigds name. The gds path
-of `fmri_meta()` is reduce -> `fmrigds::coef_contrast()` -> wrap; reducer
+of `fmri_meta()` is reduce -> `fmrigds::coef_contrast()` -> wrap; since P2,
+`fmri_ttest()` normalises every input with `.fmri_ttest_input()` and its
+classic / Welch engines call fmrigds's `"ols:voxelwise"` / `"ttest:welch"`
+kernels (`.fmri_ttest_ols()`, `.fmri_ttest_welch()`); reducer
 options are read with `[[` (fmrigds's `options$weights` partially matches a
 `weights_custom` element, hence the option name `custom_weights`).
