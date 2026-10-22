@@ -184,9 +184,12 @@
            call. = FALSE)
     }
   }
+  # t statistics carry no standard errors, so "ivw" (the default) cannot be
+  # honoured; combine with equal weights and say so, as group_data_nifti did.
   if (identical(weights, "ivw")) {
-    stop("Inverse-variance weighting is unavailable for t-only combination models; use equal or custom weights.",
-         call. = FALSE)
+    warning("IVW requested for combine but no SE available; using equal weights",
+            call. = FALSE)
+    weights <- "equal"
   }
   if (identical(tolower(combine), "fisher") && !identical(weights, "equal")) {
     stop("Fisher combination supports equal weights only; use Lancaster for weighted p-value combination.",

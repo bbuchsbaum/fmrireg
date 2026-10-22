@@ -117,12 +117,13 @@ test_that(".fmri_meta_group_data_gds_impl combine validation branches", {
       ),
       "intercept-only"
     )
-    expect_error(
+    # t statistics have no SE: "ivw" combines with equal weights and warns.
+    expect_warning(
       fmrireg:::.fmri_meta_group_data_gds_impl(
         gd, formula = ~ 1, combine = "stouffer",
         weights = "ivw", verbose = FALSE
       ),
-      "Inverse-variance|equal or custom"
+      "no SE available; using equal weights"
     )
     expect_error(
       fmrireg:::.fmri_meta_group_data_gds_impl(

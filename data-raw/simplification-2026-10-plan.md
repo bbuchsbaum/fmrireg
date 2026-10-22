@@ -55,6 +55,19 @@ of C++, 41k lines of tests (265 files), 205 Rd pages, 1,196 tracked files /
   Left: meta C++ wrapper consolidation; `ols_t_vcov_cpp` / `fmri_ols_fit`
   voxelwise covariates and `fmri_meta_fit_extended` stay in fmrireg until
   fmrigds has a per-feature covariate reducer; the legacy stack (P3).
+- **Step P3, routing** (branch `claude/group-delegation-p3`, with fmrigds#34
+  adding t/df NIfTI input): `group_data(format = "nifti")` reads var and
+  t-only maps through fmrigds, so no non-deprecated path builds a legacy
+  `group_data_nifti`/`_h5`/`_csv` object any more. 57 configurations (beta+var
+  with and without mask, t-only with scalar / per-subject df; fmri_meta
+  methods, weights, robust, contrasts; fmri_ttest engines; three
+  t-combinations) equal the legacy reader at 1e-8. Left for the next minor:
+  delete the deprecated `group_data_from_*()` constructors, the legacy
+  readers and `fmri_meta.group_data_{csv,h5,nifti}` methods, the five
+  legacy-only accessors, and `ols_t_cpp()` / `welch_t_cpp()` with their C++.
+  The internal demo `.demo_group_data_csv()` (doc_example_helpers.R) still
+  builds a legacy csv object and must move to `group_data(format = "csv")`
+  first, along with the tests that construct legacy objects by hand.
 - Kept on purpose: `as.array.NeuroVec` (fmristore's `LatentNeuroVec` needs it),
   the `.estimate_ar` fallback (live when fmriAR fails, now with a warning),
   plotting's `.ar_whiten` (differs from `ar_whiten_transform` on the first p
