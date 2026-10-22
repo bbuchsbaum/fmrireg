@@ -50,9 +50,38 @@
   fmrigds port of the same procedure (identical results); fmrireg's C++
   implementation was removed. The fmrigds post-hoc `"fmrireg:fdr:spatial"` is
   kept as an alias of fmrigds's `"fdr:sabha"`.
-* fmrireg now requires fmrigds at commit e9863f6 (`coef_contrast()`,
-  `spatial_fdr_sabha()`); the `a_09` vignette no longer calls the unexported
-  `fmrigds::plan()`.
+* fmrireg now requires fmrigds (>= 0.1.0.9001) (`coef_contrast()`,
+  `spatial_fdr_sabha()`, `"ttest:welch"`); the `a_09` vignette no longer calls
+  the unexported `fmrigds::plan()`.
+* `fmri_ttest()` has one input path: gds data, legacy `group_data` and data
+  frames are normalised once, and the classic and Welch engines are fmrigds's
+  `"ols:voxelwise"` and `"ttest:welch"` reducers on every input (the separate
+  gds method is gone). Classic results are unchanged. Consequences:
+  * gds data with several subject-level contrasts used to be analysed for the
+    first contrast only by the classic and Welch engines; they now stop with
+    a message naming the contrasts, as the meta engine does.
+  * On gds data, `paired`, `mu0`, `voxelwise_cov` (classic engine) and
+    contrasts with several coefficients now work; they used to stop.
+  * The Welch engine reports the group coefficient's standard error (it was
+    `NA`) and drops non-finite subjects per feature (they used to make the
+    whole feature `NaN`). It now requires `formula = ~ 1 + group`; before, a
+    formula without `group` silently ran the classic engine under the name
+    "welch".
+  * `voxelwise_cov` with a group `contrast` failed with "subscript out of
+    bounds"; it now returns the signed group coefficient.
+  * `engine = "auto"` records the engine that ran (`"classic"` or `"meta"`)
+    instead of `"auto"`; `paired = TRUE` records `"classic"`. `sign` is
+    always recorded.
+  * A rank-deficient design now stops with a message; the classic engine
+    used to return pseudo-inverse estimates.
+  * The meta engine on file-backed data (gds, `group_data_*`) stops when
+    `mu0` or `voxelwise_cov` is given; `group_data_*` inputs used to ignore
+    both silently.
+* `fmri_meta()` accepts a `gds` built directly with fmrigds (`as_gds()`,
+  `gds()`); it used to have no method for it.
+* `ols_t_cpp()` and `welch_t_cpp()` are deprecated and will be removed in the
+  next minor release; use `fmri_ols_fit()` / `fmri_ttest()`. `fmri_ols_fit()`
+  without a voxelwise covariate now uses `"ols:voxelwise"` (same results).
 * fmrireg no longer overwrites fmrigds's own reducers. Every group
   `fmri_meta()`/`fmri_ttest()` call used to re-register `meta:fe`,
   `meta:fe_reg`, `meta:re_reg` (switching it from DerSimonian-Laird to

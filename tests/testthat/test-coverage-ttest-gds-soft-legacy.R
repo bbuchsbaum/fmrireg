@@ -19,7 +19,8 @@ test_that("fmri_ttest.group_data_gds rejects unsupported options and runs classi
     covariate_cols = "group"
   )
 
-  expect_error(fmri_ttest(gd, paired = TRUE), "paired")
+  # paired = TRUE runs the classic one-sample engine on gds data too (P2).
+  expect_identical(suppressMessages(fmri_ttest(gd, paired = TRUE))$engine, "classic")
   expect_error(fmri_ttest(gd, mu0 = 1), "mu0")
   expect_error(fmri_ttest(gd, mask = TRUE), "mask")
   expect_error(fmri_ttest(gd, voxelwise_cov = 1), "voxelwise_cov")

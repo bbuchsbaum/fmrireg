@@ -15,7 +15,7 @@ Depends:
     R (>= 4.1.0)
 Imports:
     fmriAR (>= 0.3.3),
-    fmrigds,
+    fmrigds (>= 0.1.0.9001),
     fmridesign (>= 0.6.1.9000),
     fmrihrf (>= 0.4.0),
     fmrilss (>= 0.1.0),
@@ -71,7 +71,7 @@ Remotes:
     bbuchsbaum/fmriAR@ca27f2772bb4675573fae717a992c993c2f986c8,
     bbuchsbaum/fmrihrf@b9f6a90b05bdf3673ed43414eb06ec6c74200d43,
     bbuchsbaum/fmristore@e7fbbfca181ebd118acee150774a4f58640e039d,
-    bbuchsbaum/fmrigds@e9863f6527844db01e628c61aa6b817ab93b720d,
+    bbuchsbaum/fmrigds@0b6800ac10ef3a0b31b7548f9d8f0a5d288bec21,
     anthonynorth/roxyglobals@ab29bdcd2e618fbfd91356fc22095e961b48333d,
     bbuchsbaum/fmridataset,
     bbuchsbaum/fmrilss@f851fb0632f90da12512212af5b80c9623c93fde,

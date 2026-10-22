@@ -370,9 +370,9 @@ test_that("fmri_ttest helper materialize/weight/contrast branches", {
   Xols <- cbind(1, c(0, 0, 1, 1))
   Yols <- matrix(rnorm(4 * 3), 4, 3)
   ols <- fmrireg:::fmri_ols_fit(Yols, Xols)
-  exact <- fmrireg:::.fmri_ttest_exact_ols_contrast(ols, Xols, c(0, 1))
-  expect_equal(length(exact$estimate), 3L)
-  expect_true(all(is.finite(exact$se)))
+  exact <- fmrireg:::.fmri_ttest_t_contrast(ols$beta[2, ], ols$se[2, ], ols$df)
+  expect_equal(exact$t, unname(ols$t[2, ]))
+  expect_equal(exact$p, unname(2 * stats::pt(abs(ols$t[2, ]), ols$df, lower.tail = FALSE)))
 
   stored <- fmrireg:::.fmri_ttest_store_contrast(list(beta = 1), exact)
   expect_equal(stored$beta_contrast, exact$estimate)

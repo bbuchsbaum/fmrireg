@@ -87,6 +87,65 @@ paired_diff_block <- function(blkA, blkB, rho = 0) {
   result
 }
 
+# Normalise any fmri_ttest() input. Returns the design X (from `formula`),
+# the covariates used to build it, feature grouping and labels, and the effect
+# matrices Y / V (subjects x features) when they are in memory. File-backed
+# sources (gds, group_data_*) leave Y NULL: the meta engine hands them to
+# fmri_meta(), other engines read them with .fmri_ttest_materialize_effects().
+.fmri_ttest_input <- function(gd, formula, mask = NULL) {
+  if (is.data.frame(gd)) {
+    gd <- group_data(gd, mask = mask)
+  } else if (!is.null(mask)) {
+    stop("`mask` applies only when `gd` is a data frame; mask other group ",
+         "data when building them.", call. = FALSE)
+  }
+  if (inherits(gd, c("gds", "group_data_gds"))) {
+    covars <- tryCatch(as.data.frame(fmrigds::col_data(gd)), error = function(e) NULL)
+    S <- length(fmrigds::subjects(gd))
+    X <- .gds_safe_model_matrix(gd, formula, fallback_n = S)
+    if (is.null(X)) {
+      stop("Could not build the subject-level design for `formula` from the ",
+           "group data's subject covariates.", call. = FALSE)
+    }
+    return(list(
+      gd = gd, Y = NULL, V = NULL, X = .fmri_ttest_design(X), covars = covars,
+      feature_group = .fmri_ttest_feature_group(gd, NULL),
+      sample_labels = .fmri_ttest_sample_labels(gd, NULL)
+    ))
+  }
+  if (!inherits(gd, "group_data")) {
+    stop("gd must be a group_data object or data frame", call. = FALSE)
+  }
+
+  if (!is.null(gd$blocks)) {
+    if (length(gd$blocks) != 1) {
+      stop("fmri_ttest expects a single contrast block", call. = FALSE)
+    }
+    B <- gd$blocks[[1]]
+    Y <- B$Y
+    covars <- B$covars %||% data.frame(intercept = rep(1, nrow(Y)))
+    feature_group <- .fmri_ttest_feature_group(gd, B)
+    sample_labels <- .fmri_ttest_sample_labels(gd, B)
+  } else {
+    B <- NULL
+    Y <- NULL
+    covars <- gd$covariates %||% data.frame(intercept = rep(1, n_subjects(gd)))
+    feature_group <- .fmri_ttest_feature_group(gd, NULL)
+    sample_labels <- NULL
+  }
+  list(
+    gd = gd, Y = Y, V = B$V, covars = covars,
+    X = .fmri_ttest_design(stats::model.matrix(formula, data = covars)),
+    feature_group = feature_group, sample_labels = sample_labels
+  )
+}
+
+.fmri_ttest_design <- function(X) {
+  X <- as.matrix(X)
+  storage.mode(X) <- "double"
+  X
+}
+
 .fmri_ttest_materialize_effects <- function(gd, context = "analysis") {
   if (inherits(gd, c("gds", "gds_plan", "group_data_gds"))) {
     resolved <- if (inherits(gd, "gds_plan")) fmrigds::compute(gd) else gd
@@ -97,17 +156,23 @@ paired_diff_block <- function(blkA, blkB, rho = 0) {
         call. = FALSE
       )
     }
-    beta_first <- if (length(dim(beta)) == 3L) {
-      matrix(
+    if (length(dim(beta)) == 3L) {
+      if (dim(beta)[3L] != 1L) {
+        con <- tryCatch(fmrigds::contrasts(resolved), error = function(e) NULL) %||%
+          dimnames(beta)[[3L]]
+        stop("fmri_ttest() tests one subject-level contrast; these data have ",
+             dim(beta)[3L], " (", paste(con, collapse = ", "),
+             "). Subset them to one contrast, or use fmri_meta(), which fits each.",
+             call. = FALSE)
+      }
+      beta <- matrix(
         beta[, , 1L],
         nrow = dim(beta)[1L],
         ncol = dim(beta)[2L],
         dimnames = dimnames(beta)[1:2]
       )
-    } else {
-      as.matrix(beta)
     }
-    return(t(beta_first))
+    return(t(as.matrix(beta)))
   }
 
   if (inherits(gd, "group_data_nifti")) {
@@ -245,24 +310,6 @@ paired_diff_block <- function(blkA, blkB, rho = 0) {
   res
 }
 
-# Single-coefficient contrast read from coefficient rows that are still in the
-# engine's own (source) sign convention, returned in the target convention.
-.fmri_ttest_target_single_coef_contrast <- function(res, weights, group_info,
-                                                    target_sign, source_sign) {
-  out <- .fmri_ttest_single_coef_contrast(res, weights)
-  if (is.null(out) || is.null(group_info) || identical(target_sign, source_sign)) {
-    return(out)
-  }
-  nz <- names(weights)[abs(weights) > 0]
-  if (!identical(nz, group_info$canonical_name) && !identical(nz, group_info$raw_name)) {
-    return(out)
-  }
-  for (nm in c("estimate", "t", "z")) {
-    if (!is.null(out[[nm]])) out[[nm]] <- -out[[nm]]
-  }
-  out
-}
-
 .fmri_ttest_resolve_contrast <- function(contrast, coef_names, group_info = NULL) {
   if (is.null(contrast)) {
     return(NULL)
@@ -357,48 +404,89 @@ paired_diff_block <- function(blkA, blkB, rho = 0) {
   list(beta = ols$beta, se = ols$se, t = ols$t, df = df, z = z, p = p)
 }
 
-.fmri_ttest_exact_ols_contrast <- function(ols, X, raw_weights, Y = NULL) {
-  P <- ncol(ols$beta)
-  XtX_inv <- solve(crossprod(X))
-  scale <- rep(as.numeric(crossprod(raw_weights, XtX_inv %*% raw_weights)), P)
-  diag_inv <- diag(XtX_inv)
-  ref_idx <- which(is.finite(diag_inv) & diag_inv > 0)[1]
-  sigma2 <- (ols$se[ref_idx, ]^2) / diag_inv[[ref_idx]]
-  df <- rep_len(as.numeric(ols$df), P)
-  # Features fitted on a subset of subjects (non-finite outcomes dropped)
-  # need the contrast variance of their own design.
-  n_obs <- ols$n_obs
-  partial <- if (is.null(n_obs)) integer(0) else which(n_obs < nrow(X))
-  if (length(partial) > 0L) {
-    if (is.null(Y)) {
-      stop("Y is required for contrasts on features with missing subjects", call. = FALSE)
+# Student t / ANCOVA across features with fmrigds's "ols:voxelwise" reducer.
+# A subject with a non-finite outcome is dropped from that feature only, so df
+# is per feature; cov_tri (packed Var(beta) per feature) gives exact
+# contrasts on every feature, including those fitted on a subset of subjects.
+.fmri_ttest_ols <- function(Y, X) {
+  reducer <- fmrigds::get_reducer("ols:voxelwise")
+  fit <- withCallingHandlers(
+    reducer$fun(beta = Y, var = NULL, X = X, z = NULL, p = NULL, df = NULL,
+                df1 = NULL, df2 = NULL, opts = list(return_cov = "tri")),
+    # fmrireg documents the per-feature deletion and reports it through df.
+    warning = function(w) {
+      if (startsWith(conditionMessage(w), "ols:voxelwise: ")) invokeRestart("muffleWarning")
     }
-    for (j in partial) {
-      keep <- is.finite(Y[, j])
-      Xs <- X[keep, , drop = FALSE]
-      inv_j <- tryCatch(solve(crossprod(Xs)), error = function(e) NULL)
-      if (is.null(inv_j) || !is.finite(df[j]) || df[j] <= 0) {
-        scale[j] <- NA_real_
-        next
-      }
-      r <- Y[keep, j] - drop(Xs %*% ols$beta[, j])
-      scale[j] <- as.numeric(crossprod(raw_weights, inv_j %*% raw_weights))
-      sigma2[j] <- sum(r^2) / df[j]
-    }
-  }
-  estimate <- colSums(ols$beta * raw_weights)
-  se <- sqrt(scale * sigma2)
-  t_stat <- estimate / se
-  p_val <- 2 * stats::pt(abs(t_stat), df = df, lower.tail = FALSE)
-  z_stat <- .t_to_z(t_stat, df)
+  )
+  dn <- list(colnames(X), colnames(Y))
+  list(
+    beta = matrix(fit$coef, nrow = ncol(X), dimnames = dn),
+    se = matrix(fit$se_coef, nrow = ncol(X), dimnames = dn),
+    t = matrix(fit$coef / fit$se_coef, nrow = ncol(X), dimnames = dn),
+    # A scalar when every feature uses all subjects, as fmri_ols_fit() documents.
+    df = if (all(fit$n_obs == nrow(Y))) fit$df_res[[1]] else fit$df_res,
+    n_obs = fit$n_obs,
+    cov_tri = fit$cov_tri
+  )
+}
 
+# Welch two-sample t test across features with fmrigds's "ttest:welch"
+# reducer: the group row is mean(second level) - mean(first level) with its
+# Welch standard error and df; the intercept row is the midpoint of the two
+# group means. Non-finite subjects are dropped per feature.
+.fmri_ttest_welch <- function(Y, group, coef_names) {
+  reducer <- fmrigds::get_reducer("ttest:welch")
+  w <- reducer$fun(beta = Y, var = NULL, X = NULL, z = NULL, p = NULL, df = NULL,
+                   df1 = NULL, df2 = NULL, opts = list(group = group))
+  ok <- is.finite(Y)
+  Y0 <- Y
+  Y0[!ok] <- 0
+  in_b <- as.integer(group) == 2L
+  mean_a <- colSums(Y0[!in_b, , drop = FALSE]) / colSums(ok[!in_b, , drop = FALSE])
+  mean_b <- colSums(Y0[in_b, , drop = FALSE]) / colSums(ok[in_b, , drop = FALSE])
+  P <- ncol(Y)
+  na_row <- rep(NA_real_, P)
+  t_g <- as.numeric(w$t_g)
+  df_g <- as.numeric(w$df)
+  rows <- function(intercept, group_row) {
+    matrix(c(intercept, group_row), nrow = 2L, byrow = TRUE,
+           dimnames = list(coef_names, colnames(Y)))
+  }
+  list(
+    beta = rows((mean_a + mean_b) / 2, as.numeric(w$beta_g)),
+    se = rows(na_row, as.numeric(w$se_g)),
+    t = rows(na_row, t_g),
+    df = rows(na_row, df_g),
+    z = rows(na_row, .t_to_z(t_g, df_g)),
+    p = rows(na_row, 2 * stats::pt(abs(t_g), df = df_g, lower.tail = FALSE))
+  )
+}
+
+# Contrast statistics from an estimate and its standard error: t with `df`
+# (OLS engines) or z (meta engine, df = Inf).
+.fmri_ttest_t_contrast <- function(estimate, se, df) {
+  estimate <- as.numeric(estimate)
+  df <- rep_len(as.numeric(df), length(estimate))
+  t_stat <- estimate / as.numeric(se)
   list(
     estimate = estimate,
-    se = se,
+    se = as.numeric(se),
     t = t_stat,
-    z = z_stat,
-    p = p_val,
+    z = .t_to_z(t_stat, df),
+    p = 2 * stats::pt(abs(t_stat), df = df, lower.tail = FALSE),
     df = df
+  )
+}
+
+.fmri_ttest_z_contrast <- function(estimate, se) {
+  estimate <- as.numeric(estimate)
+  z <- estimate / as.numeric(se)
+  list(
+    estimate = estimate,
+    se = as.numeric(se),
+    z = z,
+    p = 2 * stats::pnorm(abs(z), lower.tail = FALSE),
+    df = rep(Inf, length(estimate))
   )
 }
 
@@ -693,12 +781,8 @@ fmri_ols_fit <- function(Y, X,
   }
   
   if (is.null(voxelwise)) {
-    # Standard OLS
-    ols <- ols_t_cpp(Y, X)
-    rn <- colnames(X)
-    if (!is.null(rn)) {
-      rownames(ols$beta) <- rownames(ols$se) <- rownames(ols$t) <- rn
-    }
+    # Standard OLS (fmrigds's "ols:voxelwise")
+    ols <- .fmri_ttest_ols(Y, X)
   } else {
     # OLS with voxelwise covariate
     C <- as.matrix(voxelwise)
@@ -835,4 +919,36 @@ coef_image.fmri_ttest_fit <- function(object, coef = 1,
   }
   
   values
+}
+
+#' Deprecated OLS and Welch t-test kernels
+#'
+#' `ols_t_cpp()` and `welch_t_cpp()` are deprecated and will be removed in the
+#' next minor release. [fmri_ttest()] (`engine = "classic"` or `"welch"`) and
+#' [fmri_ols_fit()] now use the fmrigds reducers `"ols:voxelwise"` and
+#' `"ttest:welch"`, which also drop non-finite subjects per feature.
+#'
+#' @param Y S x P matrix (subjects x features).
+#' @param X S x K design matrix.
+#' @param g_in Length-S vector of group indicators (1/2 or 0/1).
+#' @return `ols_t_cpp()`: list with beta, se, t (K x P), df, n_obs and ok.
+#'   `welch_t_cpp()`: list with muA, muB, t, df (Welch), nA and nB.
+#' @name ttest-kernels-deprecated
+#' @keywords internal
+NULL
+
+#' @rdname ttest-kernels-deprecated
+#' @export
+ols_t_cpp <- function(Y, X) {
+  .Deprecated("fmri_ols_fit", package = "fmrireg",
+              msg = "ols_t_cpp() is deprecated; use fmri_ols_fit() or fmri_ttest(engine = \"classic\").")
+  .ols_t_cpp_impl(Y, X)
+}
+
+#' @rdname ttest-kernels-deprecated
+#' @export
+welch_t_cpp <- function(Y, g_in) {
+  .Deprecated("fmri_ttest", package = "fmrireg",
+              msg = "welch_t_cpp() is deprecated; use fmri_ttest(engine = \"welch\").")
+  .welch_t_cpp_impl(Y, g_in)
 }
