@@ -147,6 +147,7 @@
     dots$covariates <- NULL
   }
 
+  # LEGACY-GROUP-DELETE (next minor): this conversion of legacy group_data_nifti objects.
   # For nifti when passed a legacy group_data_nifti object, adapt its fields
   if (fformat == "nifti" && inherits(data, "group_data_nifti")) {
     src <- .group_data_nifti_source(

@@ -342,6 +342,77 @@ closed form or a reference implementation (CLAUDE.md standard).
 
 ---
 
+## Legacy group-data deletion checklist (next minor release)
+
+Everything below is marked in the code with `LEGACY-GROUP-DELETE (next
+minor)`; `grep -rn "LEGACY-GROUP-DELETE" R src tests vignettes` lists every
+site, and after the deletion it must list nothing. Users have been warned
+for a release: every public entry point emits a deprecation warning (the
+constructors and `fmri_meta.group_data_csv/_h5` since 0.3.0; the accessors,
+`fmri_meta.group_data_nifti` and legacy input to `fmri_ttest()` since the
+2026-10 prep, via `.legacy_group_deprecated()`). The list was derived from the
+call graph: functions reachable only from the deprecated entry points.
+
+**Delete whole files**
+- `R/group_data_csv.R`: `group_data_from_csv()`, `.group_data_from_csv_impl()`,
+  `validate_effect_cols()`, `wide_to_long_format()`, `extract_csv_data()`,
+  `get_rois()`, `get_contrasts()`, `validate_group_data_csv()`.
+- `R/group_data_h5.R`: `group_data_from_h5()`, `group_data_from_fmrilm()`,
+  `read_h5_metadata()`, `detect_h5_file_type()`,
+  `extract_subject_ids_from_paths()`, `read_h5_chunk()`, `.close_h5_handle()`,
+  `.read_h5_subject()`, `read_h5_full()`, `validate_group_data_h5()`.
+- `R/group_data_nifti.R`: `group_data_from_nifti()`,
+  `.group_data_from_nifti_impl()`, `read_nifti_header()`, `read_nifti_data()`,
+  `validate_nifti_dimensions()`, `read_nifti_chunk()`, `read_nifti_full()`,
+  `validate_group_data_nifti()`. (`t_to_beta_se()` already moved to
+  `R/metafuns.R`.)
+
+**Delete functions in kept files**
+- `R/fmri_meta.R`: `fmri_meta.group_data_h5()`, `fmri_meta.group_data_nifti()`,
+  `fmri_meta.group_data_csv()`, `fit_meta_chunk()`, `fit_meta_single()`,
+  `parse_meta_formula()`, `.meta_slice_weights()`.
+- `R/group_data.R`: `validate_group_data()`, `print.group_data()`,
+  `summary.group_data()`, `n_subjects.group_data()`,
+  `get_subjects.group_data()`, `get_covariates.group_data()`,
+  `.legacy_group_deprecated()`, `.legacy_group_quiet()`.
+- `R/fmri_ttest_helpers.R`: `ols_t_cpp()`, `welch_t_cpp()` (and the
+  `ttest-kernels-deprecated` roxygen block); `src/ols_t.cpp`: `ols_t_cpp()`,
+  `welch_t_cpp()` (keep `ols_t_vcov_cpp()`, used by `fmri_ols_fit()`); rerun
+  `Rcpp::compileAttributes()`.
+- `R/doc_example_helpers.R`: `.demo_group_data_csv()` (live examples use
+  `.demo_group_data()`).
+
+**Delete branches in kept functions** (each marked in place)
+- `R/fmri_meta.R`, `fmri_meta()`: the `validate_group_data()` call.
+- `R/fmri_meta_methods.R`: `use_exact_roi` and its branch (csv contrast SEs);
+  the h5/nifti tests in `coef_image.fmri_meta()`; the h5/nifti branches of
+  `reconstruct_image()`, of the meta mask helper and of
+  `.extract_fmri_meta_source_files()`.
+- `R/fmri_ttest_helpers.R`: the nifti/h5 branches of
+  `.fmri_ttest_materialize_effects()`; the no-blocks `else` branch of
+  `.fmri_ttest_input()` (legacy file-backed objects). The in-memory
+  `list(blocks =)` form and `paired_diff_block()` stay.
+- `R/group_data_gds.R`: the conversion of `group_data_nifti` objects in
+  `.group_data_gds()`.
+
+**Behaviour to settle when deleting**
+- gds objects have no `summary` method of their own and currently dispatch to
+  `summary.group_data()`; add `summary.group_data_gds()` (mirroring
+  `print.group_data_gds()`) or accept fmrigds's.
+- `fmri_meta()` / `fmri_ttest()` on a legacy object will error with "no
+  method"; say so in NEWS.
+
+**Generated files**: `roxygen2::roxygenise()` removes the exports
+(`group_data_from_csv/_h5/_nifti/_fmrilm`, `extract_csv_data`, `get_rois`,
+`get_contrasts`, `read_h5_full`, `read_nifti_full`, `ols_t_cpp`,
+`welch_t_cpp`, `S3method(fmri_meta, group_data_csv/_h5/_nifti)`, the
+`group_data` print/summary/accessor methods) and their Rd files.
+
+**Tests** — see "Legacy group-data tests" below.
+
+**Docs**: NEWS (breaking: removed functions, replacements); the `a_09`
+vignette note on legacy constructors.
+
 ## Tests, docs and CI
 
 - **Coverage-wave tests.** The 93 `test-coverage-*` files (12.4k lines, one PR)
