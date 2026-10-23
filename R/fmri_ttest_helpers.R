@@ -126,7 +126,12 @@ paired_diff_block <- function(blkA, blkB, rho = 0) {
     covars <- B$covars %||% data.frame(intercept = rep(1, nrow(Y)))
     feature_group <- .fmri_ttest_feature_group(gd, B)
     sample_labels <- .fmri_ttest_sample_labels(gd, B)
+  # LEGACY-GROUP-DELETE (next minor): the `else` branch below (legacy file-backed group_data_*: no blocks, read via fmri_meta() or .fmri_ttest_materialize_effects()).
   } else {
+    .legacy_group_deprecated(
+      paste0("fmri_ttest() on a ", class(gd)[1], " object"),
+      "Build the data with group_data(), which returns gds-backed group data."
+    )
     B <- NULL
     Y <- NULL
     covars <- gd$covariates %||% data.frame(intercept = rep(1, n_subjects(gd)))
@@ -175,8 +180,9 @@ paired_diff_block <- function(blkA, blkB, rho = 0) {
     return(t(as.matrix(beta)))
   }
 
+  # LEGACY-GROUP-DELETE (next minor): the group_data_nifti and group_data_h5 branches below (legacy file-backed objects).
   if (inherits(gd, "group_data_nifti")) {
-    dat_full <- read_nifti_full(gd)
+    dat_full <- .legacy_group_quiet(read_nifti_full(gd))
     if (is.null(dat_full$beta)) {
       stop(
         sprintf("group_data_nifti missing beta paths for %s", context),
@@ -187,7 +193,7 @@ paired_diff_block <- function(blkA, blkB, rho = 0) {
   }
 
   if (inherits(gd, "group_data_h5")) {
-    arr <- read_h5_full(gd, stat = "beta")
+    arr <- .legacy_group_quiet(read_h5_full(gd, stat = "beta"))
     if (is.null(arr)) {
       stop(
         sprintf("group_data_h5 missing beta statistic for %s", context),
@@ -937,6 +943,7 @@ coef_image.fmri_ttest_fit <- function(object, coef = 1,
 #' @keywords internal
 NULL
 
+# LEGACY-GROUP-DELETE (next minor): deprecated in 2026-10 (P2); delete with src/ols_t.cpp's ols_t_cpp().
 #' @rdname ttest-kernels-deprecated
 #' @export
 ols_t_cpp <- function(Y, X) {
@@ -945,6 +952,7 @@ ols_t_cpp <- function(Y, X) {
   .ols_t_cpp_impl(Y, X)
 }
 
+# LEGACY-GROUP-DELETE (next minor): deprecated in 2026-10 (P2); delete with src/ols_t.cpp's welch_t_cpp().
 #' @rdname ttest-kernels-deprecated
 #' @export
 welch_t_cpp <- function(Y, g_in) {

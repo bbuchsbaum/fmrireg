@@ -48,6 +48,7 @@ test_that("group_data constructor works with different formats", {
   expect_equal(attr(gd, "fmrireg_sample_labels"), c("roi1", "roi2"))
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests group_data_from_csv() and legacy accessors get_rois()/get_covariates()/extract_csv_data().
 test_that("group_data_csv handles ROI data correctly", {
   # Create test data
   test_data <- data.frame(
@@ -88,8 +89,9 @@ test_that("fmri_meta fits basic meta-analysis models", {
     group = factor(rep(c("A", "B"), each = 10))
   )
   
-  gd <- group_data_from_csv(
+  gd <- fmrireg::group_data(
     test_data,
+    format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
     roi_col = "roi",
@@ -125,8 +127,9 @@ test_that("meta-analysis methods work correctly", {
     se = rep(0.2, n_subjects)
   )
   
-  gd <- group_data_from_csv(
+  gd <- fmrireg::group_data(
     test_data,
+    format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
     roi_col = "roi"
@@ -167,8 +170,9 @@ test_that("contrast application works", {
     group = factor(rep(c("control", "treatment"), each = n_per_group))
   )
   
-  gd <- group_data_from_csv(
+  gd <- fmrireg::group_data(
     test_data,
+    format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
     roi_col = "roi",
@@ -194,8 +198,9 @@ test_that("heterogeneity statistics are computed correctly", {
     se = runif(n_subjects, 0.05, 0.15)  # Low within-study variance
   )
   
-  gd <- group_data_from_csv(
+  gd <- fmrireg::group_data(
     test_data,
+    format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
     roi_col = "roi"
@@ -225,8 +230,9 @@ test_that("robust estimation down-weights outliers", {
     se = rep(0.1, n_subjects)
   )
 
-  gd <- group_data_from_csv(
+  gd <- fmrireg::group_data(
     test_data,
+    format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
     roi_col = "roi"
@@ -252,8 +258,9 @@ test_that("print and summary methods work", {
     se = runif(10, 0.1, 0.3)
   )
   
-  gd <- group_data_from_csv(
+  gd <- fmrireg::group_data(
     test_data,
+    format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
     roi_col = "roi"
@@ -281,20 +288,24 @@ test_that("tidy method returns proper tibble", {
     group = rep(c("A", "B"), each = 10)
   )
   
-  gd <- group_data_from_csv(
+  gd <- group_data(
     test_data,
+    format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
     roi_col = "roi",
     covariate_cols = "group"
   )
-  
+
   fit <- fmri_meta(gd, formula = ~ 1 + group, method = "fe", verbose = FALSE)
-  
+
   tidy_result <- tidy(fit)
   expect_s3_class(tidy_result, "tbl_df")
   expect_true("term" %in% names(tidy_result))
   expect_true("estimate" %in% names(tidy_result))
   expect_true("std.error" %in% names(tidy_result))
   expect_true("p.value" %in% names(tidy_result))
+  # one row per ROI and term, matching the fit
+  expect_equal(nrow(tidy_result), length(fit$coefficients))
+  expect_equal(tidy_result$estimate, as.vector(fit$coefficients))
 })

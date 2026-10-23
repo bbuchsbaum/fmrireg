@@ -76,6 +76,7 @@ test_that("install_cli rejects unknown commands and PATH messaging", {
   )
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests n_subjects/get_subjects/get_covariates/print/summary.group_data and validate_group_data() on a legacy group_data_csv object.
 test_that("legacy group_data accessors", {
   # Synthetic legacy group_data object for print/summary/accessors
   gd <- structure(

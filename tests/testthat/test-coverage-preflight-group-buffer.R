@@ -27,6 +27,7 @@ test_that("preflight and effective_df helpers cover remaining branches", {
   }
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests print/summary/n_subjects/get_subjects.group_data on the legacy .demo_group_data_csv().
 test_that("group_data print/summary cover remaining lines", {
   gd <- tryCatch(fmrireg:::.demo_group_data_csv(), error = function(e) NULL)
   skip_if(is.null(gd), "no demo group data")
@@ -36,7 +37,7 @@ test_that("group_data print/summary cover remaining lines", {
 })
 
 test_that("fmri_ttest_gds classic path and error gates on demo csv-as-gds", {
-  gd <- tryCatch(fmrireg:::.demo_group_data_csv(), error = function(e) NULL)
+  gd <- tryCatch(fmrireg:::.demo_group_data(), error = function(e) NULL)
   skip_if(is.null(gd), "no demo group data")
 
   fit <- tryCatch(fmri_ttest(gd, formula = ~ 1, engine = "classic"), error = function(e) e)
@@ -45,5 +46,11 @@ test_that("fmri_ttest_gds classic path and error gates on demo csv-as-gds", {
     expect_output(print(fit), regexp = ".")
   }
 
-  expect_error(fmri_ttest(gd, paired = TRUE), regexp = ".")
+  # paired = TRUE is valid on gds data (one-sample test on differences); the
+  # legacy csv object only errored because it could not be materialized. Keep
+  # an error gate that the gds path enforces: paired designs reject welch.
+  expect_error(
+    suppressMessages(fmri_ttest(gd, paired = TRUE, engine = "welch")),
+    "paired"
+  )
 })

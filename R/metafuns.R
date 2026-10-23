@@ -436,3 +436,31 @@ meta_betas_mapped <- function(bstats, colmaps, colind, weighting = c("inv_var", 
                   stat = list(collect("stat")),
                   prob = list(collect("prob")))))
 }
+
+#' Convert t-statistics to Effect Sizes
+#'
+#' Helper function to convert t-statistics and df to beta and SE estimates
+#'
+#' @param t T-statistic values
+#' @param df Degrees of freedom
+#' @param n Sample size (optional, improves SE estimation)
+#' @return List with beta and se estimates
+#' @export
+t_to_beta_se <- function(t, df, n = NULL) {
+  # Standard error of the t-statistic
+  se_t <- 1
+  
+  # If sample size is known, can get better SE estimate
+  if (!is.null(n)) {
+    se_t <- sqrt(1/n)
+  }
+  
+  # Convert t to effect size (Cohen's d approximation)
+  # beta = t * SE
+  beta <- t * se_t
+  
+  # Standard error from t-distribution
+  se <- se_t
+  
+  return(list(beta = beta, se = se))
+}

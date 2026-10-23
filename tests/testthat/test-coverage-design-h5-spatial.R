@@ -36,6 +36,7 @@ test_that("design_plot longify covers event and baseline terms", {
   expect_true(inherits(app2, "shiny.appobj") || is.list(app2))
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests deprecated group_data_from_h5() and extract_subject_ids_from_paths().
 test_that("group_data_from_h5 validation and subject extraction", {
   expect_error(
     suppressWarnings(group_data_from_h5(1:3, validate = FALSE)),
@@ -74,6 +75,7 @@ test_that("group_data_from_h5 validation and subject extraction", {
   expect_equal(ids2, c("foo", "bar"))
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests deprecated constructor group_data_from_fmrilm().
 test_that("group_data_from_fmrilm succeeds with NeuroSpace-backed mask", {
   skip_if_not_installed("neuroim2")
   skip_if_not_installed("fmridataset")

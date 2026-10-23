@@ -7,6 +7,28 @@
   returns the same long tibble `tidyr::pivot_longer()` produced, which trims
   the install footprint, notably under webR.
 
+## Deprecations (removal in the next minor release)
+
+* The legacy group-data stack will be removed in the next minor release: the
+  constructors `group_data_from_csv()`, `group_data_from_h5()`,
+  `group_data_from_nifti()` and `group_data_from_fmrilm()` (deprecated since
+  0.3.0), the `fmri_meta()` methods for `group_data_csv/_h5/_nifti` objects,
+  and the accessors `extract_csv_data()`, `get_rois()`, `get_contrasts()`,
+  `read_h5_full()` and `read_nifti_full()`, together with `ols_t_cpp()` and
+  `welch_t_cpp()`. The accessors, `fmri_meta()` on a `group_data_nifti`
+  object and `fmri_ttest()` on any legacy file-backed object now warn too
+  (silence with `options(fmrireg.suppress_deprecation = TRUE)`). Use
+  `group_data()`, which builds gds-backed group data for every format, and
+  `fmrigds::assay()` to read its values. `t_to_beta_se()` is unaffected.
+* So that nothing is lost when the legacy reader goes, gds group data now
+  behave as the legacy csv reader did: `fmri_meta()` on data whose samples are
+  not a voxel grid (ROI tables, parcels) returns an `fmri_meta_roi` fit, so
+  `tidy()` gives one row per ROI and term, `print()` reports ROIs and
+  `spatial_fdr()` treats each ROI as its own group; `group_data(format =
+  "csv")` on a table without an ROI column treats it as one ROI, "overall"
+  (it used to stop); and `summary()` on gds group data has its own method
+  (it used to fall through to the legacy one).
+
 ## Bug fixes
 
 * `group_data(format = "nifti")` reads variance maps

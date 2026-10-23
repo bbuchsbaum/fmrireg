@@ -10,21 +10,25 @@ test_that("fmri_meta ROI CSV with group covariate fits FE correctly", {
   beta <- ifelse(group == "A", 0.5, 1.5)
   se <- rep(0.2, length(beta))
 
-  df <- data.frame(subject = subjects, beta = beta, se = se, group = group,
-                   stringsAsFactors = FALSE)
+  # One ROI, named "overall" (the name the legacy reader gave a table without
+  # an ROI column).
+  df <- data.frame(subject = subjects, roi = "overall", beta = beta, se = se,
+                   group = group, stringsAsFactors = FALSE)
 
-  gd <- fmrireg:::group_data_from_csv(
-    df,
+  gd <- group_data(
+    df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
+    roi_col = "roi",
     covariate_cols = c("group")
   )
 
   fit <- fmrireg:::fmri_meta(gd, formula = ~ 1 + group, method = "fe", verbose = FALSE)
 
   # One ROI named "overall"
-  expect_s3_class(fit, "fmri_meta")
+  expect_s3_class(gd, "group_data_gds")
   expect_true(inherits(fit, "fmri_meta_roi"))
+  expect_identical(fit$roi_names, "overall")
   expect_equal(fit$n_subjects, length(subjects))
   expect_equal(fit$n_rois, 1)
 
@@ -59,13 +63,16 @@ test_that("equal weights in ROI CSV give the OLS group fit (relative weights)", 
   group <- factor(rep(c("A", "B"), each = n_per_group))
   beta <- ifelse(group == "A", 0.5, 1.5) + c(0.1, -0.2, 0.05, 0.05, -0.1, 0.3, -0.15, -0.05)
   se <- rep(0.2, length(beta))
-  df <- data.frame(subject = subjects, beta = beta, se = se, group = group,
-                   stringsAsFactors = FALSE)
+  # One ROI, named "overall" (the name the legacy reader gave a table without
+  # an ROI column).
+  df <- data.frame(subject = subjects, roi = "overall", beta = beta, se = se,
+                   group = group, stringsAsFactors = FALSE)
 
-  gd <- fmrireg:::group_data_from_csv(
-    df,
+  gd <- group_data(
+    df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
+    roi_col = "roi",
     covariate_cols = c("group")
   )
 
@@ -86,12 +93,14 @@ test_that("fmri_meta intercept-only matches grand mean in ROI CSV (PM)", {
   subjects <- sprintf("s%02d", 1:6)
   beta <- c(0.5, 0.6, 0.4, 1.5, 1.6, 1.4)
   se <- rep(0.3, length(beta))
-  df <- data.frame(subject = subjects, beta = beta, se = se, stringsAsFactors = FALSE)
+  df <- data.frame(subject = subjects, roi = "overall", beta = beta, se = se,
+                   stringsAsFactors = FALSE)
 
-  gd <- fmrireg:::group_data_from_csv(
-    df,
+  gd <- group_data(
+    df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
-    subject_col = "subject"
+    subject_col = "subject",
+    roi_col = "roi"
   )
 
   fit <- fmrireg:::fmri_meta(gd, formula = ~ 1, method = "pm", verbose = FALSE)
