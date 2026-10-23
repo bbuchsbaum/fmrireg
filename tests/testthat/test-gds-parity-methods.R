@@ -1,3 +1,4 @@
+# LEGACY-GROUP-DELETE (next minor): parity test whose reference is the legacy fmri_meta.group_data_csv() path (.demo_group_data_csv()).
 test_that("fmri_meta.gds equals legacy CSV path across methods", {
   skip_if_not_installed("fmrigds")
 
@@ -41,8 +42,7 @@ test_that("fmri_meta.gds equals legacy CSV path across methods", {
 
 test_that("fmri_meta.gds returns cov_tri with correct size for multi-coef", {
   skip_if_not_installed("fmrigds")
-  gd_csv <- fmrireg:::.demo_group_data_csv()
-  df <- gd_csv$data
+  df <- fmrireg:::.demo_group_table()
   gd_gds <- fmrireg::group_data(
     df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
@@ -60,8 +60,7 @@ test_that("fmri_meta.gds returns cov_tri with correct size for multi-coef", {
 
 test_that("fmri_meta.gds custom unit weights match equal weights", {
   skip_if_not_installed("fmrigds")
-  gd_csv <- fmrireg:::.demo_group_data_csv()
-  df <- gd_csv$data
+  df <- fmrireg:::.demo_group_table()
   gd_gds <- fmrireg::group_data(
     df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
@@ -87,8 +86,7 @@ test_that("fmri_meta.gds custom unit weights match equal weights", {
 
 test_that("fmri_ttest.gds custom weights match the declared meta estimator", {
   skip_if_not_installed("fmrigds")
-  gd_csv <- fmrireg:::.demo_group_data_csv()
-  df <- gd_csv$data
+  df <- fmrireg:::.demo_group_table()
   gd_gds <- fmrireg::group_data(
     df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),

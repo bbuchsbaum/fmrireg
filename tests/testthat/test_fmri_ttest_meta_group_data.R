@@ -1,6 +1,7 @@
-test_that("fmri_ttest(meta) works with group_data_nifti and weights", {
+test_that("fmri_ttest(meta) works with NIfTI group data and weights", {
   skip_on_cran()
   skip_if_not_installed("neuroim2")
+  skip_if_not_installed("fmrigds")
 
   library(neuroim2)
 
@@ -36,13 +37,14 @@ test_that("fmri_ttest(meta) works with group_data_nifti and weights", {
   mask_path <- file.path(tmpdir, "mask.nii.gz")
   write_vol(NeuroVol(array(1, dim = c(4, 4, 1)), space), mask_path)
 
-  gd <- group_data_from_nifti(
-    beta_paths = beta_paths,
-    se_paths   = se_paths,
+  gd <- group_data(
+    list(beta = beta_paths, se = se_paths),
+    format     = "nifti",
     subjects   = ids,
     covariates = data.frame(group = grp),
     mask       = mask_path
   )
+  expect_s3_class(gd, "group_data_gds")
 
   # Meta engine with equal weights
   fit_eq <- fmri_ttest(gd, formula = ~ 1 + group, engine = "meta", weights = "equal")
@@ -80,9 +82,9 @@ test_that("fmri_ttest(meta) works with group_data_nifti and weights", {
     "Coefficient\\(s\\) not found.*groupB"
   )
 
-  gd_t <- group_data_from_nifti(
-    t_paths = t_paths,
-    df = 60,
+  gd_t <- group_data(
+    list(t = t_paths, df = 60),
+    format = "nifti",
     subjects = ids,
     mask = mask_path
   )
@@ -155,9 +157,10 @@ test_that("public ROI t-only fits return the requested inferential result", {
   expect_true(all(is.finite(fit_tt$p)))
 })
 
-test_that("fmri_ttest classic and welch materialize group_data_nifti betas", {
+test_that("fmri_ttest classic and welch materialize NIfTI group data betas", {
   skip_on_cran()
   skip_if_not_installed("neuroim2")
+  skip_if_not_installed("fmrigds")
 
   library(neuroim2)
 
@@ -184,13 +187,14 @@ test_that("fmri_ttest classic and welch materialize group_data_nifti betas", {
   mask_path <- file.path(tmpdir, "classic_mask.nii.gz")
   write_vol(NeuroVol(array(1, dim = c(3, 3, 1)), space), mask_path)
 
-  gd <- group_data_from_nifti(
-    beta_paths = beta_paths,
-    se_paths = se_paths,
+  gd <- group_data(
+    list(beta = beta_paths, se = se_paths),
+    format = "nifti",
     subjects = ids,
     covariates = data.frame(group = grp),
     mask = mask_path
   )
+  expect_s3_class(gd, "group_data_gds")
 
   fit_classic <- fmri_ttest(gd, formula = ~ 1 + group, engine = "classic")
   fit_welch <- fmri_ttest(gd, formula = ~ 1 + group, engine = "welch")

@@ -277,7 +277,6 @@ test_that("print and summary methods work", {
   expect_output(summary(fit), "Coefficients:")
 })
 
-# LEGACY-GROUP-DELETE (next minor): NEEDS MIGRATION — per-ROI tidy() needs an fmri_meta_roi fit, which only legacy fmri_meta.group_data_csv() creates; a gds csv fit (group_data(format = "csv")) is plain fmri_meta, so tidy() returns the voxelwise summary (no estimate/std.error/p.value columns).
 test_that("tidy method returns proper tibble", {
   skip_if_not_installed("tibble")
   
@@ -289,20 +288,24 @@ test_that("tidy method returns proper tibble", {
     group = rep(c("A", "B"), each = 10)
   )
   
-  gd <- group_data_from_csv(
+  gd <- group_data(
     test_data,
+    format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
     roi_col = "roi",
     covariate_cols = "group"
   )
-  
+
   fit <- fmri_meta(gd, formula = ~ 1 + group, method = "fe", verbose = FALSE)
-  
+
   tidy_result <- tidy(fit)
   expect_s3_class(tidy_result, "tbl_df")
   expect_true("term" %in% names(tidy_result))
   expect_true("estimate" %in% names(tidy_result))
   expect_true("std.error" %in% names(tidy_result))
   expect_true("p.value" %in% names(tidy_result))
+  # one row per ROI and term, matching the fit
+  expect_equal(nrow(tidy_result), length(fit$coefficients))
+  expect_equal(tidy_result$estimate, as.vector(fit$coefficients))
 })

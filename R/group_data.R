@@ -186,6 +186,13 @@ summary.group_data <- function(object, ...) {
   invisible(object)
 }
 
+#' @rdname summary.group_data
+#' @export
+summary.group_data_gds <- function(object, ...) {
+  .print_group_data_gds(object, ...)
+  invisible(object)
+}
+
 #' Extract Number of Subjects
 #'
 #' @param x A group_data object

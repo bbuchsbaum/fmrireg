@@ -68,6 +68,7 @@
     fits <- .fmri_meta_gds_fits(res, coef_terms, con, with_cov = is.null(combine))
   }
 
+  is_roi <- !inherits(tryCatch(fmrigds::space(data), error = function(e) NULL), "space_voxel")
   wrap <- function(fit) {
     dn <- list(sample_labels, coef_terms)
     out <- list(
@@ -83,15 +84,18 @@
       weights      = weights,
       data         = data,
       formula      = formula,
-      n_voxels     = nrow(fit$coef),
       n_subjects   = tryCatch(length(fmrigds::subjects(data)), error = function(e) NA_integer_),
       roi_names    = sample_labels
     )
+    # A voxel grid gives a voxelwise fit; any other sample axis (ROI tables,
+    # parcels) gives an ROI fit, as the legacy csv reader did, so tidy(),
+    # print() and spatial_fdr() treat each sample as an ROI.
+    if (is_roi) out$n_rois <- nrow(fit$coef) else out$n_voxels <- nrow(fit$coef)
     if (!is.null(fit$cov_tri)) {
       out$cov <- list(type = "tri", tri = fit$cov_tri, coef_names = coef_terms)
     }
     out$contrasts <- fit$contrasts
-    class(out) <- "fmri_meta"
+    class(out) <- if (is_roi) c("fmri_meta_roi", "fmri_meta") else "fmri_meta"
     out
   }
 

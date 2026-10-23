@@ -47,6 +47,7 @@ test_that(".fmri_meta_group_data_gds_impl robust and reml branches", {
   )
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests fit_meta_single() and fmri_meta.group_data_csv() on .demo_group_data_csv().
 test_that("fit_meta_single and fmri_meta.group_data_csv edges", {
   set.seed(43)
   y <- rnorm(9, 0.2, 0.3)

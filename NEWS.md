@@ -20,6 +20,14 @@
   (silence with `options(fmrireg.suppress_deprecation = TRUE)`). Use
   `group_data()`, which builds gds-backed group data for every format, and
   `fmrigds::assay()` to read its values. `t_to_beta_se()` is unaffected.
+* So that nothing is lost when the legacy reader goes, gds group data now
+  behave as the legacy csv reader did: `fmri_meta()` on data whose samples are
+  not a voxel grid (ROI tables, parcels) returns an `fmri_meta_roi` fit, so
+  `tidy()` gives one row per ROI and term, `print()` reports ROIs and
+  `spatial_fdr()` treats each ROI as its own group; `group_data(format =
+  "csv")` on a table without an ROI column treats it as one ROI, "overall"
+  (it used to stop); and `summary()` on gds group data has its own method
+  (it used to fall through to the legacy one).
 
 ## Bug fixes
 

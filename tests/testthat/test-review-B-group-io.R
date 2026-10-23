@@ -1,3 +1,4 @@
+# LEGACY-GROUP-DELETE (next minor): whole file — tests the legacy readers read_h5_chunk() and the legacy fmri_meta.group_data_nifti() volume-reading path (read_nifti_data).
 # Review 2026-10, stream B: group-data readers. HDF5 handle lifetime and
 # failure reporting (B9); NIfTI volumes read once per subject (P-B1).
 

@@ -396,9 +396,12 @@ call graph: functions reachable only from the deprecated entry points.
   `.group_data_gds()`.
 
 **Behaviour to settle when deleting**
-- gds objects have no `summary` method of their own and currently dispatch to
-  `summary.group_data()`; add `summary.group_data_gds()` (mirroring
-  `print.group_data_gds()`) or accept fmrigds's.
+- (Done in the prep: `summary.group_data_gds()` exists, so gds objects no
+  longer dispatch to the legacy `summary.group_data()`; gds fits on non-voxel
+  samples are `fmri_meta_roi`; a csv table without an ROI column is one ROI,
+  "overall".) The `summary.group_data` roxygen block also documents
+  `summary.group_data_gds` (shared `@rdname`): keep that block when deleting
+  the legacy method.
 - `fmri_meta()` / `fmri_ttest()` on a legacy object will error with "no
   method"; say so in NEWS.
 
@@ -408,7 +411,25 @@ call graph: functions reachable only from the deprecated entry points.
 `welch_t_cpp`, `S3method(fmri_meta, group_data_csv/_h5/_nifti)`, the
 `group_data` print/summary/accessor methods) and their Rd files.
 
-**Tests** — see "Legacy group-data tests" below.
+**Tests**: each test that exercises only the legacy stack carries the marker
+on the line above its `test_that()` (or at the top of the file when the whole
+file goes): delete the marked blocks and files. Every test of a live feature
+that used legacy objects as input now builds gds group data instead.
+- whole files: `test-coverage-h5-meta-mock.R`, `test-gds-h5-parity.R`,
+  `test-gds-nifti-parity.R`, `test-review-B-group-io.R`;
+- marked blocks in: `test-coverage-cli-group-soft.R`,
+  `test-coverage-design-h5-spatial.R`, `test-coverage-group-nifti-io.R` (keep
+  its `t_to_beta_se` block), `test-coverage-group-ttest-meta.R`,
+  `test-coverage-meta-recon-lowrank-ar.R`, `test-coverage-meta-robust-tau2.R`,
+  `test-coverage-model-meta-contrasts.R`,
+  `test-coverage-preflight-group-buffer.R`, `test-coverage-ttest-engines-mc.R`
+  (four lines inside a kept block), `test-gds-integration.R`,
+  `test-gds-parity-methods.R`, `test-gds-ttest-parity.R`,
+  `test-group_analysis.R`, `test-review-B-meta-weights.R`,
+  `test-review-B-ttest-classic.R`, `test-simplify-2026-10-P2.R`,
+  `test-simplify-2026-10-P3.R`.
+- `tests/testthat/setup.R` sets `fmrireg.suppress_deprecation = TRUE`; drop it
+  if nothing deprecated remains.
 
 **Docs**: NEWS (breaking: removed functions, replacements); the `a_09`
 vignette note on legacy constructors.

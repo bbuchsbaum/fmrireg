@@ -50,11 +50,17 @@
       dots$sample_col <- dots$roi_col
       dots$roi_col <- NULL
     }
+    # A table with no ROI/sample column is a single ROI, "overall", as the
+    # legacy csv reader treated it.
+    if (is.null(dots$sample_col) && !("sample" %in% names(data_local))) {
+      data_local$sample <- "overall"
+      dots$sample_col <- "sample"
+    }
     # Capture sample labels (e.g., ROI names) to preserve as rownames later
     sample_labels <- NULL
-    if (!is.null(dots$sample_col) && dots$sample_col %in% names(data)) {
+    if (!is.null(dots$sample_col) && dots$sample_col %in% names(data_local)) {
       sc <- dots$sample_col
-      sample_labels <- as.character(data[[sc]][!duplicated(data[[sc]])])
+      sample_labels <- as.character(data_local[[sc]][!duplicated(data_local[[sc]])])
       legacy_sample_labels <- sample_labels
     }
     if (is.null(dots$row_data) && !is.null(sample_labels)) {
