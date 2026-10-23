@@ -55,6 +55,13 @@ of C++, 41k lines of tests (265 files), 205 Rd pages, 1,196 tracked files /
   Left: meta C++ wrapper consolidation; `ols_t_vcov_cpp` / `fmri_ols_fit`
   voxelwise covariates and `fmri_meta_fit_extended` stay in fmrireg until
   fmrigds has a per-feature covariate reducer; the legacy stack (P3).
+- **Meta kernel consolidation** (branch `claude/meta-kernel-consolidation`):
+  `src/meta_kernels.cpp` has one export, `meta_fit_cov_cpp()` (optional
+  voxelwise covariate); `meta_fit_cpp`, `meta_fit_contrasts_cpp` and the C++
+  `meta_fit_vcov_cpp` are gone (`src/` -300 lines). The exported R functions
+  keep their names and outputs; 67 configurations (four methods x robust x
+  threads, missing / non-positive variances, contrasts, voxelwise, relative
+  weights) identical at 1e-12.
 - **Step P3, routing** (branch `claude/group-delegation-p3`, with fmrigds#34
   adding t/df NIfTI input): `group_data(format = "nifti")` reads var and
   t-only maps through fmrigds, so no non-deprecated path builds a legacy
