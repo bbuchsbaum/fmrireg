@@ -152,10 +152,8 @@ fmri_meta_fit <- function(Y, V, X,
     V[V <= 0] <- NA
   }
   
-  # Call C++ implementation
-  result <- .Call("_fmrireg_meta_fit_cpp", 
-                  Y, V, X, method, robust, huber_c, robust_iter, n_threads,
-                  PACKAGE = "fmrireg")
+  result <- meta_fit_cov_cpp(Y, V, X, method, robust, huber_c, robust_iter, n_threads)
+  result$cov_tri <- NULL
   
   # Add method and robust info to result
   result$method <- method
@@ -190,7 +188,12 @@ fmri_meta_fit_contrasts <- function(Y, V, X, Cmat,
   if (!is.matrix(X)) X <- as.matrix(X)
   if (!is.matrix(Cmat)) Cmat <- as.matrix(Cmat)
   if (nrow(Cmat) != ncol(X)) stop("nrow(Cmat) must equal ncol(X)", call. = FALSE)
-  result <- meta_fit_contrasts_cpp(Y, V, X, Cmat, method, robust, huber_c, robust_iter, n_threads)
+  result <- meta_fit_cov_cpp(Y, V, X, method, robust, huber_c, robust_iter, n_threads)
+  cs <- .meta_contrasts_from_tri(result$beta, result$cov_tri, Cmat)
+  result$cov_tri <- NULL
+  result$c_beta <- cs$estimate
+  result$c_se <- cs$se
+  result$c_z <- cs$z
   result$method <- method
   result$robust <- robust
   result$ok <- as.logical(result$ok)
@@ -305,4 +308,31 @@ r_to_z <- function(r, n) {
 #' @export
 z_to_r <- function(z) {
   (exp(2 * z) - 1) / (exp(2 * z) + 1)
+}
+
+#' Meta-regression with one voxelwise covariate
+#'
+#' Fits the meta-regression of [fmri_meta_fit()] with the design augmented,
+#' per feature, by that feature's column of `C` as a last predictor.
+#'
+#' @param Y S x P matrix of effect sizes
+#' @param V S x P matrix of variances
+#' @param X S x K design matrix
+#' @param C S x P matrix of voxelwise covariates
+#' @param method Meta-analysis method ("fe", "dl", "pm"; "reml" runs PM)
+#' @param robust Robust estimation method ("none" or "huber")
+#' @param huber_c Huber tuning constant
+#' @param robust_iter Number of IRLS iterations
+#' @param n_threads Number of OpenMP threads
+#' @return List with beta, se, z ((K + 1) x P), tau2, Q_fe, I2_fe, df, ok,
+#'   method and robust
+#' @export
+meta_fit_vcov_cpp <- function(Y, V, X, C, method, robust, huber_c = 1.345,
+                              robust_iter = 2L, n_threads = 0L) {
+  result <- meta_fit_cov_cpp(as.matrix(Y), as.matrix(V), as.matrix(X), method, robust,
+                             huber_c, robust_iter, n_threads, voxelwise = as.matrix(C))
+  result$cov_tri <- NULL
+  result$method <- method
+  result$robust <- robust
+  result
 }

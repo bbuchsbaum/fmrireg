@@ -265,175 +265,12 @@ MetaResult fit_one(const mat& Xfull, const vec& yfull, const vec& vfull,
 }
 
 
-// [[Rcpp::export]]
-Rcpp::List meta_fit_cpp(const arma::mat& Y,      // subjects x features
-                        const arma::mat& V,      // subjects x features (variances)
-                        const arma::mat& X,      // subjects x predictors (incl. intercept)
-                        const std::string method, // "fe","dl","pm","reml"
-                        const std::string robust, // "none","huber"
-                        const double huber_c = 1.345,
-                        const int robust_iter = 2,
-                        const int n_threads = 0) {
-
-  const uword S = Y.n_rows;
-  const uword P = Y.n_cols;
-  const uword Sp = V.n_rows;
-  const uword Pp = V.n_cols;
-  if (S != Sp || P != Pp) stop("Y and V must have the same shape.");
-  if (X.n_rows != S)      stop("X must have the same number of rows as Y.");
-
-  int mcode = 0;
-  if (method == "fe") mcode = 0; else if (method=="dl") mcode = 1;
-  else if (method=="pm") mcode = 2; else if (method=="reml") mcode = 3;
-  else stop("Unknown method: ", method);
-
-  bool do_robust = (robust == "huber");
-
-  arma::mat B(X.n_cols, P); B.fill(datum::nan);
-  arma::mat SE(X.n_cols, P); SE.fill(datum::nan);
-  arma::mat Z(X.n_cols, P); Z.fill(datum::nan);
-  arma::rowvec TAU2(P); TAU2.fill(datum::nan);
-  arma::rowvec Qfe(P); Qfe.fill(datum::nan);
-  arma::rowvec I2(P); I2.fill(datum::nan);
-  arma::rowvec DF(P); DF.fill(datum::nan);
-  arma::uvec   OK(P,   fill::zeros);
-  arma::uvec PM_WARN(P, fill::zeros);
-
-  // Parallel over features
-#ifdef _OPENMP
-  int nthreads = n_threads;
-  if (nthreads <= 0) {
-    nthreads = omp_get_max_threads();
-  }
-#pragma omp parallel for num_threads(nthreads) schedule(dynamic, 256)
-#else
-  (void)n_threads; // Suppress unused parameter warning
-#endif
-  for (int j = 0; j < (int)P; ++j) {
-    vec y = Y.col(j);
-    vec v = V.col(j);
-
-    MetaResult res = fit_one(X, y, v, mcode, do_robust, huber_c, robust_iter);
-    if (!res.ok) continue;
-
-    B.col(j)   = res.beta;
-    SE.col(j)  = res.se;
-    Z.col(j)   = res.z;
-    TAU2(j)    = res.tau2;
-    Qfe(j)     = res.Q_fe;
-    I2(j)      = res.I2_fe;
-    DF(j)      = res.df;
-    OK(j)      = 1u;
-    PM_WARN(j) = res.pm_nonconverged ? 1u : 0u;
-  }
-
-  if (arma::accu(PM_WARN) > 0) {
-    Rcpp::warning("Paule-Mandel solver did not fully converge for some features; using last iterate");
-  }
-
-  return List::create(
-    _["beta"] = B,
-    _["se"]   = SE,
-    _["z"]    = Z,
-    _["tau2"] = TAU2,
-    _["Q_fe"] = Qfe,
-    _["I2_fe"]= I2,
-    _["df"]   = DF,
-    _["ok"]   = OK
-  );
-}
-
-// [[Rcpp::export]]
-Rcpp::List meta_fit_contrasts_cpp(const arma::mat& Y,      // S x P
-                                  const arma::mat& V,      // S x P (variances)
-                                  const arma::mat& X,      // S x K
-                                  const arma::mat& Cmat,   // K x J (rows are predictors, cols are contrasts)
-                                  const std::string method,
-                                  const std::string robust,
-                                  const double huber_c = 1.345,
-                                  const int robust_iter = 2,
-                                  const int n_threads = 0) {
-  using namespace arma;
-
-  const uword S = Y.n_rows, P = Y.n_cols;
-  if (V.n_rows != S || V.n_cols != P) stop("meta_fit_contrasts_cpp: Y and V must match.");
-  if (X.n_rows != S) stop("meta_fit_contrasts_cpp: X rows must equal nrow(Y).");
-  if (Cmat.n_rows != X.n_cols) stop("meta_fit_contrasts_cpp: nrow(C) must equal ncol(X).");
-
-  int mcode = 0;
-  if (method == "fe") mcode = 0; else if (method=="dl") mcode = 1; else if (method=="pm") mcode = 2; else if (method=="reml") mcode = 3; else stop("Unknown method");
-  bool do_robust = (robust == "huber");
-
-  const uword K = X.n_cols;
-  const uword J = Cmat.n_cols;
-
-  mat B(K, P); B.fill(datum::nan);
-  mat SE(K, P); SE.fill(datum::nan);
-  mat Z(K, P); Z.fill(datum::nan);
-  rowvec TAU2(P); TAU2.fill(datum::nan);
-  rowvec Qfe(P); Qfe.fill(datum::nan);
-  rowvec I2(P); I2.fill(datum::nan);
-  rowvec DF(P); DF.fill(datum::nan);
-  uvec   OK(P,   fill::zeros);
-  uvec PM_WARN(P, fill::zeros);
-
-  mat CB(J, P); CB.fill(datum::nan);
-  mat CSE(J, P); CSE.fill(datum::nan);
-  mat CZ(J, P); CZ.fill(datum::nan);
-
-#ifdef _OPENMP
-  int nthreads = n_threads;
-  if (nthreads <= 0) nthreads = omp_get_max_threads();
-#pragma omp parallel for num_threads(nthreads) schedule(dynamic, 256)
-#endif
-  for (int j = 0; j < (int)P; ++j) {
-    vec y = Y.col(j);
-    vec v = V.col(j);
-    MetaResult res = fit_one(X, y, v, mcode, do_robust, huber_c, robust_iter);
-    if (!res.ok) continue;
-
-    B.col(j)   = res.beta;
-    SE.col(j)  = res.se;
-    Z.col(j)   = res.z;
-    TAU2(j)    = res.tau2;
-    Qfe(j)     = res.Q_fe;
-    I2(j)      = res.I2_fe;
-    DF(j)      = res.df;
-    OK(j)      = 1u;
-    PM_WARN(j) = res.pm_nonconverged ? 1u : 0u;
-
-    // Compute contrasts
-    for (uword c = 0; c < J; ++c) {
-      vec cw = Cmat.col(c);
-      double est = dot(cw, res.beta);
-      double varc = as_scalar(cw.t() * res.invXtWX * cw);
-      double sec = (varc > 0.0 && std::isfinite(varc)) ? std::sqrt(varc) : datum::nan;
-      double zc = (std::isfinite(sec) && sec > 0.0) ? (est / sec) : datum::nan;
-      CB(c, j)  = est;
-      CSE(c, j) = sec;
-      CZ(c, j)  = zc;
-    }
-  }
-
-  if (arma::accu(PM_WARN) > 0) {
-    Rcpp::warning("Paule-Mandel solver did not fully converge for some features; using last iterate");
-  }
-
-  return List::create(
-    _["beta"] = B,
-    _["se"]   = SE,
-    _["z"]    = Z,
-    _["tau2"] = TAU2,
-    _["Q_fe"] = Qfe,
-    _["I2_fe"]= I2,
-    _["df"]   = DF,
-    _["ok"]   = OK,
-    _["c_beta"] = CB,
-    _["c_se"] = CSE,
-    _["c_z"] = CZ
-  );
-}
-
+// The single meta-regression kernel. Every R entry point (fmri_meta_fit*,
+// meta_fit_vcov_cpp, .meta_fit_core) calls it. Fits each feature with
+// fit_one() and returns the packed upper triangle of Var(beta) per feature
+// (row-major over a <= b), from which contrasts are computed in R.
+// `voxelwise` (optional, S x P) adds that feature's column to the design as
+// a last predictor.
 // [[Rcpp::export]]
 Rcpp::List meta_fit_cov_cpp(const arma::mat& Y,      // S x P betas
                             const arma::mat& V,      // S x P variances
@@ -442,12 +279,20 @@ Rcpp::List meta_fit_cov_cpp(const arma::mat& Y,      // S x P betas
                             const std::string robust,
                             const double huber_c = 1.345,
                             const int robust_iter = 2,
-                            const int n_threads = 0) {
+                            const int n_threads = 0,
+                            Rcpp::Nullable<Rcpp::NumericMatrix> voxelwise = R_NilValue) {
   using namespace arma;
 
   const uword S = Y.n_rows, P = Y.n_cols;
   if (V.n_rows != S || V.n_cols != P) Rcpp::stop("meta_fit_cov_cpp: Y/V shape mismatch.");
   if (X.n_rows != S) Rcpp::stop("meta_fit_cov_cpp: X rows must equal nrow(Y).");
+
+  const bool has_cov = voxelwise.isNotNull();
+  mat Cv;
+  if (has_cov) {
+    Cv = Rcpp::as<arma::mat>(voxelwise.get());
+    if (Cv.n_rows != S || Cv.n_cols != P) Rcpp::stop("meta_fit_cov_cpp: voxelwise must be S x P.");
+  }
 
   int mcode = 0;
   if (method == "fe") mcode = 0;
@@ -458,7 +303,7 @@ Rcpp::List meta_fit_cov_cpp(const arma::mat& Y,      // S x P betas
 
   bool do_robust = (robust == "huber");
 
-  const uword K = X.n_cols;
+  const uword K = X.n_cols + (has_cov ? 1 : 0);
   const uword TSZ = K * (K + 1) / 2;
   mat B(K, P); B.fill(datum::nan);
   mat SE(K, P); SE.fill(datum::nan);
@@ -475,11 +320,21 @@ Rcpp::List meta_fit_cov_cpp(const arma::mat& Y,      // S x P betas
   int nthreads = n_threads;
   if (nthreads <= 0) nthreads = omp_get_max_threads();
 #pragma omp parallel for num_threads(nthreads) schedule(dynamic, 256)
+#else
+  (void)n_threads;
 #endif
   for (int j = 0; j < (int)P; ++j) {
     vec y = Y.col(j);
     vec v = V.col(j);
-    MetaResult res = fit_one(X, y, v, mcode, do_robust, huber_c, robust_iter);
+    MetaResult res;
+    if (has_cov) {
+      mat Xj(S, K);
+      Xj.cols(0, K - 2) = X;
+      Xj.col(K - 1) = Cv.col(j);
+      res = fit_one(Xj, y, v, mcode, do_robust, huber_c, robust_iter);
+    } else {
+      res = fit_one(X, y, v, mcode, do_robust, huber_c, robust_iter);
+    }
     if (!res.ok) continue;
     B.col(j)   = res.beta;
     SE.col(j)  = res.se;
@@ -514,110 +369,5 @@ Rcpp::List meta_fit_cov_cpp(const arma::mat& Y,      // S x P betas
     Rcpp::Named("df") = DF,
     Rcpp::Named("ok") = OK,
     Rcpp::Named("cov_tri") = COVTRI
-  );
-}
-
-//' Meta-regression with ONE voxelwise covariate
-//' 
-//' @param Y S x P matrix of effect sizes
-//' @param V S x P matrix of variances
-//' @param X S x K design matrix
-//' @param C S x P matrix of voxelwise covariates
-//' @param method Meta-analysis method
-//' @param robust Robust estimation method
-//' @param huber_c Huber tuning constant
-//' @param robust_iter Number of IRLS iterations
-//' @param n_threads Number of OpenMP threads
-//' @return List with results
-//' @export
-// [[Rcpp::export]]
-Rcpp::List meta_fit_vcov_cpp(const arma::mat& Y,  // S x P betas
-                             const arma::mat& V,  // S x P variances
-                             const arma::mat& X,  // S x K
-                             const arma::mat& C,  // S x P (voxelwise covariate)
-                             const std::string method,
-                             const std::string robust,
-                             const double huber_c = 1.345,
-                             const int robust_iter = 2,
-                             const int n_threads = 0) {
-  using namespace arma;
-  
-  const uword S = Y.n_rows, P = Y.n_cols;
-  
-  if (V.n_rows != S || V.n_cols != P) {
-    Rcpp::stop("meta_fit_vcov_cpp: Y/V shape mismatch.");
-  }
-  if (X.n_rows != S) {
-    Rcpp::stop("meta_fit_vcov_cpp: X rows must equal nrow(Y).");
-  }
-  if (C.n_rows != S || C.n_cols != P) {
-    Rcpp::stop("meta_fit_vcov_cpp: C must be S x P.");
-  }
-  
-  int mcode = 0;
-  if (method == "fe") mcode = 0;
-  else if (method == "dl") mcode = 1;
-  else if (method == "pm") mcode = 2;
-  else if (method == "reml") mcode = 3;
-  else Rcpp::stop("Unknown method: %s", method.c_str());
-  
-  bool do_robust = (robust == "huber");
-  
-  const uword K = X.n_cols + 1;  // augmented dimension
-  mat B(K, P); B.fill(datum::nan);
-  mat SE(K, P); SE.fill(datum::nan);
-  mat Z(K, P); Z.fill(datum::nan);
-  rowvec TAU2(P); TAU2.fill(datum::nan);
-  rowvec Qfe(P); Qfe.fill(datum::nan);
-  rowvec I2(P); I2.fill(datum::nan);
-  rowvec DF(P); DF.fill(datum::nan);
-  uvec OK(P, fill::zeros);
-  uvec PM_WARN(P, fill::zeros);
-  
-  int nth = n_threads;
-#ifdef _OPENMP
-  if (nth <= 0) nth = omp_get_max_threads();
-#pragma omp parallel for num_threads(nth) schedule(dynamic, 256)
-#endif
-  for (int j = 0; j < (int)P; ++j) {
-    // Build augmented design matrix for feature j
-    mat Xj(X.n_rows, X.n_cols + 1);
-    Xj.cols(0, X.n_cols - 1) = X;
-    Xj.col(X.n_cols) = C.col(j);
-    
-    vec y = Y.col(j);
-    vec v = V.col(j);
-    
-    // Use existing fit_one function
-    MetaResult res = fit_one(Xj, y, v, mcode, do_robust, huber_c, robust_iter);
-    
-    if (!res.ok) continue;
-    
-    B.col(j) = res.beta;
-    SE.col(j) = res.se;
-    Z.col(j) = res.z;
-    TAU2(j) = res.tau2;
-    Qfe(j) = res.Q_fe;
-    I2(j) = res.I2_fe;
-    DF(j) = res.df;
-    OK(j) = 1u;
-    PM_WARN(j) = res.pm_nonconverged ? 1u : 0u;
-  }
-
-  if (arma::accu(PM_WARN) > 0) {
-    Rcpp::warning("Paule-Mandel solver did not fully converge for some features; using last iterate");
-  }
-  
-  return Rcpp::List::create(
-    Rcpp::Named("beta") = B,
-    Rcpp::Named("se") = SE,
-    Rcpp::Named("z") = Z,
-    Rcpp::Named("tau2") = TAU2,
-    Rcpp::Named("Q_fe") = Qfe,
-    Rcpp::Named("I2_fe") = I2,
-    Rcpp::Named("df") = DF,
-    Rcpp::Named("ok") = OK,
-    Rcpp::Named("method") = method,
-    Rcpp::Named("robust") = robust
   );
 }

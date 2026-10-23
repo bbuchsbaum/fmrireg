@@ -24,7 +24,11 @@ fmri_ttest(
 )
 }
 \arguments{
-\item{gd}{A group_data object or data frame with subject data}
+\item{gd}{A gds-backed \code{group_data()} object (or an fmrigds \code{gds}), a legacy
+group_data object, or a data frame accepted by \code{\link[=group_data]{group_data()}}. gds data
+must hold one subject-level contrast; every engine and option works on it,
+except that the meta engine on gds data supports neither \code{mu0} nor
+\code{voxelwise_cov}.}
 
 \item{formula}{R formula for between-subjects design. Examples:
 \itemize{
@@ -35,15 +39,20 @@ fmri_ttest(
 
 \item{engine}{Character string; analysis engine to use:
 \itemize{
-\item "auto": Automatically select based on data (default)
+\item "auto": "meta" when sampling variances are available (always for
+gds data), otherwise "classic" (default). The fit records the engine
+that ran.
 \item "meta": Use inverse-variance meta-analysis (requires SE)
 \item "classic": Use OLS/Student t-test. A subject with a non-finite
 value for a feature is dropped from that feature only, so degrees of
 freedom can differ between features.
-\item "welch": Use Welch t-test for unequal variances
+\item "welch": Welch t-test for unequal variances; needs
+\code{formula = ~ 1 + group} with a two-level factor \code{group}. Non-finite
+subjects are dropped per feature.
 }}
 
-\item{paired}{Logical; if TRUE, perform paired t-test on differences (default: FALSE)}
+\item{paired}{Logical; if TRUE, the effects are within-subject differences and
+are tested against \code{mu0} with the classic one-sample engine (default: FALSE)}
 
 \item{mu0}{Numeric scalar; constant to test against for one-sample tests (default: 0)}
 
@@ -104,7 +113,10 @@ An fmri_ttest_fit object containing:
 \description{
 Performs group-level t-tests on fMRI data with support for one-sample, two-sample,
 paired, and ANCOVA designs. Provides both meta-analysis and classical t-test engines,
-mirroring AFNI 3dttest++ functionality within the fmrireg framework.
+mirroring AFNI 3dttest++ functionality within the fmrireg framework. The
+classic and Welch engines are fmrigds's \code{"ols:voxelwise"} and
+\code{"ttest:welch"} reducers; the meta engine is fmrireg's meta-regression
+(see \code{\link[=fmri_meta]{fmri_meta()}}).
 }
 \examples{
 \dontrun{

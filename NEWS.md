@@ -143,6 +143,13 @@
 
 ## Internal
 
+* The meta-analysis C++ code has one entry point, `meta_fit_cov_cpp()`, which
+  takes an optional voxelwise covariate; the three other copies of its
+  per-feature loop (behind `fmri_meta_fit()`, `fmri_meta_fit_contrasts()` and
+  `meta_fit_vcov_cpp()`) are gone (about 300 lines of C++). Those functions
+  keep their names, arguments and outputs, and give identical results;
+  `fmri_meta_fit_contrasts()` now computes its contrasts from the packed
+  covariance.
 * Removed about 1,150 lines of code that no exported function, S3 method or
   `.onLoad` could reach, including the unwired bootstrap and sandwich helpers,
   `fast_rlm_run()`, `multiresponse_rlm()`, `ar_whiten_inplace()` and an unused
