@@ -1,4 +1,4 @@
-# Fifteenth wave: fmri_meta by_stat / by_coefficient NIfTI writers via group_data_nifti.
+# Fifteenth wave: fmri_meta by_stat / by_coefficient NIfTI writers via voxel-space gds group data.
 
 make_nifti_meta <- function(seed = 421L) {
   skip_if_not_installed("neuroim2")
@@ -13,6 +13,18 @@ make_nifti_meta <- function(seed = 421L) {
     runif(nvox * 2, 0.1, 0.4), nvox, 2,
     dimnames = dimnames(coefs)
   )
+  # gds-backed group data in a 2x2x1 voxel space (unit voxels)
+  subj <- paste0("s", 1:6)
+  gd <- fmrigds::as_gds(
+    list(
+      beta = matrix(rnorm(nvox * 6), nvox, 6,
+                    dimnames = list(paste0("v", seq_len(nvox)), subj)),
+      var = matrix(0.04, nvox, 6,
+                   dimnames = list(paste0("v", seq_len(nvox)), subj))
+    ),
+    space = fmrigds::space_voxel(dims, affine = diag(4))
+  )
+  class(gd) <- c("group_data_gds", "group_data", class(gd))
   structure(
     list(
       coefficients = coefs,
@@ -26,16 +38,13 @@ make_nifti_meta <- function(seed = 421L) {
       formula = ~ 1 + age,
       n_subjects = 6L,
       n_voxels = nvox,
-      data = structure(
-        list(dim = dims, voxel_size = c(1, 1, 1)),
-        class = "group_data_nifti"
-      )
+      data = gd
     ),
     class = c("fmri_meta", "list")
   )
 }
 
-test_that(".fmri_meta_stat_image reconstructs NeuroVols for nifti group data", {
+test_that(".fmri_meta_stat_image reconstructs NeuroVols for voxel-space gds group data", {
   meta <- make_nifti_meta()
   beta <- fmrireg:::.fmri_meta_stat_image(meta, 1L, "beta")
   expect_true(inherits(beta, "NeuroVol"))

@@ -1,3 +1,4 @@
+# LEGACY-GROUP-DELETE (next minor): whole file — legacy-vs-gds parity whose reference is group_data_from_h5() + fmri_meta.group_data_h5() (also read_h5_metadata/read_h5_full).
 test_that("fmri_meta.gds equals legacy HDF5 path (FE/PM)", {
   skip_if_not_installed("fmristore")
   skip_if_not_installed("neuroim2")

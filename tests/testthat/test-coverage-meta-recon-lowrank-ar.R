@@ -1,5 +1,6 @@
 # reconstruct_image / mask_array for h5+nifti-shaped meta objects + lowrank AR sketch paths.
 
+# LEGACY-GROUP-DELETE (next minor): tests the legacy group_data_h5/_nifti branches of reconstruct_image().
 test_that("reconstruct_image covers h5 and nifti group_data backends", {
   skip_if_not_installed("neuroim2")
   dims <- c(2L, 2L, 1L)
@@ -49,6 +50,7 @@ test_that("reconstruct_image covers h5 and nifti group_data backends", {
   expect_s4_class(vol_nii2, "NeuroVol")
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests the legacy group_data_nifti/_h5 branches of .fmri_meta_mask_array().
 test_that(".fmri_meta_mask_array covers nifti/h5 backends and fallbacks", {
   skip_if_not_installed("neuroim2")
   dims <- c(2L, 2L, 1L)

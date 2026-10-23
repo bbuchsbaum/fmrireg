@@ -1,5 +1,6 @@
 # Coverage for group_data validation error paths, ttest helpers, meta_gds edges.
 
+# LEGACY-GROUP-DELETE (next minor): tests legacy constructors/validators/readers (group_data_from_h5, .group_data_from_*_impl, validate_group_data_*, validate_effect_cols, wide_to_long_format, read_*_full, extract_csv_data, get_rois, get_contrasts).
 test_that("group_data_h5 / nifti / csv validation error paths", {
   expect_error(
     fmrireg:::group_data_from_h5(1:3),
@@ -242,11 +243,14 @@ test_that("fmri_ttest helper materialize/weight/contrast branches", {
     fmrireg:::.fmri_ttest_materialize_effects(list()),
     "cannot be materialized"
   )
+  # gds-backed group data without a beta assay
+  gd_no_beta <- fmrigds::as_gds(list(
+    se = matrix(0.1, 2, 3, dimnames = list(c("v1", "v2"), c("s1", "s2", "s3")))
+  ))
+  class(gd_no_beta) <- c("group_data_gds", "group_data", class(gd_no_beta))
   expect_error(
-    fmrireg:::.fmri_ttest_materialize_effects(
-      structure(list(n_voxels = 0L), class = "group_data_nifti")
-    ),
-    "missing beta|beta paths|group_data_nifti"
+    fmrireg:::.fmri_ttest_materialize_effects(gd_no_beta),
+    "missing beta"
   )
 
   expect_error(
@@ -410,6 +414,7 @@ test_that("fmri_meta_gds early validation branches", {
   )
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests legacy helpers detect_h5_file_type() / extract_subject_ids_from_paths().
 test_that("detect_h5_file_type and subject id extraction", {
   expect_equal(
     fmrireg:::detect_h5_file_type(list(labels = c("beta", "se", "tstat"))),
