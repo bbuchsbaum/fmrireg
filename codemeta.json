@@ -315,7 +315,7 @@
       "@type": "SoftwareApplication",
       "identifier": "fmrigds",
       "name": "fmrigds",
-      "version": ">= 0.1.0.9001"
+      "version": ">= 0.1.0.9002"
     },
     "4": {
       "@type": "SoftwareApplication",
@@ -560,7 +560,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "4116.961KB",
+  "fileSize": "4111.133KB",
   "citation": [
     {
       "@type": "SoftwareSourceCode",
