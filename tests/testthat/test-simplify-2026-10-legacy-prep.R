@@ -47,3 +47,34 @@ test_that("summary() on gds group data uses the gds method, not the legacy one",
   expect_true(any(grepl("group_data (backed by gds)", out, fixed = TRUE)))
   expect_false(any(grepl("^Format:", out)))
 })
+
+# LEGACY-GROUP-DELETE (next minor): checks the deprecation warnings of the legacy entry points.
+test_that("every public legacy group-data entry point warns that it is deprecated", {
+  gd_csv <- .demo_group_data_csv()  # built with warnings silenced
+  withr::local_options(fmrireg.suppress_deprecation = FALSE)
+  expect_warning(extract_csv_data(gd_csv), "extract_csv_data\\(\\) is deprecated")
+  expect_warning(get_rois(gd_csv), "get_rois\\(\\) is deprecated")
+  expect_warning(get_contrasts(gd_csv), "get_contrasts\\(\\) is deprecated")
+  expect_warning(
+    tryCatch(fmri_ttest(gd_csv, ~ 1, engine = "meta"), error = function(e) NULL),
+    "fmri_ttest\\(\\) on a group_data_csv object is deprecated"
+  )
+  fake_nifti <- structure(list(format = "nifti", subjects = "s1"),
+                          class = c("group_data_nifti", "group_data"))
+  expect_warning(
+    tryCatch(read_nifti_full(fake_nifti), error = function(e) NULL),
+    "read_nifti_full\\(\\) is deprecated"
+  )
+  expect_warning(
+    tryCatch(fmri_meta.group_data_nifti(fake_nifti, verbose = FALSE), error = function(e) NULL),
+    "group_data_nifti object is deprecated"
+  )
+  fake_h5 <- structure(list(format = "h5", subjects = "s1", paths = "none.h5"),
+                       class = c("group_data_h5", "group_data"))
+  expect_warning(
+    tryCatch(read_h5_full(fake_h5), error = function(e) NULL),
+    "read_h5_full\\(\\) is deprecated"
+  )
+  # Internal legacy reads stay quiet: one warning per public call, not several.
+  expect_silent(.legacy_group_quiet(extract_csv_data(gd_csv)))
+})
