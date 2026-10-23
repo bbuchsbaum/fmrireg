@@ -122,29 +122,18 @@
     src <- tmpfile
   }
 
-  # For nifti with list(beta=..., se=...) or list(t=..., df=...), accept both *_paths and plain names
-  if (fformat == "nifti" && is.list(data)) {
-    beta_src <- data$beta %||% data$beta_paths
-    se_src   <- data$se %||% data$se_paths
-    var_src  <- data$var %||% data$var_paths
-    t_src    <- data$t %||% data$t_paths
-    df_src   <- data$df
-    if (!is.null(t_src) || !is.null(var_src)) {
-      legacy_args <- if (!is.null(t_src)) {
-        list(t_paths = t_src, df = df_src)
-      } else {
-        list(beta_paths = beta_src, var_paths = var_src)
-      }
-      return(do.call(.group_data_from_nifti_impl, c(legacy_args, dots)))
-    }
-    if (!is.null(beta_src)) {
-      src <- list(beta_paths = beta_src)
-      if (!is.null(se_src))  src$se_paths  <- se_src
-      if (!is.null(var_src)) src$var_paths <- var_src
-    } else if (!is.null(t_src)) {
-      src <- list(t_paths = t_src)
-      if (!is.null(df_src)) src$df <- df_src
-    }
+  # NIfTI sources: list(beta=, se= | var=) or list(t=, df=), also with the
+  # legacy *_paths names. fmrigds's NIfTI adapter reads all of them; names are
+  # passed exactly (its source list is read with `$`, which would otherwise
+  # partially match "beta" to "beta_paths").
+  if (fformat == "nifti" && is.list(data) && !inherits(data, "group_data_nifti")) {
+    src <- .group_data_nifti_source(
+      beta = data[["beta"]] %||% data[["beta_paths"]],
+      se = data[["se"]] %||% data[["se_paths"]],
+      var = data[["var"]] %||% data[["var_paths"]],
+      t = data[["t"]] %||% data[["t_paths"]],
+      df = data[["df"]]
+    )
   }
 
   # Translate the legacy public argument name to fmrigds metadata so formulas
@@ -160,19 +149,10 @@
 
   # For nifti when passed a legacy group_data_nifti object, adapt its fields
   if (fformat == "nifti" && inherits(data, "group_data_nifti")) {
-    bp <- data$beta_paths
-    sp <- data$se_paths
-    vp <- data$var_paths
-    tp <- data$t_paths
-    dfv <- data$df
-    if (!is.null(bp)) {
-      src <- list(beta_paths = bp)
-      if (!is.null(sp)) src$se_paths  <- sp
-      if (!is.null(vp)) src$var_paths <- vp
-    } else if (!is.null(tp)) {
-      src <- list(t_paths = tp)
-      if (!is.null(dfv)) src$df <- dfv
-    }
+    src <- .group_data_nifti_source(
+      beta = data$beta_paths, se = data$se_paths, var = data$var_paths,
+      t = data$t_paths, df = data$df
+    )
   }
 
   gd <- do.call(fmrigds::gds, c(list(source = src, format = fformat), dots))
@@ -223,4 +203,12 @@
     }
   }
   invisible(x)
+}
+
+.group_data_nifti_source <- function(beta = NULL, se = NULL, var = NULL, t = NULL, df = NULL) {
+  if (!is.null(t)) {
+    return(list(t = t, df = df))
+  }
+  src <- list(beta = beta, se = se, var = var)
+  src[!vapply(src, is.null, logical(1))]
 }
