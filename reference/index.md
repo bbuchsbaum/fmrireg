@@ -297,7 +297,7 @@
   : Compute Effective Sample Size for Meta-Analysis
 
 - [`meta_fit_vcov_cpp()`](https://bbuchsbaum.github.io/fmrireg/reference/meta_fit_vcov_cpp.md)
-  : Meta-regression with ONE voxelwise covariate
+  : Meta-regression with one voxelwise covariate
 
 - [`mixed_solve_cpp()`](https://bbuchsbaum.github.io/fmrireg/reference/mixed_solve_cpp.md)
   : Mixed Model Solver using Rcpp and roptim

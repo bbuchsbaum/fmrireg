@@ -3,7 +3,10 @@
 Performs group-level t-tests on fMRI data with support for one-sample,
 two-sample, paired, and ANCOVA designs. Provides both meta-analysis and
 classical t-test engines, mirroring AFNI 3dttest++ functionality within
-the fmrireg framework.
+the fmrireg framework. The classic and Welch engines are fmrigds's
+`"ols:voxelwise"` and `"ttest:welch"` reducers; the meta engine is
+fmrireg's meta-regression (see
+[`fmri_meta()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_meta.md)).
 
 ## Usage
 
@@ -32,7 +35,14 @@ fmri_ttest(
 
 - gd:
 
-  A group_data object or data frame with subject data
+  A gds-backed
+  [`group_data()`](https://bbuchsbaum.github.io/fmrireg/reference/group_data.md)
+  object (or an fmrigds `gds`), a legacy group_data object, or a data
+  frame accepted by
+  [`group_data()`](https://bbuchsbaum.github.io/fmrireg/reference/group_data.md).
+  gds data must hold one subject-level contrast; every engine and option
+  works on it, except that the meta engine on gds data supports neither
+  `mu0` nor `voxelwise_cov`.
 
 - formula:
 
@@ -48,7 +58,9 @@ fmri_ttest(
 
   Character string; analysis engine to use:
 
-  - "auto": Automatically select based on data (default)
+  - "auto": "meta" when sampling variances are available (always for gds
+    data), otherwise "classic" (default). The fit records the engine
+    that ran.
 
   - "meta": Use inverse-variance meta-analysis (requires SE)
 
@@ -56,11 +68,14 @@ fmri_ttest(
     for a feature is dropped from that feature only, so degrees of
     freedom can differ between features.
 
-  - "welch": Use Welch t-test for unequal variances
+  - "welch": Welch t-test for unequal variances; needs
+    `formula = ~ 1 + group` with a two-level factor `group`. Non-finite
+    subjects are dropped per feature.
 
 - paired:
 
-  Logical; if TRUE, perform paired t-test on differences (default:
+  Logical; if TRUE, the effects are within-subject differences and are
+  tested against `mu0` with the classic one-sample engine (default:
   FALSE)
 
 - mu0:

@@ -1,6 +1,9 @@
-# Meta-regression with ONE voxelwise covariate
+# Meta-regression with one voxelwise covariate
 
-Meta-regression with ONE voxelwise covariate
+Fits the meta-regression of
+[`fmri_meta_fit()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_meta_fit.md)
+with the design augmented, per feature, by that feature's column of `C`
+as a last predictor.
 
 ## Usage
 
@@ -38,11 +41,11 @@ meta_fit_vcov_cpp(
 
 - method:
 
-  Meta-analysis method
+  Meta-analysis method ("fe", "dl", "pm"; "reml" runs PM)
 
 - robust:
 
-  Robust estimation method
+  Robust estimation method ("none" or "huber")
 
 - huber_c:
 
@@ -58,4 +61,5 @@ meta_fit_vcov_cpp(
 
 ## Value
 
-List with results
+List with beta, se, z ((K + 1) x P), tau2, Q_fe, I2_fe, df, ok, method
+and robust
