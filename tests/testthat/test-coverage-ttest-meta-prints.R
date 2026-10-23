@@ -2,7 +2,7 @@
 
 test_that("fmri_ttest dataframe path and summary with q values", {
   set.seed(41)
-  # Classic engine on a small subject x feature matrix via group_data csv
+  # Classic engine on a small subject x feature matrix via gds group data
   skip_if_not_installed("tibble")
 
   n_subj <- 12
@@ -18,20 +18,15 @@ test_that("fmri_ttest dataframe path and summary with q values", {
     stringsAsFactors = FALSE
   )
 
-  # Build CSV-style group data if helper exists
-  gd <- tryCatch(
-    group_data_from_csv(
-      beta = as.data.frame(beta),
-      se = as.data.frame(se),
-      covariates = cov,
-      subject_col = "subject"
-    ),
-    error = function(e) NULL
+  # gds-backed group data (features x subjects assays)
+  skip_if_not_installed("fmrigds")
+  rownames(cov) <- cov$subject
+  dimnames(se) <- dimnames(beta)
+  gd <- fmrigds::as_gds(
+    list(beta = t(beta), var = t(se^2)),
+    col_data = cov[, "group", drop = FALSE]
   )
-  if (is.null(gd)) {
-    gd <- tryCatch(fmrireg:::.demo_group_data_csv(), error = function(e) NULL)
-  }
-  skip_if(is.null(gd), "no group_data csv fixture")
+  class(gd) <- c("group_data_gds", "group_data", class(gd))
 
   fit <- tryCatch(
     fmri_ttest(gd, formula = ~ 1, engine = "classic"),

@@ -119,7 +119,7 @@ test_that(".group_data_gds nifti list routes to legacy nifti impl", {
 
 test_that(".print_group_data_gds prints assay/subject info when available", {
   skip_if_not_installed("fmrigds")
-  gd <- fmrireg:::.demo_group_data_csv()
+  gd <- fmrireg:::.demo_group_data()
   # Ensure gds class annotation
   if (!inherits(gd, "group_data_gds")) {
     gd <- fmrireg:::.annotate_group_data_gds(gd)

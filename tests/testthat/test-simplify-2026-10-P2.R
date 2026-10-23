@@ -147,6 +147,7 @@ test_that("P2: a rank-deficient design fails fast", {
                "rank deficient")
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests the deprecated ols_t_cpp()/welch_t_cpp() wrappers
 test_that("P2: ols_t_cpp() and welch_t_cpp() are deprecated and unchanged", {
   d <- p2_data()
   X <- stats::model.matrix(~ 1 + group, d$covars)

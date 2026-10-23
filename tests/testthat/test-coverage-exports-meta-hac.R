@@ -121,7 +121,7 @@ test_that("HAC variance_from_context covers model+satterthwaite and robust weigh
 })
 
 test_that("fmri_meta FE on demo CSV group data", {
-  gd <- tryCatch(fmrireg:::.demo_group_data_csv(), error = function(e) NULL)
+  gd <- tryCatch(fmrireg:::.demo_group_data(), error = function(e) NULL)
   skip_if(is.null(gd), "no csv group data")
 
   fit <- fmri_meta(gd, formula = ~ 1, method = "fe")

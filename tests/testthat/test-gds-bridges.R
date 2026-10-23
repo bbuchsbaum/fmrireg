@@ -1,7 +1,6 @@
 test_that("group_data_gds bridges work", {
   skip_if_not_installed("fmrigds")
-  gd_csv <- fmrireg:::.demo_group_data_csv()
-  df <- gd_csv$data
+  df <- fmrireg:::.demo_group_table()
   gd <- fmrireg::group_data(
     df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),

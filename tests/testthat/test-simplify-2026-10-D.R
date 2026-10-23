@@ -1,15 +1,7 @@
 # Regression tests for the 2026-10 simplification, stream D (group analysis).
 
 .d_demo_gds <- function() {
-  gd_csv <- suppressWarnings(fmrireg:::.demo_group_data_csv())
-  fmrireg::group_data(
-    gd_csv$data, format = "csv",
-    effect_cols = c(beta = "beta", se = "se"),
-    subject_col = "subject",
-    roi_col = "roi",
-    contrast_col = "contrast",
-    covariate_cols = "age"
-  )
+  fmrireg:::.demo_group_data()
 }
 
 .d_registry_snapshot <- function() {
@@ -135,25 +127,20 @@ test_that("contrast.fmri_meta formula weights match the equivalent numeric contr
   expect_error(contrast(m, c(groupB = 1, nope = -1)), "nope")
 })
 
-test_that("legacy fit-time contrasts reject unknown coefficient names (B5)", {
+test_that("fit-time contrasts reject unknown coefficient names (B5)", {
   set.seed(5)
   S <- 10L; P <- 4L
   covars <- data.frame(x = rnorm(S))
   beta <- matrix(rnorm(S * P), S, P) + 0.3 * covars$x
   se <- matrix(runif(S * P, 0.2, 1), S, P)
-  dims <- c(P, 1L, 1L)
-  store <- new.env()
-  bp <- paste0("beta_", seq_len(S)); sp <- paste0("se_", seq_len(S))
-  for (i in seq_len(S)) {
-    store[[bp[i]]] <- array(beta[i, ], dims); store[[sp[i]]] <- array(se[i, ], dims)
-  }
-  gd <- structure(
-    list(beta_paths = bp, se_paths = sp, var_paths = NULL, t_paths = NULL, df = NULL,
-         subjects = paste0("s", seq_len(S)), covariates = covars, mask = NULL,
-         mask_data = NULL, dim = dims, format = "nifti", n_subjects = S, n_voxels = P),
-    class = c("group_data_nifti", "group_data")
+  subj <- paste0("s", seq_len(S)); feat <- paste0("v", seq_len(P))
+  rownames(covars) <- subj
+  gd <- fmrigds::as_gds(
+    list(beta = matrix(t(beta), P, S, dimnames = list(feat, subj)),
+         var = matrix(t(se^2), P, S, dimnames = list(feat, subj))),
+    col_data = covars
   )
-  testthat::local_mocked_bindings(read_nifti_data = function(path, mask = NULL) store[[path]])
+  class(gd) <- c("group_data_gds", "group_data", class(gd))
   fit_named <- fmri_meta(gd, formula = ~ x, method = "fe", verbose = FALSE, n_threads = 1,
                          contrasts = c(x = 1))
   fit_unnamed <- fmri_meta(gd, formula = ~ x, method = "fe", verbose = FALSE, n_threads = 1,
@@ -167,7 +154,7 @@ test_that("legacy fit-time contrasts reject unknown coefficient names (B5)", {
               contrasts = c(z = 1)),
     "z"
   )
-  # the h5 method uses the same helper
+  # contrast.fmri_meta() uses the same named-weights helper
   expect_identical(fmrireg:::.meta_named_contrast_weights(c(x = 2), c("(Intercept)", "x")),
                    c("(Intercept)" = 0, x = 2))
   expect_error(fmrireg:::.meta_named_contrast_weights(c(z = 1), c("(Intercept)", "x")), "z")
