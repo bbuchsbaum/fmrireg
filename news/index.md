@@ -14,6 +14,18 @@
 
 ### Bug fixes
 
+- `group_data(format = "nifti")` reads variance maps
+  (`list(beta = , var = )`) and t-only maps (`list(t = , df = )`)
+  through fmrigds, like beta/se maps, and returns a gds-backed object;
+  it used to fall back to the legacy `group_data_nifti` reader for these
+  two inputs. Fits are unchanged (57 configurations pinned against the
+  legacy reader). On t-only gds data, `fmri_meta(combine = )` with the
+  default `weights = "ivw"` now warns and combines with equal weights,
+  as the legacy reader did; it used to stop. fmrireg now requires
+  fmrigds (\>= 0.1.0.9002). The legacy reader is reachable only from the
+  deprecated
+  [`group_data_from_nifti()`](https://bbuchsbaum.github.io/fmrireg/reference/group_data_from_nifti.md).
+
 - [`fmri_lm_control()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm_control.md)
   now defaults `estimation` to `estimation_spec("runwise_meta")`, the
   same default
