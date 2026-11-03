@@ -90,9 +90,6 @@ supported.
 \note{
 This method is currently experimental.
 }
-\seealso{
-\code{\link[=latent_frame]{latent_frame()}}, \code{\link[=fmri_lm]{fmri_lm()}}, \code{\link[=fmri_lm_control]{fmri_lm_control()}}
-}
 \examples{
 
 
@@ -108,4 +105,7 @@ This method is currently experimental.
 
 # Print the result
 #print(result)
+}
+\seealso{
+\code{\link[=latent_frame]{latent_frame()}}, \code{\link[=fmri_lm]{fmri_lm()}}, \code{\link[=fmri_lm_control]{fmri_lm_control()}}
 }
