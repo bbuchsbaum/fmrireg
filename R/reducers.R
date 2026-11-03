@@ -70,10 +70,10 @@ reduce_identity <- function() {
 #'
 #' Extracts the fitted contrasts as a long data frame (one row per
 #' contrast x voxel), optionally prefixed with the job id so results stack
-#' cleanly across subjects. Surfaces template-level contrasts (those passed to
-#' [fmri_template()], applied by [run_job()]) when present, otherwise the
-#' model's formula-embedded contrasts via [coef()]. Returns a zero-row frame
-#' when no contrasts are defined.
+#' cleanly across subjects. Covers formula contrasts and template-level
+#' contrasts (those passed to [fmri_template()]) alike, with the standard
+#' error and test statistic of each. Returns a zero-row frame when no
+#' contrasts are defined.
 #'
 #' @param add_id Logical; prepend a \code{job_id} column. Default \code{TRUE}.
 #' @return A reducer function suitable for [fmri_template()].
@@ -82,19 +82,7 @@ reduce_identity <- function() {
 reduce_contrasts <- function(add_id = TRUE) {
   force(add_id)
   new_reducer(function(fit, job) {
-    tc <- attr(fit, "template_contrasts")
-    if (!is.null(tc)) {
-      out <- .tidy_template_contrasts(tc)
-    } else {
-      con <- tryCatch(coef(fit, type = "contrasts"), error = function(e) NULL)
-      if (is.null(con) || prod(dim(as.matrix(con))) == 0) {
-        out <- data.frame(term = character(0), voxel = integer(0),
-                          estimate = numeric(0), stringsAsFactors = FALSE)
-      } else {
-        # coef(type="contrasts") is voxels x contrasts; transpose to contrasts x voxels.
-        out <- .coef_to_long(t(as.matrix(con)), "estimate")
-      }
-    }
+    out <- .tidy_fit_contrasts(fit$result$contrasts)
     if (isTRUE(add_id)) out <- cbind(job_id = job$id, out, stringsAsFactors = FALSE)
     out
   })
@@ -102,17 +90,27 @@ reduce_contrasts <- function(add_id = TRUE) {
 
 #' @keywords internal
 #' @noRd
-# Turn the list returned by fit_contrasts() (one entry per contrast, each with
-# per-voxel estimate/se/stat) into a long (term, voxel, estimate, se, stat) frame.
-.tidy_template_contrasts <- function(tc) {
-  parts <- lapply(names(tc), function(nm) {
-    e <- tc[[nm]]
-    est <- as.numeric(e$estimate)
-    df <- data.frame(term = e$name %||% nm, voxel = seq_along(est),
-                     estimate = est, stringsAsFactors = FALSE)
-    if (!is.null(e$se)) df$se <- as.numeric(e$se)
-    if (!is.null(e$stat)) df$stat <- as.numeric(e$stat)
-    df
+# Turn a fit's contrast table (one row per contrast, per-voxel statistics in
+# the nested `data` column) into a long (term, voxel, estimate, se, stat) frame.
+.tidy_fit_contrasts <- function(tbl) {
+  empty <- data.frame(term = character(0), voxel = integer(0),
+                      estimate = numeric(0), se = numeric(0), stat = numeric(0),
+                      stringsAsFactors = FALSE)
+  if (is.null(tbl) || nrow(tbl) == 0L) return(empty)
+  parts <- lapply(seq_len(nrow(tbl)), function(i) {
+    d <- tbl$data[[i]]
+    col <- function(nm) {
+      v <- d[[nm]]
+      if (is.list(v)) v <- v[[1L]]
+      as.numeric(v)
+    }
+    est <- col("estimate")
+    se <- col("se")
+    stat <- col("stat")
+    data.frame(term = tbl$name[i], voxel = seq_along(est), estimate = est,
+               se = if (length(se) == length(est)) se else NA_real_,
+               stat = if (length(stat) == length(est)) stat else NA_real_,
+               stringsAsFactors = FALSE)
   })
   do.call(rbind, parts)
 }

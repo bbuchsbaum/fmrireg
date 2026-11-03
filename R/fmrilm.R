@@ -950,7 +950,11 @@ fmri_lm_fit <- function(fmrimod, dataset, cfg, compute = compute_spec()) {
       rch <- run_chunks[[ri]]
       X_run <- .run_design(fmrimod, rch$chunk_num)
       Y_run <- as.matrix(.chunk_data(rch))
-      ols <- .fast_lm_matrix(X_run, Y_run, .fast_preproject(X_run), return_fitted = TRUE)
+      # Auxiliary fit: a run-level rank deficiency is reported by the fit
+      # itself (runwise) or does not matter (joint; #267).
+      ols <- .without_run_rank_warnings(
+        .fast_lm_matrix(X_run, Y_run, .fast_preproject(X_run), return_fitted = TRUE)
+      )
       resid_run <- Y_run - ols$fitted
       if (need_global_ar) {
         resid_chunks[[ri]] <- resid_run
