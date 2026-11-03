@@ -148,3 +148,15 @@ test_that("each run's functional mask is paired; anatomical masks stay out", {
                          basename(b$meta$runs$mask))))
   expect_false(any(grepl("/anat/", b$meta$runs$mask)))
 })
+
+test_that("duplicate events files outside the selection do not block it", {
+  root <- fixture_266(edit = function(root) {
+    f <- all_files(file.path(root, "sub-02"), "_run-1_events\\.tsv$")
+    file.copy(f, sub("_run-1_", "_acq-x_run-1_", f))
+  })
+  proj <- open_266(root)
+  mani <- from_bids(proj, task = "stroop", space = space, subjects = "01")
+  expect_length(mani[[1]]$scans, 2L)
+  expect_error(from_bids(proj, task = "stroop", space = space, subjects = "02"),
+               "several events files for one run")
+})

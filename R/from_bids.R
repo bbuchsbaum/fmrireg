@@ -211,6 +211,11 @@ from_bids <- function(proj, task, space = NULL, confounds = NULL,
   ev_ok <- !is.na(ev_ent$sub) & !is.na(ev_ent$task)
   ev_files <- file.path(root, ev_files[ev_ok])
   ev_keys <- .bids_run_key(ev_ent[ev_ok, , drop = FALSE])
+  # Only the selected runs' events matter: other subjects, sessions or tasks
+  # may hold several events files per run without affecting this analysis.
+  ev_sel <- ev_keys %in% runs$key
+  ev_files <- ev_files[ev_sel]
+  ev_keys <- ev_keys[ev_sel]
   if (anyDuplicated(ev_keys)) {
     clash <- ev_keys %in% ev_keys[duplicated(ev_keys)]
     stop(sprintf("several events files for one run: %s",
