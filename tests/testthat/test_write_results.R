@@ -430,6 +430,7 @@ test_that("write_results.fmri_lm creates valid JSON metadata", {
 })
 
 test_that("write_results.fmri_lm validates required inputs", {
+  skip_if_not_installed("fmristore")
   mod <- create_test_fmri_lm()
   
   temp_dir <- tempfile() 
