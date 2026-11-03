@@ -14,6 +14,23 @@
 
 ### Bug fixes
 
+- [`fmri_latent_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_latent_lm.md)
+  gains a `control` argument
+  ([\#263](https://github.com/bbuchsbaum/fmrireg/issues/263)). It used
+  to swallow `control =` in `...` and always fit joint estimation with
+  one AR model shared across components. `control = NULL` keeps that
+  default; a control such as
+  `fmri_lm_control(estimation = estimation_spec("runwise_meta"), noise = noise_spec("ar1", voxelwise = TRUE))`
+  now fits a separate noise model per component, identical to
+  [`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
+  on the score matrix. Such fits have no voxel-space covariance, so
+  [`standard_error()`](https://bbuchsbaum.github.io/fmrireg/reference/standard_error.md)
+  / [`stats()`](https://bbuchsbaum.github.io/fmrireg/reference/stats.md)
+  with `recon = TRUE` refuse them. Any other argument in `...` is now an
+  error rather than ignored, an `autocor` that contradicts `control` is
+  an error, and `durations` defaults to 0 like
+  [`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md).
+
 - `group_data(format = "nifti")` reads variance maps
   (`list(beta = , var = )`) and t-only maps (`list(t = , df = )`)
   through fmrigds, like beta/se maps, and returns a gds-backed object;
