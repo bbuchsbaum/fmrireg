@@ -29,6 +29,28 @@ is.formula <- function(x) {
   )
 }
 
+#' Evaluate an auxiliary per-run fit without its rank-deficiency warning
+#'
+#' Joint estimation fits each run's own design only to estimate that run's
+#' noise model (AR coefficients, robust weights). A condition or trial absent
+#' from a run leaves an all-zero column in that run's design, so the per-run
+#' design is rank deficient although the joint design, whose rank is checked
+#' (and warned about) separately, is not. Only the `.rank_deficiency_message()`
+#' warnings are muffled; anything else passes through.
+#' @keywords internal
+#' @noRd
+.without_run_rank_warnings <- function(expr) {
+  withCallingHandlers(
+    expr,
+    warning = function(w) {
+      if (grepl("^Design matrix is rank deficient: rank [0-9]+ < [0-9]+ columns",
+                conditionMessage(w))) {
+        invokeRestart("muffleWarning")
+      }
+    }
+  )
+}
+
 .design_rank_info <- function(X, tol = 1e-7) {
   if (!is.matrix(X)) {
     X <- as.matrix(X)

@@ -1276,7 +1276,14 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   }
 
   # Variables the specification refers to (e.g. `cond` in ~ cond == "A").
-  spec_vars <- unique(unlist(lapply(con_spec, function(el) {
+  # A `contrast()` formula (~ face - house) names condition labels, not
+  # variables, so only its `where` filter can name variables.
+  spec_formulas <- if (inherits(con_spec, "contrast_formula_spec")) {
+    list(con_spec$where)
+  } else {
+    con_spec
+  }
+  spec_vars <- unique(unlist(lapply(spec_formulas, function(el) {
     if (inherits(el, "formula")) all.vars(el) else NULL
   })))
 

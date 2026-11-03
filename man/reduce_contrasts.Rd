@@ -15,10 +15,10 @@ A reducer function suitable for \code{\link[=fmri_template]{fmri_template()}}.
 \description{
 Extracts the fitted contrasts as a long data frame (one row per
 contrast x voxel), optionally prefixed with the job id so results stack
-cleanly across subjects. Surfaces template-level contrasts (those passed to
-\code{\link[=fmri_template]{fmri_template()}}, applied by \code{\link[=run_job]{run_job()}}) when present, otherwise the
-model's formula-embedded contrasts via \code{\link[=coef]{coef()}}. Returns a zero-row frame
-when no contrasts are defined.
+cleanly across subjects. Covers formula contrasts and template-level
+contrasts (those passed to \code{\link[=fmri_template]{fmri_template()}}) alike, with the standard
+error and test statistic of each. Returns a zero-row frame when no
+contrasts are defined.
 }
 \seealso{
 Other reducers: 
