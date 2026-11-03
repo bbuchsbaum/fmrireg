@@ -420,8 +420,8 @@ design_map.fmri_model <- function(x,
     ggplot2::facet_grid(cols = ggplot2::vars(.data$group),
                         scales = "free_x", space = "free_x") +
     ggplot2::scale_fill_gradient2(
-      low = .fmrireg_diverging[["low"]], mid = .fmrireg_diverging[["mid"]],
-      high = .fmrireg_diverging[["high"]], midpoint = fill_midpoint %||% 0,
+      low = .fmrireg_diverging()[["low"]], mid = .fmrireg_diverging()[["mid"]],
+      high = .fmrireg_diverging()[["high"]], midpoint = fill_midpoint %||% 0,
       limits = lim, oob = .squish, na.value = "#BDBDBD",
       name = if (scale_columns) paste0("Value ", intToUtf8(247L), " column max") else "Value"
     ) +

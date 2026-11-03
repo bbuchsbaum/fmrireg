@@ -277,8 +277,8 @@ autoplot.Reg <- function(object, grid = NULL, precision = 0.1, method = "conv",
     ggplot2::geom_tile(ggplot2::aes(fill = .data$r), colour = .fmrireg_ink[["rule"]],
                        linewidth = if (p <= 60) 0.2 else 0, ...) +
     ggplot2::scale_fill_gradient2(
-      low = .fmrireg_diverging[["low"]], mid = "white",
-      high = .fmrireg_diverging[["high"]], midpoint = 0, limits = lim,
+      low = .fmrireg_diverging()[["low"]], mid = "white",
+      high = .fmrireg_diverging()[["high"]], midpoint = 0, limits = lim,
       name = "r", na.value = "#BDBDBD",
       breaks = if (absolute_limits) c(-1, -0.5, 0, 0.5, 1) else ggplot2::waiver()
     ) +

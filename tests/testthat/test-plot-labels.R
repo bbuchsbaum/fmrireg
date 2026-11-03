@@ -23,3 +23,15 @@ test_that("a constant drift basis is labelled and grouped as run intercepts", {
   expect_equal(sub(paste0(" ", .glyph("dot"), " run [0-9]+$"), "", info$label[base]), c("intercept", "intercept"))
   expect_equal(info$label[!base], c("face", "house"))
 })
+
+test_that("palettes and type follow the shared neuro.* options", {
+  withr::local_options(neuro.palette.categorical = NULL, neuro.palette.diverging = NULL)
+  expect_equal(.fmrireg_categorical(2), c("#0072B2", "#D55E00"))
+  expect_equal(.fmrireg_diverging()[["high"]], "#B2182B")
+  withr::local_options(neuro.palette.categorical = c("#8a6d1f", "#2f7d6d"),
+                       neuro.palette.diverging = c("#2a5bd7", "#f6f5f1", "#d33f29"),
+                       neuro.base_family = "serif")
+  expect_equal(.fmrireg_categorical(3), c("#8a6d1f", "#2f7d6d", "#8a6d1f"))
+  expect_equal(unname(.fmrireg_diverging()), c("#2a5bd7", "#f6f5f1", "#d33f29"))
+  expect_equal(theme_fmrireg()$text$family, "serif")
+})

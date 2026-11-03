@@ -13,15 +13,24 @@
 #' @keywords internal
 #' @noRd
 .fmrireg_categorical <- function(n) {
-  base <- c("#0072B2", "#D55E00", "#009E73", "#CC79A7",
-            "#E69F00", "#56B4E9", "#882255", "#555555")
+  base <- getOption("neuro.palette.categorical",
+                    c("#0072B2", "#D55E00", "#009E73", "#CC79A7",
+                      "#E69F00", "#56B4E9", "#882255", "#555555"))
   rep_len(base, n)
 }
 
 #' Diverging endpoints (ColorBrewer RdBu) with a neutral light-grey midpoint.
 #' @keywords internal
 #' @noRd
-.fmrireg_diverging <- c(low = "#2166AC", mid = "#F4F4F4", high = "#B2182B")
+#' A host application can set both palettes for every fmrireg figure with the
+#' options shared with the other neuroimaging packages:
+#' `neuro.palette.categorical` and `neuro.palette.diverging` (a ramp from the
+#' negative to the positive pole; its ends and middle are used here).
+.fmrireg_diverging <- function() {
+  ramp <- getOption("neuro.palette.diverging")
+  if (is.null(ramp)) return(c(low = "#2166AC", mid = "#F4F4F4", high = "#B2182B"))
+  c(low = ramp[[1]], mid = ramp[[ceiling(length(ramp) / 2)]], high = ramp[[length(ramp)]])
+}
 
 #' Ink colours for non-data elements.
 #' @keywords internal
@@ -39,15 +48,17 @@
 #' every fmrireg plot, set `options(fmrireg.plot_theme = <theme>)`, for example
 #' `options(fmrireg.plot_theme = ggplot2::theme_bw())`.
 #'
-#' @param base_size Base font size in points.
-#' @param base_family Base font family.
+#' @param base_size Base font size in points; defaults to the shared option
+#'   `neuro.base_size` (11), so a host application can set every figure's type.
+#' @param base_family Base font family; defaults to `neuro.base_family` (`""`).
 #' @param grid Which major gridlines to keep: `"y"`, `"x"`, `"xy"`, or `"none"`.
 #' @return A [ggplot2::theme()] object.
 #' @examples
 #' library(ggplot2)
 #' ggplot(mtcars, aes(wt, mpg)) + geom_point() + theme_fmrireg()
 #' @export
-theme_fmrireg <- function(base_size = 11, base_family = "",
+theme_fmrireg <- function(base_size = getOption("neuro.base_size", 11),
+                          base_family = getOption("neuro.base_family", ""),
                           grid = c("y", "x", "xy", "none")) {
   grid <- match.arg(grid)
   ink <- .fmrireg_ink
