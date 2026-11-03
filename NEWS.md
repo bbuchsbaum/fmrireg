@@ -9,6 +9,17 @@
 
 ## Bug fixes
 
+* `fmri_latent_lm()` gains a `control` argument (#263). It used to swallow
+  `control =` in `...` and always fit joint estimation with one AR model
+  shared across components. `control = NULL` keeps that default; a control
+  such as `fmri_lm_control(estimation = estimation_spec("runwise_meta"),
+  noise = noise_spec("ar1", voxelwise = TRUE))` now fits a separate noise
+  model per component, identical to `fmri_lm()` on the score matrix. Such
+  fits have no voxel-space covariance, so `standard_error()` / `stats()` with
+  `recon = TRUE` refuse them. Any other argument in `...` is now an error
+  rather than ignored, an `autocor` that contradicts `control` is an error,
+  and `durations` defaults to 0 like `fmri_lm()`.
+
 * `group_data(format = "nifti")` reads variance maps
   (`list(beta = , var = )`) and t-only maps (`list(t = , df = )`) through
   fmrigds, like beta/se maps, and returns a gds-backed object; it used to fall
