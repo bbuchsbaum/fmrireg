@@ -116,6 +116,7 @@ fmri_meta <- function(data,
                       n_threads = .fmrireg_num_threads(),
                       verbose = TRUE) {
   
+  # LEGACY-GROUP-DELETE (next minor): this validate_group_data() call (legacy objects only).
   # Validate legacy group_data only; gds-backed objects skip this
   if (!inherits(data, "group_data_gds") && !inherits(data, "gds_plan") && !inherits(data, "gds")) {
     validate_group_data(data)
@@ -142,6 +143,7 @@ fmri_meta <- function(data,
   UseMethod("fmri_meta")
 }
 
+# LEGACY-GROUP-DELETE (next minor): legacy group_data_* meta-analysis path; gds data use fmri_meta.group_data_gds().
 #' @export
 fmri_meta.group_data_h5 <- function(data,
                                     formula = ~ 1,
@@ -347,6 +349,7 @@ fmri_meta.group_data_gds <- function(data,
 #' @export
 fmri_meta.gds <- fmri_meta.group_data_gds
 
+# LEGACY-GROUP-DELETE (next minor): legacy group_data_* meta-analysis path; gds data use fmri_meta.group_data_gds().
 #' @export
 fmri_meta.group_data_nifti <- function(data,
                                        formula = ~ 1,
@@ -360,6 +363,10 @@ fmri_meta.group_data_nifti <- function(data,
                                        chunk_size = 10000,
                                        n_threads = .fmrireg_num_threads(),
                                        verbose = TRUE) {
+  .legacy_group_deprecated(
+    "fmri_meta() on a group_data_nifti object",
+    "Build the data with group_data(list(beta = , se = ), format = \"nifti\")."
+  )
   # Similar to group_data_h5 but using read_nifti_chunk
   method <- .meta_resolve_method(match.arg(method))
   robust <- match.arg(robust)
@@ -526,6 +533,7 @@ fmri_meta.group_data_nifti <- function(data,
   )
 }
 
+# LEGACY-GROUP-DELETE (next minor): legacy group_data_* meta-analysis path; gds data use fmri_meta.group_data_gds().
 #' @export
 fmri_meta.group_data_csv <- function(data,
                                      formula = ~ 1,
@@ -580,7 +588,7 @@ fmri_meta.group_data_csv <- function(data,
     roi <- rois[i]
     
     # Extract data for this ROI
-    roi_data <- extract_csv_data(data, roi = if (roi != "overall") roi else NULL)
+    roi_data <- .legacy_group_quiet(extract_csv_data(data, roi = if (roi != "overall") roi else NULL))
     
     # Fit meta-analysis
     if (!is.null(roi_data$beta) && !is.null(roi_data$se)) {
@@ -672,6 +680,7 @@ fmri_meta.group_data_csv <- function(data,
   )
 }
 
+# LEGACY-GROUP-DELETE (next minor): legacy group_data_* meta-analysis path; gds data use fmri_meta.group_data_gds().
 #' Parse Meta-Analysis Formula
 #'
 #' @param formula Formula object
@@ -699,6 +708,7 @@ parse_meta_formula <- function(formula, data) {
   )
 }
 
+# LEGACY-GROUP-DELETE (next minor): legacy group_data_* meta-analysis path; gds data use fmri_meta.group_data_gds().
 #' Fit Meta-Analysis for a Chunk of Voxels
 #'
 #' @param chunk_data List with beta and se matrices
@@ -781,6 +791,7 @@ fit_meta_chunk <- function(chunk_data, X, method, robust, weights, weights_custo
   stop("fit_meta_chunk: No usable data found (need beta+se or t+df)", call. = FALSE)
 }
 
+# LEGACY-GROUP-DELETE (next minor): legacy group_data_* meta-analysis path; gds data use fmri_meta.group_data_gds().
 #' Fit Meta-Analysis for a Single Voxel/ROI
 #'
 #' @param y Effect sizes
@@ -820,6 +831,7 @@ fit_meta_single <- function(y, se, X, method, robust, weights, weights_custom) {
 }
 
 # Internal: restrict custom weights to a subset of features (chunk).
+# LEGACY-GROUP-DELETE (next minor): legacy group_data_* meta-analysis path; gds data use fmri_meta.group_data_gds().
 .meta_slice_weights <- function(weights, weights_custom, idx) {
   if (!identical(weights, "custom") || is.null(weights_custom) ||
       !is.matrix(weights_custom)) {

@@ -68,6 +68,7 @@ test_that("B7: classic two-sample/ANCOVA engine matches lm on complete cases, in
   }
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests the deprecated ols_t_cpp() wrapper
 test_that("B7: ols_t_cpp complete-data output is unchanged (scalar df)", {
   set.seed(9)
   Y <- matrix(stats::rnorm(30), 10, 3)

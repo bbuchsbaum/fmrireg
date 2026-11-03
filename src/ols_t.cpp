@@ -21,7 +21,8 @@ static inline bool inv_sympd_safe(mat& out, const mat& A) {
   }
 }
 
-// Deprecated R entry point: ols_t_cpp() in R/fmri_ttest_helpers.R.
+// LEGACY-GROUP-DELETE (next minor): deprecated in 2026-10 (P2); delete with
+// the R wrapper ols_t_cpp() in R/fmri_ttest_helpers.R.
 // [[Rcpp::export(.ols_t_cpp_impl)]]
 List ols_t_cpp(const arma::mat& Y, const arma::mat& X) {
   const uword S = Y.n_rows, K = X.n_cols, P = Y.n_cols;
@@ -116,7 +117,8 @@ List ols_t_cpp(const arma::mat& Y, const arma::mat& X) {
   );
 }
 
-// Deprecated R entry point: welch_t_cpp() in R/fmri_ttest_helpers.R.
+// LEGACY-GROUP-DELETE (next minor): deprecated in 2026-10 (P2); delete with
+// the R wrapper welch_t_cpp() in R/fmri_ttest_helpers.R.
 // [[Rcpp::export(.welch_t_cpp_impl)]]
 List welch_t_cpp(const arma::mat& Y, const IntegerVector& g_in) {
   const uword S = Y.n_rows, P = Y.n_cols;

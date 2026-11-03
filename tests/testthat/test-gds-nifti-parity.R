@@ -1,3 +1,4 @@
+# LEGACY-GROUP-DELETE (next minor): whole file — legacy-vs-gds parity whose reference is group_data_from_nifti() + fmri_meta.group_data_nifti().
 test_that("fmri_meta.gds equals legacy NIfTI path (FE/PM)", {
   skip_if_not_installed("RNifti")
   skip_if_not_installed("fmrigds")

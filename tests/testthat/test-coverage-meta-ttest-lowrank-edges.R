@@ -75,7 +75,7 @@ test_that("engine context check rejects by_cluster without parcels", {
 
 test_that("fmri_ttest_gds classic path on demo csv group data", {
   skip_if_not_installed("fmrigds")
-  gd <- fmrireg:::.demo_group_data_csv()
+  gd <- fmrireg:::.demo_group_data()
   fit <- tryCatch(
     fmri_ttest(gd, formula = ~ 1, engine = "classic", mc = "none"),
     error = function(e) e

@@ -51,11 +51,19 @@ test_that("spatial_fdr_fmri_meta covers coef name lookup and per-voxel groups", 
   P <- 12L
   coefs <- cbind(Intercept = rnorm(P), age = rnorm(P, 0.2))
   se <- cbind(Intercept = runif(P, 0.1, 0.4), age = runif(P, 0.1, 0.4))
+  # gds-backed group data with no spatial mask
+  gd <- fmrigds::as_gds(list(
+    beta = matrix(rnorm(P * 3), P, 3,
+                  dimnames = list(paste0("f", seq_len(P)), paste0("s", 1:3))),
+    se = matrix(0.2, P, 3,
+                dimnames = list(paste0("f", seq_len(P)), paste0("s", 1:3)))
+  ))
+  class(gd) <- c("group_data_gds", "group_data", class(gd))
   meta <- structure(
     list(
       coefficients = coefs,
       se = se,
-      data = structure(list(mask = NULL, mask_data = NULL), class = "group_data_csv")
+      data = gd
     ),
     class = c("fmri_meta", "list")
   )

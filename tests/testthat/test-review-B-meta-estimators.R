@@ -16,24 +16,20 @@ meta_sim <- function(S = 15L, P = 6L, seed = 11) {
   list(Y = Y, V = V, covars = covars)
 }
 
-mock_nifti_gd <- function(beta, se, covariates = NULL) {
+# Subject-level effects (subjects x voxels) as in-memory gds group data.
+gds_gd <- function(beta, se, covariates = NULL) {
   S <- nrow(beta)
   P <- ncol(beta)
-  dims <- c(P, 1L, 1L)
-  store <- new.env()
-  bp <- paste0("beta_", seq_len(S))
-  sp <- paste0("se_", seq_len(S))
-  for (i in seq_len(S)) {
-    store[[bp[i]]] <- array(beta[i, ], dims)
-    store[[sp[i]]] <- array(se[i, ], dims)
-  }
-  gd <- structure(
-    list(beta_paths = bp, se_paths = sp, var_paths = NULL, t_paths = NULL, df = NULL,
-         subjects = paste0("s", seq_len(S)), covariates = covariates, mask = NULL,
-         mask_data = NULL, dim = dims, format = "nifti", n_subjects = S, n_voxels = P),
-    class = c("group_data_nifti", "group_data")
-  )
-  list(gd = gd, store = store)
+  subj <- paste0("s", seq_len(S))
+  B <- t(beta)
+  dimnames(B) <- list(paste0("v", seq_len(P)), subj)
+  V <- t(se^2)
+  dimnames(V) <- dimnames(B)
+  cd <- if (is.null(covariates)) data.frame(row.names = subj) else covariates
+  rownames(cd) <- subj
+  g <- fmrigds::as_gds(list(beta = B, var = V), col_data = cd)
+  class(g) <- c("group_data_gds", "group_data", class(g))
+  g
 }
 
 rma_ref <- function(y, v, covars, mods, method) {
@@ -81,12 +77,10 @@ test_that("B5: method = 'reml' is labelled honestly (Paule-Mandel with a message
   expect_identical(fit_reml$method, "pm")
   expect_equal(fit_reml$tau2, fit_pm$tau2)
 
-  mk <- mock_nifti_gd(sim$Y, sqrt(sim$V))
-  testthat::local_mocked_bindings(
-    read_nifti_data = function(path, mask = NULL) mk$store[[path]]
-  )
+  skip_if_not_installed("fmrigds")
+  gd <- gds_gd(sim$Y, sqrt(sim$V))
   expect_message(
-    meta <- fmri_meta(mk$gd, method = "reml", verbose = FALSE, n_threads = 1),
+    meta <- fmri_meta(gd, method = "reml", verbose = FALSE, n_threads = 1),
     "Paule-Mandel"
   )
   expect_identical(meta$method, "pm")
@@ -95,13 +89,11 @@ test_that("B5: method = 'reml' is labelled honestly (Paule-Mandel with a message
 test_that("B6: contrast() on an fmri_meta fit uses the coefficient covariance (vs metafor)", {
   skip_if_not_installed("metafor")
   sim <- meta_sim(seed = 12)
-  mk <- mock_nifti_gd(sim$Y, sqrt(sim$V), covariates = sim$covars)
-  testthat::local_mocked_bindings(
-    read_nifti_data = function(path, mask = NULL) mk$store[[path]]
-  )
+  skip_if_not_installed("fmrigds")
+  gd <- gds_gd(sim$Y, sqrt(sim$V), covariates = sim$covars)
   for (m in c(fe = "FE", dl = "DL", pm = "PM")) {
     meth <- tolower(m)
-    fit <- fmri_meta(mk$gd, formula = ~ x + g, method = meth, verbose = FALSE, n_threads = 1)
+    fit <- fmri_meta(gd, formula = ~ x + g, method = meth, verbose = FALSE, n_threads = 1)
     L <- c(`(Intercept)` = 1, x = 2, gb = -1, gc = 0)
     con <- contrast(fit, L)
     for (j in seq_len(ncol(sim$Y))) {

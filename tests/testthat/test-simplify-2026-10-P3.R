@@ -24,6 +24,26 @@ p3_maps <- function(dir, S = 8L, dims = c(3L, 3L, 2L), seed = 41) {
   )
 }
 
+test_that("P3: beta + var and t-only NIfTI maps are read by fmrigds", {
+  m <- p3_maps(withr::local_tempdir())
+  gd <- group_data(list(beta = m$beta, var = m$var), format = "nifti",
+                   subjects = m$subjects, covariates = m$covariates)
+  expect_s3_class(gd, "group_data_gds")
+  df <- 15 + seq_along(m$t)
+  gd_t <- group_data(list(t = m$t, df = df), format = "nifti", subjects = m$subjects)
+  expect_s3_class(gd_t, "group_data_gds")
+
+  # The default weights = "ivw" cannot use t statistics; like the legacy
+  # reader, the combination warns and uses equal weights.
+  expect_warning(
+    fit_ivw <- fmri_meta(gd_t, ~ 1, combine = "stouffer", verbose = FALSE),
+    "no SE available; using equal weights"
+  )
+  fit_eq <- fmri_meta(gd_t, ~ 1, combine = "stouffer", weights = "equal", verbose = FALSE)
+  expect_equal(fit_ivw$coefficients, fit_eq$coefficients)
+})
+
+# LEGACY-GROUP-DELETE (next minor): parity test against the legacy reader (group_data_from_nifti() + fmri_meta.group_data_nifti()).
 test_that("P3: beta + var NIfTI maps are read by fmrigds and fit as before", {
   m <- p3_maps(withr::local_tempdir())
   gd <- group_data(list(beta = m$beta, var = m$var), format = "nifti",
@@ -41,6 +61,7 @@ test_that("P3: beta + var NIfTI maps are read by fmrigds and fit as before", {
   }
 })
 
+# LEGACY-GROUP-DELETE (next minor): parity test against the legacy reader (group_data_from_nifti() + fmri_meta.group_data_nifti()); its gds-only assertions are duplicated above.
 test_that("P3: t-only NIfTI maps are read by fmrigds and combine as before", {
   m <- p3_maps(withr::local_tempdir())
   df <- 15 + seq_along(m$t)
@@ -63,6 +84,7 @@ test_that("P3: t-only NIfTI maps are read by fmrigds and combine as before", {
   expect_equal(fit_ivw$coefficients, fit_eq$coefficients)
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests the legacy group_data_nifti -> gds conversion in .group_data_gds() and parity with fmri_meta.group_data_nifti().
 test_that("P3: a legacy group_data_nifti object converts to gds with the same fit", {
   m <- p3_maps(withr::local_tempdir())
   legacy_var <- suppressWarnings(group_data_from_nifti(

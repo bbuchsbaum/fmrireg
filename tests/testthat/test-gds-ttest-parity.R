@@ -1,3 +1,4 @@
+# LEGACY-GROUP-DELETE (next minor): legacy-vs-gds parity; reference is fmri_ttest() on the legacy group_data_csv (.demo_group_data_csv())
 test_that("fmri_ttest.gds (meta engine) matches legacy CSV path", {
   skip_if_not_installed("fmrigds")
 
@@ -30,16 +31,7 @@ test_that("fmri_ttest.gds (meta engine) matches legacy CSV path", {
 
 test_that("fmri_ttest.gds BH/BY match p.adjust", {
   skip_if_not_installed("fmrigds")
-  gd_csv <- fmrireg:::.demo_group_data_csv()
-  df <- gd_csv$data
-  gd_gds <- fmrireg::group_data(
-    df, format = "csv",
-    effect_cols = c(beta = "beta", se = "se"),
-    subject_col = "subject",
-    roi_col = "roi",
-    contrast_col = "contrast",
-    covariate_cols = "age"
-  )
+  gd_gds <- fmrireg:::.demo_group_data()
   fit_new <- fmri_ttest(gd_gds, formula = ~ 1, engine = "meta", mc = "bh")
   # Compare BH per coefficient row
   for (i in seq_len(nrow(fit_new$p))) {
@@ -54,16 +46,7 @@ test_that("fmri_ttest.gds BH/BY match p.adjust", {
 test_that("fmri_ttest.gds computes meta contrasts and rejects unsupported args", {
   skip_if_not_installed("fmrigds")
 
-  gd_csv <- fmrireg:::.demo_group_data_csv()
-  df <- gd_csv$data
-  gd_gds <- fmrireg::group_data(
-    df, format = "csv",
-    effect_cols = c(beta = "beta", se = "se"),
-    subject_col = "subject",
-    roi_col = "roi",
-    contrast_col = "contrast",
-    covariate_cols = "age"
-  )
+  gd_gds <- fmrireg:::.demo_group_data()
 
   fit_contrast <- fmri_ttest(
     gd_gds,

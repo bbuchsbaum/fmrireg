@@ -1016,7 +1016,7 @@ invisible(fmrigds::preview(pl, n = 1, assays = "beta"))
 res <- fmrigds::compute(pl)
 ```
 
-Note: `group_data()` now routes through fmrigds (GDS). Legacy constructors (`group_data_from_h5()`/`_nifti()`/`_csv()`) are preserved for backward compatibility but will be deprecated.
+Note: `group_data()` routes through fmrigds (GDS) for every format. The legacy constructors (`group_data_from_h5()`/`_nifti()`/`_csv()`/`_fmrilm()`) and their accessors are deprecated and will be removed in the next minor release.
 
 ## Next
 

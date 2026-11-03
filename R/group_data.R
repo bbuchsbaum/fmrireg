@@ -48,6 +48,7 @@ group_data <- function(data, format = c("auto", "h5", "nifti", "csv", "fmrilm"),
   .group_data_gds(data, format = match.arg(format), ...)
 }
 
+# LEGACY-GROUP-DELETE (next minor): reads legacy group_data_* fields ($format, $subjects, $covariates, $paths).
 #' Validate Group Data Object
 #'
 #' @param x A group_data object
@@ -89,6 +90,7 @@ validate_group_data <- function(x) {
   invisible(TRUE)
 }
 
+# LEGACY-GROUP-DELETE (next minor): reads legacy group_data_* fields ($format, $subjects, $covariates, $paths).
 #' Print Group Data Object
 #'
 #' @param x A group_data object
@@ -133,6 +135,7 @@ print.group_data_gds <- function(x, ...) {
   .print_group_data_gds(x, ...)
 }
 
+# LEGACY-GROUP-DELETE (next minor): reads legacy group_data_* fields ($format, $subjects, $covariates, $paths). NB: gds objects have no summary method of their own and dispatch here today; add summary.group_data_gds or accept fmrigds's.
 #' Summary of Group Data Object
 #'
 #' @param object A group_data object
@@ -183,18 +186,26 @@ summary.group_data <- function(object, ...) {
   invisible(object)
 }
 
+#' @rdname summary.group_data
+#' @export
+summary.group_data_gds <- function(object, ...) {
+  .print_group_data_gds(object, ...)
+  invisible(object)
+}
+
 #' Extract Number of Subjects
 #'
 #' @param x A group_data object
 #' @return Integer number of unique subjects
 #' @examples
-#' gd <- fmrireg:::.demo_group_data_csv()
+#' gd <- fmrireg:::.demo_group_data()
 #' n_subjects(gd)
 #' @export
 n_subjects <- function(x) {
   UseMethod("n_subjects")
 }
 
+# LEGACY-GROUP-DELETE (next minor): reads legacy group_data_* fields ($format, $subjects, $covariates, $paths).
 #' @export
 n_subjects.group_data <- function(x) {
   length(unique(x$subjects))
@@ -210,13 +221,14 @@ n_subjects.group_data_gds <- function(x) {
 #' @param x A group_data object
 #' @return Character vector of unique subject IDs
 #' @examples
-#' gd <- fmrireg:::.demo_group_data_csv()
+#' gd <- fmrireg:::.demo_group_data()
 #' get_subjects(gd)
 #' @export
 get_subjects <- function(x) {
   UseMethod("get_subjects")
 }
 
+# LEGACY-GROUP-DELETE (next minor): reads legacy group_data_* fields ($format, $subjects, $covariates, $paths).
 #' @export
 get_subjects.group_data <- function(x) {
   unique(as.character(x$subjects))
@@ -232,13 +244,14 @@ get_subjects.group_data_gds <- function(x) {
 #' @param x A group_data object
 #' @return Data frame of covariates or NULL
 #' @examples
-#' gd <- fmrireg:::.demo_group_data_csv()
+#' gd <- fmrireg:::.demo_group_data()
 #' get_covariates(gd)
 #' @export
 get_covariates <- function(x) {
   UseMethod("get_covariates")
 }
 
+# LEGACY-GROUP-DELETE (next minor): reads legacy group_data_* fields ($format, $subjects, $covariates, $paths).
 #' @export
 get_covariates.group_data <- function(x) {
   x$covariates
@@ -247,4 +260,22 @@ get_covariates.group_data <- function(x) {
 #' @export
 get_covariates.group_data_gds <- function(x) {
   .get_covariates_group_data_gds(x)
+}
+
+# LEGACY-GROUP-DELETE (next minor): deprecation plumbing for the legacy group-data stack.
+# .legacy_group_deprecated() warns once per call of a public legacy entry point
+# (silenced by options(fmrireg.suppress_deprecation = TRUE), like the
+# deprecated constructors); .legacy_group_quiet() evaluates an internal call to
+# a deprecated accessor without a second warning.
+.legacy_group_deprecated <- function(what, instead) {
+  if (!isTRUE(getOption("fmrireg.suppress_deprecation", FALSE))) {
+    .Deprecated(msg = paste0(what, " is deprecated and will be removed in the next minor release. ",
+                             instead))
+  }
+}
+
+.legacy_group_quiet <- function(expr) {
+  op <- options(fmrireg.suppress_deprecation = TRUE)
+  on.exit(options(op), add = TRUE)
+  expr
 }

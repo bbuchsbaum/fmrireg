@@ -111,9 +111,10 @@
 
 .p1_expect_fit <- function(fit, ref, args, info) {
   tol <- 1e-10
-  expect_s3_class(fit, "fmri_meta")
+  # ROI-table data give an ROI fit (since the legacy-deletion prep).
+  expect_s3_class(fit, "fmri_meta_roi")
   expect_setequal(names(fit), c("coefficients", "se", "tau2", "I2", "Q", "Q_df", "model",
-                                "method", "robust", "weights", "data", "formula", "n_voxels",
+                                "method", "robust", "weights", "data", "formula", "n_rois",
                                 "n_subjects", "roi_names", "cov",
                                 if (!is.null(args$contrasts)) "contrasts"))
   expect_equal(fit[["coefficients"]], ref$coefficients, tolerance = tol, info = info)
@@ -129,7 +130,7 @@
   expect_identical(fit[["method"]], ref$method, info = info)
   expect_identical(fit[["robust"]], args$robust %||% "none", info = info)
   expect_identical(fit[["weights"]], args$weights %||% "ivw", info = info)
-  expect_equal(fit[["n_voxels"]], length(ref$rois), info = info)
+  expect_equal(fit[["n_rois"]], length(ref$rois), info = info)
   expect_equal(fit[["n_subjects"]], ref$S, info = info)
   expect_identical(fit[["roi_names"]], ref$rois, info = info)
   expect_identical(fit[["cov"]][["type"]], "tri", info = info)

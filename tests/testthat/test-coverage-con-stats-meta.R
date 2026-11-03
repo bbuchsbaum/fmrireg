@@ -221,24 +221,32 @@ test_that("fmri_meta methods cover formula contrasts, pvalues, print/summary, co
   expect_true(all(img_p >= 0 & img_p <= 1))
   expect_error(coef_image(meta, coef = "nope"), "not found")
 
-  # reconstruct_image for synthetic nifti-backed meta
+  # reconstruct_image for synthetic voxel-space gds-backed meta
+  make_vox_gd <- function(space) {
+    subj <- paste0("s", 1:3)
+    g <- fmrigds::as_gds(
+      list(
+        beta = matrix(rnorm(8 * 3), 8, 3, dimnames = list(paste0("v", 1:8), subj)),
+        var = matrix(0.01, 8, 3, dimnames = list(paste0("v", 1:8), subj))
+      ),
+      space = space
+    )
+    class(g) <- c("group_data_gds", "group_data", class(g))
+    g
+  }
+  # dense 2 mm voxel space
   meta_nii <- meta
-  meta_nii$data <- structure(
-    list(dim = c(2L, 2L, 2L), voxel_size = c(2, 2, 2)),
-    class = c("group_data_nifti", "group_data")
+  meta_nii$data <- make_vox_gd(
+    fmrigds::space_voxel(c(2L, 2L, 2L), affine = diag(c(2, 2, 2, 1)))
   )
-  meta_nii$voxel_indices <- seq_len(8)
   vol <- fmrireg:::reconstruct_image(as.numeric(meta$coefficients[, 1]), meta_nii)
   expect_true(inherits(vol, "NeuroVol") || is.array(as.array(vol)))
 
+  # packed voxel space with an all-TRUE mask
   meta_h5 <- meta
-  meta_h5$data <- structure(
-    list(
-      dim = c(2L, 2L, 2L, 1L),
-      mask = array(TRUE, dim = c(2, 2, 2)),
-      space = neuroim2::NeuroSpace(c(2, 2, 2))
-    ),
-    class = c("group_data_h5", "group_data")
+  meta_h5$data <- make_vox_gd(
+    fmrigds::space_voxel(c(2L, 2L, 2L), affine = diag(4),
+                         mask_idx = seq_len(8), storage = "packed")
   )
   vol_h5 <- fmrireg:::reconstruct_image(as.numeric(meta$coefficients[, 2]), meta_h5)
   expect_true(inherits(vol_h5, "NeuroVol"))

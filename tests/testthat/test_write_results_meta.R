@@ -1,6 +1,24 @@
 library(testthat)
 library(fmrireg)
 
+# Voxel-space gds-backed group data (2 mm voxels, all voxels in the mask).
+make_test_meta_gds <- function(dims, n_subjects = 4L) {
+  n_vox <- prod(dims)
+  subj <- paste0("s", seq_len(n_subjects))
+  gds <- fmrigds::new_gds(
+    assays = list(
+      beta = array(seq_len(n_vox * n_subjects) / 10, dim = c(n_vox, n_subjects, 1L)),
+      se = array(0.1, dim = c(n_vox, n_subjects, 1L))
+    ),
+    space = fmrigds::space_voxel(dims, diag(c(2, 2, 2, 1)),
+                                 mask_bitmap = array(TRUE, dim = dims)),
+    subjects = subj,
+    contrasts = "c1"
+  )
+  class(gds) <- c("group_data_gds", "group_data", class(gds))
+  gds
+}
+
 make_test_fmri_meta <- function() {
   dims <- c(2L, 2L, 1L)
   n_vox <- prod(dims)
@@ -23,16 +41,7 @@ make_test_fmri_meta <- function() {
       method = "fe",
       robust = "none",
       weights = "ivw",
-      data = structure(
-        list(
-          dim = dims,
-          voxel_size = c(2, 2, 2),
-          format = "nifti",
-          n_subjects = 4L,
-          n_voxels = n_vox
-        ),
-        class = c("group_data_nifti", "group_data")
-      ),
+      data = make_test_meta_gds(dims, n_subjects = 4L),
       formula = ~ 1,
       n_voxels = n_vox,
       n_subjects = 4L,
@@ -43,6 +52,7 @@ make_test_fmri_meta <- function() {
 }
 
 test_that("write_results.fmri_meta writes regular by-coefficient h5 and nifti outputs", {
+  skip_if_not_installed("fmrigds")
   skip_if_not_installed("fmristore")
   skip_if_not_installed("jsonlite")
   skip_if_not_installed("neuroim2")
@@ -105,6 +115,7 @@ test_that("write_results.fmri_meta writes regular by-coefficient h5 and nifti ou
 })
 
 test_that("write_results.fmri_meta writes by-stat outputs with coefficient labels", {
+  skip_if_not_installed("fmrigds")
   skip_if_not_installed("jsonlite")
   skip_if_not_installed("neuroim2")
 

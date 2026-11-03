@@ -1,3 +1,6 @@
+# LEGACY-GROUP-DELETE (next minor): this whole file is the legacy h5 group-data stack (deprecated constructors, readers, accessors, validators).
+# See data-raw/simplification-2026-10-plan.md, "Legacy group-data deletion checklist".
+
 # Group Data Support for HDF5/LabeledVolumeSet Files
 # Reads fmristore HDF5 files created by write_results.fmri_lm
 
@@ -372,6 +375,10 @@ read_h5_chunk <- function(gd, voxel_indices, stat = NULL) {
 #' @return Array with dimensions (voxels, subjects, statistics)
 #' @export
 read_h5_full <- function(gd, stat = NULL) {
+  .legacy_group_deprecated(
+    "read_h5_full()",
+    "Build group data with group_data(format = \"h5\") and read assays with fmrigds::assay()."
+  )
   if (!inherits(gd, "group_data_h5")) {
     stop("Input must be a group_data_h5 object", call. = FALSE)
   }

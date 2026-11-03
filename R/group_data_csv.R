@@ -1,3 +1,6 @@
+# LEGACY-GROUP-DELETE (next minor): this whole file is the legacy csv group-data stack (deprecated constructors, readers, accessors, validators).
+# See data-raw/simplification-2026-10-plan.md, "Legacy group-data deletion checklist".
+
 # Group Data Support for CSV/Tabular Data
 # Handles ROI summaries and pre-extracted statistics for group analysis
 
@@ -259,6 +262,10 @@ wide_to_long_format <- function(df, effect_cols, subject_col) {
 #' extract_csv_data(gd, roi = "ROI1")
 #' @export
 extract_csv_data <- function(gd, roi = NULL, contrast = NULL) {
+  .legacy_group_deprecated(
+    "extract_csv_data()",
+    "Build group data with group_data(format = \"csv\") and read assays with fmrigds::assay()."
+  )
   if (!inherits(gd, "group_data_csv")) {
     stop("Input must be a group_data_csv object", call. = FALSE)
   }
@@ -339,6 +346,10 @@ extract_csv_data <- function(gd, roi = NULL, contrast = NULL) {
 #' get_rois(gd)
 #' @export
 get_rois <- function(gd) {
+  .legacy_group_deprecated(
+    "get_rois()",
+    "Build group data with group_data(format = \"csv\"); its samples are the ROIs."
+  )
   if (!inherits(gd, "group_data_csv")) {
     stop("Input must be a group_data_csv object", call. = FALSE)
   }
@@ -354,6 +365,10 @@ get_rois <- function(gd) {
 #' get_contrasts(gd)
 #' @export
 get_contrasts <- function(gd) {
+  .legacy_group_deprecated(
+    "get_contrasts()",
+    "Build group data with group_data(format = \"csv\") and use fmrigds::contrasts()."
+  )
   if (!inherits(gd, "group_data_csv")) {
     stop("Input must be a group_data_csv object", call. = FALSE)
   }

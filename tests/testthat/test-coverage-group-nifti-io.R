@@ -9,6 +9,7 @@ make_tiny_nifti <- function(vals = rnorm(8), dims = c(2, 2, 2)) {
   path
 }
 
+# LEGACY-GROUP-DELETE (next minor): tests the deprecated constructor group_data_from_nifti().
 test_that("group_data_from_nifti emits deprecation when not suppressed", {
   old <- getOption("fmrireg.suppress_deprecation")
   on.exit(options(fmrireg.suppress_deprecation = old), add = TRUE)
@@ -23,6 +24,7 @@ test_that("group_data_from_nifti emits deprecation when not suppressed", {
   )
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests legacy readers read_nifti_header() / validate_nifti_dimensions().
 test_that("read_nifti_header / validate_nifti_dimensions round-trip tiny volumes", {
   skip_if_not_installed("neuroim2")
   set.seed(3)
@@ -44,6 +46,7 @@ test_that("read_nifti_header / validate_nifti_dimensions round-trip tiny volumes
   )
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests legacy reader read_nifti_data().
 test_that("read_nifti_data returns full array or masked vector", {
   skip_if_not_installed("neuroim2")
   set.seed(4)
@@ -67,6 +70,7 @@ test_that("read_nifti_data returns full array or masked vector", {
   )
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests .group_data_from_nifti_impl(), read_nifti_chunk(), read_nifti_full().
 test_that("read_nifti_chunk / read_nifti_full validate object class and read data", {
   skip_if_not_installed("neuroim2")
   set.seed(5)

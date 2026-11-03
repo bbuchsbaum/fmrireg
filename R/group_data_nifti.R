@@ -1,3 +1,6 @@
+# LEGACY-GROUP-DELETE (next minor): this whole file is the legacy nifti group-data stack (deprecated constructors, readers, accessors, validators).
+# See data-raw/simplification-2026-10-plan.md, "Legacy group-data deletion checklist".
+
 # Group Data Support for NIfTI Files
 # Handles standard NIfTI neuroimaging files for group analysis
 
@@ -383,6 +386,10 @@ read_nifti_chunk <- function(gd, voxel_indices) {
 #' @return List with data matrices
 #' @export
 read_nifti_full <- function(gd, use_mask = NULL) {
+  .legacy_group_deprecated(
+    "read_nifti_full()",
+    "Build group data with group_data(format = \"nifti\") and read assays with fmrigds::assay()."
+  )
   if (!inherits(gd, "group_data_nifti")) {
     stop("Input must be a group_data_nifti object", call. = FALSE)
   }
@@ -428,32 +435,4 @@ validate_group_data_nifti <- function(x) {
   }
   
   invisible(TRUE)
-}
-
-#' Convert t-statistics to Effect Sizes
-#'
-#' Helper function to convert t-statistics and df to beta and SE estimates
-#'
-#' @param t T-statistic values
-#' @param df Degrees of freedom
-#' @param n Sample size (optional, improves SE estimation)
-#' @return List with beta and se estimates
-#' @export
-t_to_beta_se <- function(t, df, n = NULL) {
-  # Standard error of the t-statistic
-  se_t <- 1
-  
-  # If sample size is known, can get better SE estimate
-  if (!is.null(n)) {
-    se_t <- sqrt(1/n)
-  }
-  
-  # Convert t to effect size (Cohen's d approximation)
-  # beta = t * SE
-  beta <- t * se_t
-  
-  # Standard error from t-distribution
-  se <- se_t
-  
-  return(list(beta = beta, se = se))
 }

@@ -2,9 +2,12 @@
 % Please edit documentation in R/group_data.R
 \name{summary.group_data}
 \alias{summary.group_data}
+\alias{summary.group_data_gds}
 \title{Summary of Group Data Object}
 \usage{
 \method{summary}{group_data}(object, ...)
+
+\method{summary}{group_data_gds}(object, ...)
 }
 \arguments{
 \item{object}{A group_data object}
