@@ -12,6 +12,8 @@ from_bids(
   mask = NULL,
   desc = "preproc",
   subjects = NULL,
+  sessions = NULL,
+  res = NULL,
   ...
 )
 }
@@ -30,7 +32,9 @@ reads no confounds.}
 
 \item{mask}{A brain-mask path (length-1 character) applied to every subject's
 file-backed dataset. Required for file-backed BIDS data, which needs a mask
-(auto-resolution of the fmriprep brain mask is a planned enhancement).}
+(auto-resolution of the fmriprep brain mask is a planned enhancement). The
+functional brain masks paired with each run are listed in each binding's
+\code{meta$runs$mask}.}
 
 \item{desc}{BIDS \code{desc-} label of the preprocessed scans
 (default \code{"preproc"}).}
@@ -38,11 +42,20 @@ file-backed dataset. Required for file-backed BIDS data, which needs a mask
 \item{subjects}{Optional character vector of subject labels (bare ids, e.g.
 \code{"01"}); default is all participants.}
 
+\item{sessions}{Optional character vector of session labels (bare, e.g.
+\code{"1"}); default is every session.}
+
+\item{res}{Optional BIDS \code{res-} label, for derivatives written at
+several resolutions; \code{NULL} accepts a single resolution per run.}
+
 \item{...}{Forwarded to \code{bidser::read_confounds()} (e.g. \code{npcs},
 \code{clean}, \code{na_action}).}
 }
 \value{
-An \code{fmri_manifest}: a list of bindings, one per subject.
+An \code{fmri_manifest}: a list of bindings, one per subject. Each
+binding's \code{meta$runs} is a data frame with one row per run
+(\code{session}, \code{run}, \code{scan}, \code{events},
+\code{mask}).
 }
 \description{
 Uses \pkg{bidser} to discover preprocessed BOLD scans, events, confounds, TR,
@@ -51,11 +64,26 @@ and run lengths for each subject of a BIDS dataset, returning an
 \code{\link[=instantiate]{instantiate()}}.
 }
 \details{
+Files are paired by their BIDS entities, parsed from the file names: a
+preprocessed series, its events file and its confounds file belong to the
+same run only when \code{sub}, \code{ses}, \code{task} and \code{run} are
+equal, and labels are compared exactly (\code{subjects = "1"} never selects
+\code{sub-10}; \code{task = "faces"} never selects \code{task-facesloc}).
+Runs are ordered by session, then run number, and numbered \code{1, 2, ...}
+in that order; each session's runs are blocks of their own. Two series for
+one run (another resolution, acquisition or echo) are an error unless
+\code{res} picks one of them.
+
 The design formula's variables must match the columns of the BIDS
-\code{events.tsv} (e.g. \code{trial_type}); a \code{run} column is added for
-the block structure. Confound columns are selected by \code{confounds} (a
-character vector or \code{bidser::confound_set()} result) passed straight to
-\code{bidser::read_confounds()}.
+\code{events.tsv} (e.g. \code{trial_type}); a \code{run} column holding the
+block number is added for the block structure. Confound columns are selected
+by \code{confounds} (a character vector or \code{bidser::confound_set()}
+result) passed straight to \code{bidser::read_confounds()}.
+
+The TR is the \code{RepetitionTime} of the series' own JSON sidecar, else of
+the raw series' sidecar (or an inherited \code{task-<label>_bold.json}),
+else the NIfTI header's. Sidecars of other files under \code{derivatives/}
+(for example maps written by \code{\link[=write_results]{write_results()}}) are never read.
 }
 \examples{
 \dontrun{

@@ -656,16 +656,24 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
       censor = censor_run
     )
 
+    # These per-run fits only estimate the run's noise model; the joint
+    # design's rank is checked below (`proj_global_final`), so a column that
+    # is empty in this run alone is not reported (#267).
     if (ar_modeling && robust_modeling) {
       # Combined AR + Robust (censor handled inside process_run_ar_robust)
-      res <- process_run_ar_robust(rch, model, cfg, phi_fixed, sigma_fixed, dataset)
+      res <- .without_run_rank_warnings(
+        process_run_ar_robust(rch, model, cfg, phi_fixed, sigma_fixed, dataset)
+      )
       info$phi_hat <- res$phi_hat
       info$weights <- res$robust_weights
       info$sigma <- res$sigma_robust
     } else if (ar_modeling) {
-      info$phi_hat <- phi_fixed %||% .run_ar_phi(model, rch, cfg, censor_run)
+      info$phi_hat <- phi_fixed %||%
+        .without_run_rank_warnings(.run_ar_phi(model, rch, cfg, censor_run))
     } else if (robust_modeling) {
-      res <- process_run_robust(rch, model, cfg, sigma_fixed, dataset)
+      res <- .without_run_rank_warnings(
+        process_run_robust(rch, model, cfg, sigma_fixed, dataset)
+      )
       info$weights <- res$robust_weights
       info$sigma <- res$sigma_robust
     }

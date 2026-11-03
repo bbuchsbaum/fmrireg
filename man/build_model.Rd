@@ -19,6 +19,14 @@ Builds the per-subject \code{baseline_model} (from the template's
 \link{baseline_spec}, the dataset's sampling frame, and any nuisance regressors)
 and combines it with the event model into an \code{fmri_model}.
 }
+\details{
+Each contrast specification in the template's \code{contrasts} (e.g. the
+elements of a \code{contrast_set()}) is attached to the event term it
+resolves against, exactly as if it had been written in that term
+(\code{hrf(..., contrasts = )}). The fit therefore computes it like any
+formula contrast, under every estimation scope, and \code{\link[=write_results]{write_results()}} /
+\code{\link[=reduce_write_results]{reduce_write_results()}} write it.
+}
 \seealso{
 \code{\link[=realize_dataset]{realize_dataset()}}, \code{\link[=run_job]{run_job()}}
 }

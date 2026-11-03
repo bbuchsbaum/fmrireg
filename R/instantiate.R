@@ -184,6 +184,13 @@ realize_dataset <- function(job) {
 #' [baseline_spec], the dataset's sampling frame, and any nuisance regressors)
 #' and combines it with the event model into an \code{fmri_model}.
 #'
+#' Each contrast specification in the template's \code{contrasts} (e.g. the
+#' elements of a \code{contrast_set()}) is attached to the event term it
+#' resolves against, exactly as if it had been written in that term
+#' (\code{hrf(..., contrasts = )}). The fit therefore computes it like any
+#' formula contrast, under every estimation scope, and [write_results()] /
+#' [reduce_write_results()] write it.
+#'
 #' @param job An [fmri_job].
 #' @param dataset The realized dataset (defaults to \code{realize_dataset(job)}).
 #' @return An \code{fmri_model}.
@@ -201,9 +208,82 @@ build_model <- function(job, dataset = realize_dataset(job)) {
     intercept = bs$intercept, nuisance_list = nl,
     nuisance_check = bs$nuisance_check
   )
-  create_fmri_model(
+  model <- create_fmri_model(
     formula = tmpl$formula, block = tmpl$block,
     baseline_model = bmodel, dataset = dataset,
     durations = tmpl$durations
   )
+  .attach_template_contrasts(model, .template_contrast_specs(tmpl$contrasts))
+}
+
+#' Split template contrasts into specifications and anything else
+#'
+#' A single `contrast_spec` becomes a one-element list. Specifications are
+#' attached to the model by `build_model()`; the rest (named weight vectors,
+#' weight matrices) can only be computed post hoc by `run_job()`.
+#' @keywords internal
+#' @noRd
+.template_contrast_list <- function(contrasts) {
+  if (is.null(contrasts)) return(list())
+  if (inherits(contrasts, "contrast_spec")) contrasts <- list(contrasts)
+  if (!is.list(contrasts)) contrasts <- list(contrasts)
+  contrasts
+}
+
+#' @keywords internal
+#' @noRd
+.template_contrast_specs <- function(contrasts) {
+  cl <- .template_contrast_list(contrasts)
+  cl[vapply(cl, inherits, logical(1), "contrast_spec")]
+}
+
+#' @keywords internal
+#' @noRd
+.template_posthoc_contrasts <- function(contrasts) {
+  cl <- .template_contrast_list(contrasts)
+  cl[!vapply(cl, inherits, logical(1), "contrast_spec")]
+}
+
+#' Attach contrast specifications to the event terms they test
+#'
+#' Resolves each specification against the event terms with the post-hoc
+#' resolver (`.posthoc_resolve_spec()`: exactly one term must accept it) and
+#' appends it to that term's `hrfspec` contrasts, which is where
+#' `contrast_weights.event_model()` reads formula contrasts from.
+#' @keywords internal
+#' @noRd
+.attach_template_contrasts <- function(model, specs) {
+  if (length(specs) == 0L) return(model)
+  emod <- model$event_model
+  tnames <- names(emod$terms)
+  for (spec in specs) {
+    con_name <- spec$name %||% ""
+    if (!is.character(con_name) || length(con_name) != 1L || !nzchar(con_name)) {
+      stop("every template contrast must have a name", call. = FALSE)
+    }
+    # Warnings (e.g. a level absent from a term) are raised again, once, when
+    # the fit computes the contrast.
+    hit <- tryCatch(
+      suppressWarnings(.posthoc_resolve_spec(spec, list(model = list(event_model = emod)))),
+      error = function(e) {
+        stop(sprintf("template contrast '%s': %s", con_name, conditionMessage(e)),
+             call. = FALSE)
+      }
+    )
+    k <- match(hit$term, tnames)
+    hs <- attr(emod$terms[[k]], "hrfspec")
+    cs <- unclass(hs$contrasts %||% list())
+    have <- vapply(cs, function(x) as.character(x$name %||% ""), character(1))
+    if (con_name %in% have) {
+      stop(sprintf(paste0(
+        "template contrast '%s' duplicates a contrast of the same name in term '%s'"),
+        con_name, hit$term), call. = FALSE)
+    }
+    cs[[length(cs) + 1L]] <- spec
+    names(cs) <- c(have, con_name)
+    hs$contrasts <- structure(cs, class = c("contrast_set", "list"))
+    attr(emod$terms[[k]], "hrfspec") <- hs
+  }
+  model$event_model <- emod
+  model
 }

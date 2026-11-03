@@ -81,8 +81,13 @@ baseline_spec <- function(degree = 3,
 #' @param block Block / run-structure formula, e.g. \code{~ run}.
 #' @param baseline A [baseline_spec()] describing the nuisance model.
 #' @param durations Event durations passed through to the event model.
-#' @param contrasts Optional contrast specification (e.g. from
-#'   \code{contrast_set()}).
+#' @param contrasts Optional contrasts for every subject: a
+#'   \code{contrast_set()}, a single contrast specification, or a list of
+#'   them. Each specification is attached to the event term it resolves
+#'   against (see [build_model()]) and so is computed, reported and written
+#'   exactly like a contrast given in the formula, under any estimation scope.
+#'   Named weight vectors or matrices are also accepted; they are computed
+#'   post hoc by [run_job()] with [fit_contrasts()].
 #' @param control An \code{fmri_lm_control} from [fmri_lm_control()] holding the
 #'   robust / AR / preprocessing options for fitting.
 #' @param compute A [compute_spec()] describing backend, voxel partitioning,

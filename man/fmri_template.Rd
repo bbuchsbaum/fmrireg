@@ -26,8 +26,13 @@ fmri_template(
 
 \item{durations}{Event durations passed through to the event model.}
 
-\item{contrasts}{Optional contrast specification (e.g. from
-\code{contrast_set()}).}
+\item{contrasts}{Optional contrasts for every subject: a
+\code{contrast_set()}, a single contrast specification, or a list of
+them. Each specification is attached to the event term it resolves
+against (see \code{\link[=build_model]{build_model()}}) and so is computed, reported and written
+exactly like a contrast given in the formula, under any estimation scope.
+Named weight vectors or matrices are also accepted; they are computed
+post hoc by \code{\link[=run_job]{run_job()}} with \code{\link[=fit_contrasts]{fit_contrasts()}}.}
 
 \item{control}{An \code{fmri_lm_control} from \code{\link[=fmri_lm_control]{fmri_lm_control()}} holding the
 robust / AR / preprocessing options for fitting.}

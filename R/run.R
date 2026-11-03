@@ -19,6 +19,12 @@
 #' Realizes the dataset, assembles the model, fits it with the template's
 #' control options (and engine, if any), and applies the template's reducer.
 #'
+#' Template contrasts given as contrast specifications are computed in the fit
+#' (see [build_model()]). Template contrasts given as weight vectors or
+#' matrices are computed afterwards with [fit_contrasts()] and added to the
+#' fit's contrast table; post-hoc contrasts are not available for multi-run
+#' \code{runwise_meta} fits with a temporal noise model or robust weighting.
+#'
 #' @param job An [fmri_job].
 #' @param progress Logical; show a fitting progress bar.
 #' @return The reducer's output, or the fitted \code{fmri_lm} if the template has
@@ -43,14 +49,47 @@ run_job <- function(job, progress = FALSE) {
     engine = tmpl$engine, engine_args = tmpl$engine_args
   )
 
-  # Apply template-level contrasts so they actually drive output (reduce_contrasts
-  # and any downstream consumer read them from this attribute). Formula-embedded
-  # contrasts continue to flow through coef()/write_results() as before.
-  if (!is.null(tmpl$contrasts)) {
-    attr(fit, "template_contrasts") <- fit_contrasts(fit, tmpl$contrasts)
+  # Template contrast specifications were attached to the event terms by
+  # build_model() and are computed in the fit. Anything else (weight vectors
+  # or matrices) can only be computed post hoc; those results join the fit's
+  # contrast table so coef(), write_results() and the reducers see them.
+  posthoc <- .template_posthoc_contrasts(tmpl$contrasts)
+  if (length(posthoc) > 0L) {
+    fit <- .add_posthoc_contrasts(fit, fit_contrasts(fit, posthoc))
   }
 
   apply_reducer(tmpl$reducer, fit, job)
+}
+
+#' Add post-hoc contrast results to a fit's contrast table
+#'
+#' `results` is the list returned by `fit_contrasts.fmri_lm()`. Each entry
+#' becomes a row of `fit$result$contrasts` in the layout the in-fit contrasts
+#' use, so every consumer of that table treats the two alike.
+#' @keywords internal
+#' @noRd
+.add_posthoc_contrasts <- function(fit, results) {
+  if (length(results) == 0L) return(fit)
+  existing <- fit$result$contrasts
+  clash <- intersect(names(results), existing$name %||% character(0))
+  if (length(clash) > 0L) {
+    stop(sprintf("template contrast name(s) already used by the model: %s",
+                 paste(clash, collapse = ", ")), call. = FALSE)
+  }
+  rows <- lapply(results, function(r) {
+    dplyr::tibble(
+      type = r$type,
+      name = r$name,
+      stat_type = r$stat_type,
+      df.residual = r$df.residual,
+      conmat = list(NULL),
+      colind = list(NULL),
+      data = list(dplyr::tibble(estimate = r$estimate, se = r$se,
+                                stat = r$stat, prob = r$prob))
+    )
+  })
+  fit$result$contrasts <- dplyr::bind_rows(c(list(existing), rows))
+  fit
 }
 
 #' Run a batch of jobs

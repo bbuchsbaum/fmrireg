@@ -19,6 +19,13 @@ no reducer.
 Realizes the dataset, assembles the model, fits it with the template's
 control options (and engine, if any), and applies the template's reducer.
 }
+\details{
+Template contrasts given as contrast specifications are computed in the fit
+(see \code{\link[=build_model]{build_model()}}). Template contrasts given as weight vectors or
+matrices are computed afterwards with \code{\link[=fit_contrasts]{fit_contrasts()}} and added to the
+fit's contrast table; post-hoc contrasts are not available for multi-run
+\code{runwise_meta} fits with a temporal noise model or robust weighting.
+}
 \seealso{
 \code{\link[=run_jobs]{run_jobs()}}, \code{\link[=build_model]{build_model()}}
 }

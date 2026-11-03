@@ -354,9 +354,13 @@ chunkwise_lm_slow <- function(dset, chunks, model, cfg, contrast_objects,
     # Estimate phi once per run from every voxel, as the matrix backend does,
     # and hold it fixed in each chunk's solve. Estimating inside each chunk
     # (from at most 64 of its voxels) made the fit depend on the chunking.
+    # The joint design's rank was checked above; a run's own design may be
+    # rank deficient without that mattering here (#267).
     cfg$ar$phi_fixed <- phi_fixed %||% lapply(.dset_run_chunks(dset), function(rch) {
-      .run_ar_phi(model, rch, cfg,
-                  censor = resolve_censor(cfg, dset, rch$chunk_num, length(rch$row_ind)))
+      .without_run_rank_warnings(
+        .run_ar_phi(model, rch, cfg,
+                    censor = resolve_censor(cfg, dset, rch$chunk_num, length(rch$row_ind)))
+      )
     })
   }
 
