@@ -125,9 +125,11 @@ theme_fmrireg <- function(base_size = 11, base_family = "",
       }
     }
   }
+  out <- sub("^base_constant[0-9]*_block_([0-9]+)$", paste0("intercept", dot, "run \\1"), out)
   out <- sub("^base_([A-Za-z]+)([0-9]+)_block_([0-9]+)$", paste0("\\1\\2", dot, "run \\3"), out)
   out <- sub("^base_(.*)_block_([0-9]+)$", paste0("\\1", dot, "run \\2"), out)
-  out <- sub("^constant_([0-9]+)$", "run \\1", out)
+  out <- sub("^constant_?([0-9]+)$", "run \\1", out)
+  out <- sub("^nuis_(.*)_block_([0-9]+)$", paste0("\\1", dot, "run \\2"), out)
   out <- sub("^constant$", "intercept", out)
   out <- sub("^nuis#0*([0-9]+)_([0-9]+)$", paste0("nuis \\2", dot, "run \\1"), out)
   out
@@ -136,12 +138,50 @@ theme_fmrireg <- function(base_size = 11, base_family = "",
 #' `condition.faces_task.a` -> `faces x a`; `rt_c` -> `rt_c`
 #' @keywords internal
 #' @noRd
-.strip_level_prefixes <- function(x) {
+.strip_level_prefixes <- function(x, vars = NULL) {
+  times <- paste0(" ", .glyph("times"), " ")
+  if (length(vars)) {
+    vars <- vars[order(-nchar(vars))]
+    return(vapply(x, function(s) {
+      parts <- .split_condition(s, vars)
+      if (is.null(parts)) .strip_level_prefixes(s) else paste(parts, collapse = times)
+    }, character(1), USE.NAMES = FALSE))
+  }
   vapply(x, function(s) {
     parts <- strsplit(s, "_(?=[^_]+\\.)", perl = TRUE)[[1]]
     parts <- sub("^[^.]+\\.", "", parts)
-    paste(parts, collapse = paste0(" ", .glyph("times"), " "))
+    paste(parts, collapse = times)
   }, character(1), USE.NAMES = FALSE)
+}
+
+# Split a condition name such as "trial_type.face_rt" into its parts using the
+# term's variable names, so names containing "_" or "." are not cut apart:
+# a factor contributes its level ("face"), a continuous variable its name
+# ("rt"). NULL when the name does not parse with these variables.
+.split_condition <- function(s, vars) {
+  esc <- gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", vars)
+  next_var <- paste0("_(", paste(esc, collapse = "|"), ")(\\.|_|$)")
+  out <- character(0)
+  while (nzchar(s)) {
+    factor <- vars[startsWith(s, paste0(vars, "."))][1]
+    if (!is.na(factor)) {
+      rest <- substring(s, nchar(factor) + 2L)
+      at <- regexpr(next_var, rest, perl = TRUE)
+      if (at > 0) {
+        out <- c(out, substring(rest, 1L, at - 1L))
+        s <- substring(rest, at + 1L)
+      } else {
+        out <- c(out, rest)
+        s <- ""
+      }
+      next
+    }
+    plain <- vars[s == vars | startsWith(s, paste0(vars, "_"))][1]
+    if (is.na(plain)) return(NULL)
+    out <- c(out, plain)
+    s <- substring(s, nchar(plain) + 2L)
+  }
+  out
 }
 
 #' One row of metadata per design-matrix column
@@ -188,7 +228,7 @@ theme_fmrireg <- function(base_size = 11, base_family = "",
       conds <- tryCatch(fmridesign::conditions(eterms[[tn]]), error = function(e) NULL)
       nb <- if (length(conds)) length(idx) / length(conds) else NA
       if (length(conds) && isTRUE(nb == round(nb))) {
-        lab <- .strip_level_prefixes(conds)
+        lab <- .strip_level_prefixes(conds, names(eterms[[tn]]$events))
         info$condition[idx] <- rep(lab, each = nb)
         info$basis[idx] <- rep(seq_len(nb), times = length(lab))
         info$nbasis[idx] <- as.integer(nb)
@@ -218,6 +258,10 @@ theme_fmrireg <- function(base_size = 11, base_family = "",
     idx <- match(tc, cols)
     idx <- idx[!is.na(idx)]
     k <- if (tn %in% names(bl_kind)) bl_kind[[tn]] else "other"
+    # A drift term with a constant basis is the run intercepts themselves.
+    if (identical(tn, "drift") && identical(fmrimod$baseline_model$drift_spec$basis, "constant")) {
+      k <- "intercept"
+    }
     info$group[idx] <- if (k == "other") tn else k
     info$kind[idx] <- k
   }

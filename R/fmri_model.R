@@ -423,7 +423,7 @@ design_map.fmri_model <- function(x,
       low = .fmrireg_diverging[["low"]], mid = .fmrireg_diverging[["mid"]],
       high = .fmrireg_diverging[["high"]], midpoint = fill_midpoint %||% 0,
       limits = lim, oob = .squish, na.value = "#BDBDBD",
-      name = if (scale_columns) paste0("Value ", intToUtf8(247L), "\ncolumn's\nmax |value|") else "Value"
+      name = if (scale_columns) paste0("Value ", intToUtf8(247L), " column max") else "Value"
     ) +
     # the run of a run-specific column is visible from its block, so the
     # axis shows the short name
@@ -438,7 +438,7 @@ design_map.fmri_model <- function(x,
     plt <- plt + ggplot2::scale_y_reverse(
       breaks = mids, labels = paste("Run", seq_along(runs)),
       sec.axis = ggplot2::dup_axis(breaks = c(starts, n_scans),
-                                   labels = c(starts, n_scans), name = "Scan"),
+                                   labels = c(starts, n_scans), name = NULL),
       expand = c(0, 0)
     )
     if (block_separators) {
