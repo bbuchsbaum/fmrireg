@@ -16,6 +16,8 @@ from_bids(
   mask = NULL,
   desc = "preproc",
   subjects = NULL,
+  sessions = NULL,
+  res = NULL,
   ...
 )
 ```
@@ -49,7 +51,8 @@ from_bids(
   A brain-mask path (length-1 character) applied to every subject's
   file-backed dataset. Required for file-backed BIDS data, which needs a
   mask (auto-resolution of the fmriprep brain mask is a planned
-  enhancement).
+  enhancement). The functional brain masks paired with each run are
+  listed in each binding's `meta$runs$mask`.
 
 - desc:
 
@@ -60,6 +63,16 @@ from_bids(
   Optional character vector of subject labels (bare ids, e.g. `"01"`);
   default is all participants.
 
+- sessions:
+
+  Optional character vector of session labels (bare, e.g. `"1"`);
+  default is every session.
+
+- res:
+
+  Optional BIDS `res-` label, for derivatives written at several
+  resolutions; `NULL` accepts a single resolution per run.
+
 - ...:
 
   Forwarded to
@@ -68,17 +81,36 @@ from_bids(
 
 ## Value
 
-An `fmri_manifest`: a list of bindings, one per subject.
+An `fmri_manifest`: a list of bindings, one per subject. Each binding's
+`meta$runs` is a data frame with one row per run (`session`, `run`,
+`scan`, `events`, `mask`).
 
 ## Details
 
+Files are paired by their BIDS entities, parsed from the file names: a
+preprocessed series, its events file and its confounds file belong to
+the same run only when `sub`, `ses`, `task` and `run` are equal, and
+labels are compared exactly (`subjects = "1"` never selects `sub-10`;
+`task = "faces"` never selects `task-facesloc`). Runs are ordered by
+session, then run number, and numbered `1, 2, ...` in that order; each
+session's runs are blocks of their own. Two series for one run (another
+resolution, acquisition or echo) are an error unless `res` picks one of
+them.
+
 The design formula's variables must match the columns of the BIDS
-`events.tsv` (e.g. `trial_type`); a `run` column is added for the block
-structure. Confound columns are selected by `confounds` (a character
-vector or
+`events.tsv` (e.g. `trial_type`); a `run` column holding the block
+number is added for the block structure. Confound columns are selected
+by `confounds` (a character vector or
 [`bidser::confound_set()`](https://bbuchsbaum.github.io/bidser/reference/confound_set.html)
 result) passed straight to
 [`bidser::read_confounds()`](https://bbuchsbaum.github.io/bidser/reference/read_confounds.html).
+
+The TR is the `RepetitionTime` of the series' own JSON sidecar, else of
+the raw series' sidecar (or an inherited `task-<label>_bold.json`), else
+the NIfTI header's. Sidecars of other files under `derivatives/` (for
+example maps written by
+[`write_results()`](https://bbuchsbaum.github.io/fmrireg/reference/write_results.md))
+are never read.
 
 ## See also
 

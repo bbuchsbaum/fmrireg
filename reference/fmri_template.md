@@ -48,8 +48,17 @@ fmri_template(
 
 - contrasts:
 
-  Optional contrast specification (e.g. from
-  [`contrast_set()`](https://bbuchsbaum.github.io/fmrireg/reference/contrast_set.md)).
+  Optional contrasts for every subject: a
+  [`contrast_set()`](https://bbuchsbaum.github.io/fmrireg/reference/contrast_set.md),
+  a single contrast specification, or a list of them. Each specification
+  is attached to the event term it resolves against (see
+  [`build_model()`](https://bbuchsbaum.github.io/fmrireg/reference/build_model.md))
+  and so is computed, reported and written exactly like a contrast given
+  in the formula, under any estimation scope. Named weight vectors or
+  matrices are also accepted; they are computed post hoc by
+  [`run_job()`](https://bbuchsbaum.github.io/fmrireg/reference/run_job.md)
+  with
+  [`fit_contrasts()`](https://bbuchsbaum.github.io/fmrireg/reference/fit_contrasts.md).
 
 - control:
 

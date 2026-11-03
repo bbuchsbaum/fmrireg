@@ -32,5 +32,5 @@ A formula.
 fm <- fmrireg:::.demo_fmri_model()
 get_formula(fm)
 #> .y ~ condition + drift + block - 1
-#> <environment: 0x5bcfaba8d7a8>
+#> <environment: 0x6236fd0cca48>
 ```

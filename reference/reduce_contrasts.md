@@ -2,13 +2,11 @@
 
 Extracts the fitted contrasts as a long data frame (one row per contrast
 x voxel), optionally prefixed with the job id so results stack cleanly
-across subjects. Surfaces template-level contrasts (those passed to
-[`fmri_template()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_template.md),
-applied by
-[`run_job()`](https://bbuchsbaum.github.io/fmrireg/reference/run_job.md))
-when present, otherwise the model's formula-embedded contrasts via
-[`coef()`](https://rdrr.io/r/stats/coef.html). Returns a zero-row frame
-when no contrasts are defined.
+across subjects. Covers formula contrasts and template-level contrasts
+(those passed to
+[`fmri_template()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_template.md))
+alike, with the standard error and test statistic of each. Returns a
+zero-row frame when no contrasts are defined.
 
 ## Usage
 

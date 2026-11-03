@@ -93,6 +93,15 @@ and combines it with the event model into an <code>fmri_model</code>.</p>
     <p>An <code>fmri_model</code>.</p>
     </div>
     <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Each contrast specification in the template's <code>contrasts</code> (e.g. the
+elements of a <code><a href="contrast_set.html">contrast_set()</a></code>) is attached to the event term it
+resolves against, exactly as if it had been written in that term
+(<code>hrf(..., contrasts = )</code>). The fit therefore computes it like any
+formula contrast, under every estimation scope, and <code><a href="write_results.html">write_results()</a></code> /
+<code><a href="reduce_write_results.html">reduce_write_results()</a></code> write it.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="realize_dataset.html">realize_dataset()</a></code>, <code><a href="run_job.html">run_job()</a></code></p></div>
     </div>

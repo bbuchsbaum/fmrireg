@@ -91,6 +91,14 @@ control options (and engine, if any), and applies the template's reducer.</p>
 no reducer.</p>
     </div>
     <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Template contrasts given as contrast specifications are computed in the fit
+(see <code><a href="build_model.html">build_model()</a></code>). Template contrasts given as weight vectors or
+matrices are computed afterwards with <code><a href="fit_contrasts.html">fit_contrasts()</a></code> and added to the
+fit's contrast table; post-hoc contrasts are not available for multi-run
+<code>runwise_meta</code> fits with a temporal noise model or robust weighting.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="run_jobs.html">run_jobs()</a></code>, <code><a href="build_model.html">build_model()</a></code></p></div>
     </div>

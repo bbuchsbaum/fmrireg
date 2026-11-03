@@ -365,7 +365,7 @@ results_df <- data.frame(
 print(results_df)
 #>                                   Dataset Correlation  RMSE Noiseless_Max_Error
 #> BM_Canonical_HighSNR BM_Canonical_HighSNR       0.991 0.041        3.441691e-15
-#> BM_Canonical_LowSNR   BM_Canonical_LowSNR       0.621 0.381        5.995204e-15
+#> BM_Canonical_LowSNR   BM_Canonical_LowSNR       0.621 0.381        5.884182e-15
 #>                      Target_SNR
 #> BM_Canonical_HighSNR        4.0
 #> BM_Canonical_LowSNR         0.5

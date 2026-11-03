@@ -26,6 +26,19 @@ build_model(job, dataset = realize_dataset(job))
 
 An `fmri_model`.
 
+## Details
+
+Each contrast specification in the template's `contrasts` (e.g. the
+elements of a
+[`contrast_set()`](https://bbuchsbaum.github.io/fmrireg/reference/contrast_set.md))
+is attached to the event term it resolves against, exactly as if it had
+been written in that term (`hrf(..., contrasts = )`). The fit therefore
+computes it like any formula contrast, under every estimation scope, and
+[`write_results()`](https://bbuchsbaum.github.io/fmrireg/reference/write_results.md)
+/
+[`reduce_write_results()`](https://bbuchsbaum.github.io/fmrireg/reference/reduce_write_results.md)
+write it.
+
 ## See also
 
 [`realize_dataset()`](https://bbuchsbaum.github.io/fmrireg/reference/realize_dataset.md),

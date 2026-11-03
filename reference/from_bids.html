@@ -84,6 +84,8 @@ and run lengths for each subject of a BIDS dataset, returning an
 <span>  mask <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  desc <span class="op">=</span> <span class="st">"preproc"</span>,</span>
 <span>  subjects <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  sessions <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  res <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -115,7 +117,9 @@ reads no confounds.</p></dd>
 <dt id="arg-mask">mask<a class="anchor" aria-label="anchor" href="#arg-mask"></a></dt>
 <dd><p>A brain-mask path (length-1 character) applied to every subject's
 file-backed dataset. Required for file-backed BIDS data, which needs a mask
-(auto-resolution of the fmriprep brain mask is a planned enhancement).</p></dd>
+(auto-resolution of the fmriprep brain mask is a planned enhancement). The
+functional brain masks paired with each run are listed in each binding's
+<code>meta$runs$mask</code>.</p></dd>
 
 
 <dt id="arg-desc">desc<a class="anchor" aria-label="anchor" href="#arg-desc"></a></dt>
@@ -128,6 +132,16 @@ file-backed dataset. Required for file-backed BIDS data, which needs a mask
 <code>"01"</code>); default is all participants.</p></dd>
 
 
+<dt id="arg-sessions">sessions<a class="anchor" aria-label="anchor" href="#arg-sessions"></a></dt>
+<dd><p>Optional character vector of session labels (bare, e.g.
+<code>"1"</code>); default is every session.</p></dd>
+
+
+<dt id="arg-res">res<a class="anchor" aria-label="anchor" href="#arg-res"></a></dt>
+<dd><p>Optional BIDS <code>res-</code> label, for derivatives written at
+several resolutions; <code>NULL</code> accepts a single resolution per run.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Forwarded to <code><a href="https://bbuchsbaum.github.io/bidser/reference/read_confounds.html" class="external-link">bidser::read_confounds()</a></code> (e.g. <code>npcs</code>,
 <code>clean</code>, <code>na_action</code>).</p></dd>
@@ -135,15 +149,31 @@ file-backed dataset. Required for file-backed BIDS data, which needs a mask
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>An <code>fmri_manifest</code>: a list of bindings, one per subject.</p>
+    <p>An <code>fmri_manifest</code>: a list of bindings, one per subject. Each
+binding's <code>meta$runs</code> is a data frame with one row per run
+(<code>session</code>, <code>run</code>, <code>scan</code>, <code>events</code>,
+<code>mask</code>).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>The design formula's variables must match the columns of the BIDS
-<code>events.tsv</code> (e.g. <code>trial_type</code>); a <code>run</code> column is added for
-the block structure. Confound columns are selected by <code>confounds</code> (a
-character vector or <code><a href="https://bbuchsbaum.github.io/bidser/reference/confound_set.html" class="external-link">bidser::confound_set()</a></code> result) passed straight to
-<code><a href="https://bbuchsbaum.github.io/bidser/reference/read_confounds.html" class="external-link">bidser::read_confounds()</a></code>.</p>
+    <p>Files are paired by their BIDS entities, parsed from the file names: a
+preprocessed series, its events file and its confounds file belong to the
+same run only when <code>sub</code>, <code>ses</code>, <code>task</code> and <code>run</code> are
+equal, and labels are compared exactly (<code>subjects = "1"</code> never selects
+<code>sub-10</code>; <code>task = "faces"</code> never selects <code>task-facesloc</code>).
+Runs are ordered by session, then run number, and numbered <code>1, 2, ...</code>
+in that order; each session's runs are blocks of their own. Two series for
+one run (another resolution, acquisition or echo) are an error unless
+<code>res</code> picks one of them.</p>
+<p>The design formula's variables must match the columns of the BIDS
+<code>events.tsv</code> (e.g. <code>trial_type</code>); a <code>run</code> column holding the
+block number is added for the block structure. Confound columns are selected
+by <code>confounds</code> (a character vector or <code><a href="https://bbuchsbaum.github.io/bidser/reference/confound_set.html" class="external-link">bidser::confound_set()</a></code>
+result) passed straight to <code><a href="https://bbuchsbaum.github.io/bidser/reference/read_confounds.html" class="external-link">bidser::read_confounds()</a></code>.</p>
+<p>The TR is the <code>RepetitionTime</code> of the series' own JSON sidecar, else of
+the raw series' sidecar (or an inherited <code>task-&lt;label&gt;_bold.json</code>),
+else the NIfTI header's. Sidecars of other files under <code>derivatives/</code>
+(for example maps written by <code><a href="write_results.html">write_results()</a></code>) are never read.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

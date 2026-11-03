@@ -111,8 +111,13 @@ can be executed locally, in parallel via <span class="pkg">future</span>, or on 
 
 
 <dt id="arg-contrasts">contrasts<a class="anchor" aria-label="anchor" href="#arg-contrasts"></a></dt>
-<dd><p>Optional contrast specification (e.g. from
-<code><a href="contrast_set.html">contrast_set()</a></code>).</p></dd>
+<dd><p>Optional contrasts for every subject: a
+<code><a href="contrast_set.html">contrast_set()</a></code>, a single contrast specification, or a list of
+them. Each specification is attached to the event term it resolves
+against (see <code><a href="build_model.html">build_model()</a></code>) and so is computed, reported and written
+exactly like a contrast given in the formula, under any estimation scope.
+Named weight vectors or matrices are also accepted; they are computed
+post hoc by <code><a href="run_job.html">run_job()</a></code> with <code><a href="fit_contrasts.html">fit_contrasts()</a></code>.</p></dd>
 
 
 <dt id="arg-control">control<a class="anchor" aria-label="anchor" href="#arg-control"></a></dt>

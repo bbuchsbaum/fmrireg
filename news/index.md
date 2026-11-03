@@ -14,6 +14,53 @@
 
 ### Bug fixes
 
+- `fmri_template(contrasts = )` now reaches the fit
+  ([\#265](https://github.com/bbuchsbaum/fmrireg/issues/265)).
+  [`build_model()`](https://bbuchsbaum.github.io/fmrireg/reference/build_model.md)
+  attaches each contrast specification to the event term it resolves
+  against, so it is computed exactly like `hrf(..., contrasts = )`:
+  under every estimation scope (including the default `runwise_meta`
+  with a noise model, which used to fail with “Post-hoc contrasts are
+  not available …”), in `coef(fit, type = "contrasts")`, and in the maps
+  [`write_results()`](https://bbuchsbaum.github.io/fmrireg/reference/write_results.md)
+  /
+  [`reduce_write_results()`](https://bbuchsbaum.github.io/fmrireg/reference/reduce_write_results.md)
+  write (which used to get betas only). A template contrast given as a
+  weight vector is computed post hoc and added to the fit’s contrast
+  table.
+  [`reduce_contrasts()`](https://bbuchsbaum.github.io/fmrireg/reference/reduce_contrasts.md)
+  reads that table for every contrast and reports `se` and `stat`; the
+  `"template_contrasts"` attribute is gone. Post hoc,
+  `contrast(~ A - B)` now resolves against the term whose levels it
+  names; it used to fail with “does not resolve against any event term”.
+
+- [`from_bids()`](https://bbuchsbaum.github.io/fmrireg/reference/from_bids.md)
+  pairs files by exact BIDS entities
+  ([\#266](https://github.com/bbuchsbaum/fmrireg/issues/266)). Subject
+  and task labels are compared exactly (`subjects = "1"` no longer picks
+  up `sub-10`, `task = "faces"` no longer picks up `task-facesloc`). A
+  run’s series, events and confounds must agree on `sub`, `ses`, `task`
+  and `run`; sessions are separate blocks, ordered by session then run
+  (they used to be merged or mis-paired by run number). Two series for
+  one run (for example `res-2` next to the default resolution) are an
+  error naming the new `res` argument; `sessions` selects sessions. The
+  TR comes from the series’ own sidecar, the raw sidecar or an inherited
+  `task-*_bold.json`, never from other JSON under `derivatives/` (output
+  sidecars of an earlier
+  [`write_results()`](https://bbuchsbaum.github.io/fmrireg/reference/write_results.md)
+  used to break a second run). Each binding’s `meta$runs` lists the
+  session, run, scan, events file and functional brain mask of every
+  run.
+
+- Joint estimation no longer warns “Design matrix is rank deficient”
+  when a condition (or trial) is absent from one run while the joint
+  design is full rank
+  ([\#267](https://github.com/bbuchsbaum/fmrireg/issues/267)). The
+  warning came from the per-run fits that only estimate the AR model or
+  robust weights; the joint design’s rank is still checked and reported.
+  `runwise_meta` fits still warn for the deficient run, whose estimate
+  is blank.
+
 - [`fmri_latent_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_latent_lm.md)
   gains a `control` argument
   ([\#263](https://github.com/bbuchsbaum/fmrireg/issues/263)). It used
