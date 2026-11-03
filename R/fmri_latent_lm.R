@@ -9,23 +9,55 @@
 #' @param block A factor indicating the block structure of the data.
 #' @param baseline_model An optional baseline model.
 #' @param dataset A latent `fmri_frame` (see [latent_frame()]).
-#' @param durations The duration of events in the dataset.
+#' @param durations The duration of events in the dataset. Default is 0
+#'   (impulse events), as in [fmri_lm()].
 #' @param drop_empty Whether to drop empty events from the model. Default is TRUE.
 #' @param robust Must be FALSE. Robust weights are voxel-specific and cannot be
 #'   computed on component scores, so any robust request is an error.
-#' @param autocor The autocorrelation model. 'none' (OLS), 'ar1' or 'ar2'. AR
-#'   models use one set of AR coefficients per run shared across voxels,
-#'   estimated so that the fit equals a dense fit of the reconstructed voxel
-#'   data. 'auto' and 'arma' are not implemented and are an error.
+#' @param autocor The autocorrelation model used when `control` is `NULL`.
+#'   'none' (OLS), 'ar1' or 'ar2'. AR models use one set of AR coefficients per
+#'   run shared across all components, estimated so that the fit equals a dense
+#'   fit of the reconstructed voxel data. 'auto' and 'arma' are not implemented
+#'   and are an error. When `control` is supplied, `autocor` may be omitted; if
+#'   it is also given it must name the same structure as `control`.
 #' @param bootstrap Must be FALSE; bootstrapping is not implemented for latent
 #'   datasets and TRUE is an error.
 #' @param nboot Unused (see `bootstrap`).
-#' @param ... Additional arguments.
+#' @param control Optional [fmri_lm_control()] object. `NULL` (the default)
+#'   fits `estimation_spec("joint")` with the noise model named by `autocor`,
+#'   shared across components. Supply a control to choose the estimation scope
+#'   and noise model explicitly, e.g.
+#'   `fmri_lm_control(estimation = estimation_spec("runwise_meta"),
+#'   noise = noise_spec("ar1", voxelwise = TRUE))` for a separate AR model per
+#'   component (see Details).
+#' @param ... Not used. Any argument passed here is an error, so a misspelled
+#'   or unsupported argument is never silently dropped.
+#'
+#' @details
+#' **Default (shared noise) model.** With `control = NULL` the model is fitted
+#' jointly over runs and, for AR noise, uses one AR model per run shared by
+#' all components. Because voxel data are `Y = Z %*% t(L)` (scores `Z`, loadings
+#' `L`) this is exactly the fit a dense GLS of the reconstructed voxel data
+#' would give, so voxel-level standard errors and statistics are available
+#' with `recon = TRUE`.
+#'
+#' **Per-component noise.** Latent components can differ strongly in temporal
+#' autocorrelation. A `control` with `estimation_spec("runwise_meta")` (and,
+#' optionally, `noise_spec(..., voxelwise = TRUE)`) treats each component as
+#' a separate response with its own noise model and run weights, i.e. the
+#' same fit `fmri_lm()` gives for the score matrix as a `matrix_frame()`.
+#' That model has no exact voxel-space equivalent: `coef(recon = TRUE)`
+#' returns the loadings applied to the component estimates, but
+#' `standard_error()` and `stats()` with `recon = TRUE` are an error because
+#' the component noise models do not combine into one voxel covariance.
+#' Under joint estimation only shared (run- or global-pooled) AR models are
+#' supported.
 #'
 #' @return An object of class 'fmri_latent_lm' containing the regression model and dataset.
 #'
 #' @note This method is currently experimental.
 #'
+#' @seealso [latent_frame()], [fmri_lm()], [fmri_lm_control()]
 #' @export
 #'
 #' @examples
@@ -35,14 +67,30 @@
 #' #result <- fmri_latent_lm(formula = formula, block = block, dataset = dset,
 #' #                          durations = NULL, drop_empty = TRUE, robust = FALSE)
 #'
+#' # Per-component AR(1) noise, run-wise estimation
+#' #ctrl <- fmri_lm_control(estimation = estimation_spec("runwise_meta"),
+#' #                        noise = noise_spec("ar1", voxelwise = TRUE))
+#' #result <- fmri_latent_lm(formula, block = block, dataset = dset,
+#' #                         control = ctrl)
+#'
 #' # Print the result
 #' #print(result)
 fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset, 
-                    durations, drop_empty=TRUE, robust=FALSE, 
+                    durations = 0, drop_empty=TRUE, robust=FALSE, 
                     autocor=c("none", "auto", "ar1", "ar2", "arma"), 
-                    bootstrap=FALSE, nboot=1000,
+                    bootstrap=FALSE, nboot=1000, control = NULL,
                     ...) {
-  
+  dots <- list(...)
+  if (length(dots)) {
+    nms <- names(dots) %||% rep("", length(dots))
+    nms[!nzchar(nms)] <- "<unnamed>"
+    stop("Unused argument(s) to `fmri_latent_lm()`: ",
+         paste(nms, collapse = ", "),
+         ". Statistical options belong in `control = fmri_lm_control(...)`.",
+         call. = FALSE)
+  }
+
+  autocor_missing <- missing(autocor)
   autocor <- match.arg(autocor)
   assert_that(.dset_is_latent(dataset),
               msg = "'dataset' must be an fmri_frame over a basis_space (see latent_frame())")
@@ -58,10 +106,31 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
   if (!isFALSE(bootstrap)) {
     stop("`bootstrap` is not supported for latent datasets.", call. = FALSE)
   }
-  control <- fmri_lm_control(
-    estimation = estimation_spec("joint"),
-    noise = noise_spec(if (autocor == "none") "iid" else autocor)
-  )
+
+  if (is.null(control)) {
+    control <- fmri_lm_control(
+      estimation = estimation_spec("joint"),
+      noise = noise_spec(if (autocor == "none") "iid" else autocor)
+    )
+  } else {
+    if (!inherits(control, "fmri_lm_control")) {
+      stop("`control` must be an object created by `fmri_lm_control()`.",
+           call. = FALSE)
+    }
+    ctrl_struct <- (control$noise %||% control$ar)$struct %||% "iid"
+    want_struct <- if (autocor == "none") "iid" else autocor
+    if (!autocor_missing && !identical(ctrl_struct, want_struct)) {
+      stop("`autocor = '", autocor, "'` conflicts with the noise model in ",
+           "`control` ('", ctrl_struct, "'). Specify the noise model in ",
+           "`control` only.", call. = FALSE)
+    }
+    if (.fmri_lm_robust_enabled(control$robust)) {
+      stop("Robust fitting is not supported for latent datasets: robust weights ",
+           "are voxel-specific and cannot be computed on component scores. ",
+           "Fit the reconstructed voxel data instead.", call. = FALSE)
+    }
+  }
+
   ret <- fmri_lm(formula, block, baseline_model=baseline_model, dataset=dataset,
                  durations=durations, drop_empty=drop_empty,
                  control = control, compute = compute_spec(voxel_chunks = 1L))
@@ -69,6 +138,28 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
   ret$dataset <- dataset
   class(ret) <- c("fmri_latent_lm", class(ret))
   ret
+}
+
+
+#' Internal: refuse voxel-space inference that the latent fit cannot support
+#'
+#' Voxel standard errors from component results need one temporal covariance
+#' shared by all components (joint fit, shared AR). Run-wise pooling and
+#' per-component AR weight each component differently, so no voxel covariance
+#' follows from the component results.
+#' @keywords internal
+#' @noRd
+.latent_check_recon_inference <- function(x) {
+  strategy <- x[["strategy"]] %||% attr(x, "strategy")
+  if (!identical(strategy, "chunkwise") || is.null(x$result[["resid_cov"]])) {
+    stop("Voxel-space standard errors and statistics (`recon = TRUE`) need a ",
+         "noise model shared across components (the default ",
+         "`estimation_spec(\"joint\")` fit). This fit used run-wise ",
+         "estimation or per-component noise, which has no voxel-space ",
+         "covariance. Use `recon = FALSE` for component-level inference.",
+         call. = FALSE)
+  }
+  invisible(TRUE)
 }
 
 
@@ -288,6 +379,7 @@ standard_error.fmri_latent_lm <- function(x, type = c("betas", "contrasts"), rec
   if (!recon) {
     standard_error.fmri_lm(x, type)
   } else {
+    .latent_check_recon_inference(x)
     # Voxel coefficients are L B, so Var(L b_i) = C[i, i] * L Sigma L' with
     # C the unscaled coefficient covariance and Sigma the component residual
     # covariance (both in the fitted, whitened domain for AR fits).
