@@ -73,11 +73,9 @@
   )
 }
 
-#' Internal: demo group_data_csv object
-#' @keywords internal
-#' @noRd
-.demo_group_data_csv <- function() {
-  df <- data.frame(
+# Demo subject-level ROI table shared by the group-data demos below.
+.demo_group_table <- function() {
+  data.frame(
     subject = rep(paste0("s", 1:3), each = 2),
     roi = rep(c("ROI1", "ROI2"), times = 3),
     contrast = "A_vs_B",
@@ -85,23 +83,48 @@
     beta = c(0.2, 0.1, 0.3, 0.15, 0.25, 0.2),
     se = rep(0.1, 6)
   )
-  # Suppress deprecation warning - this helper uses legacy function for compatibility
-  suppressWarnings(group_data_from_csv(
-    df,
+}
+
+#' Internal: demo gds-backed group_data (3 subjects x 2 ROIs, beta + se)
+#' @keywords internal
+#' @noRd
+.demo_group_data <- function() {
+  group_data(
+    .demo_group_table(),
+    format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
     roi_col = "roi",
     contrast_col = "contrast",
     covariate_cols = "age"
-  ))
+  )
 }
 
-#' Internal: demo fmri_meta fit using CSV group data
+# LEGACY-GROUP-DELETE (next minor): legacy group_data_csv demo, used only by
+# the examples of the legacy accessors extract_csv_data(), get_rois() and
+# get_contrasts(). Delete with them.
+#' Internal: demo legacy group_data_csv object
+#' @keywords internal
+#' @noRd
+.demo_group_data_csv <- function() {
+  op <- options(fmrireg.suppress_deprecation = TRUE)
+  on.exit(options(op), add = TRUE)
+  group_data_from_csv(
+    .demo_group_table(),
+    effect_cols = c(beta = "beta", se = "se"),
+    subject_col = "subject",
+    roi_col = "roi",
+    contrast_col = "contrast",
+    covariate_cols = "age"
+  )
+}
+
+#' Internal: demo fmri_meta fit on the demo group data
 #' @keywords internal
 #' @noRd
 .demo_fmri_meta <- function() {
   fmri_meta(
-    data = .demo_group_data_csv(),
+    data = .demo_group_data(),
     formula = ~ 1,
     method = "fe",
     robust = "none",

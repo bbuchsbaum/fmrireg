@@ -1,3 +1,4 @@
+# LEGACY-GROUP-DELETE (next minor): whole file — tests legacy h5 helpers read_h5_metadata(), detect_h5_file_type(), extract_subject_ids_from_paths() and group_data_from_h5().
 # group_data_h5 helpers: mocked read_h5_metadata, detect type, subject ids.
 
 test_that("read_h5_metadata covers list and S4 mocked handles", {

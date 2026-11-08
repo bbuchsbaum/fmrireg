@@ -278,6 +278,7 @@ test_that("paired_diff_block and flip_sign cover ttest helpers", {
   expect_equal(dim(W), c(3, 4))
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests the deprecated constructor group_data_from_fmrilm().
 test_that("group_data_from_fmrilm validates inputs", {
   etab <- data.frame(onset = c(5, 25), condition = factor(c("A", "B")), run = 1L)
   # matrix_dataset lacks NeuroSpace mask — expect spatial reconstruction error

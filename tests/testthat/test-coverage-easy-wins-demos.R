@@ -34,9 +34,9 @@ test_that(".demo_* helpers construct coherent tiny objects", {
   fmod <- fmrireg:::.demo_fmri_model()
   expect_s3_class(fmod, "fmri_model")
 
-  gd <- fmrireg:::.demo_group_data_csv()
-  expect_true(inherits(gd, "group_data") || inherits(gd, "group_data_csv"))
-  expect_true(nrow(gd$data) >= 3L)
+  gd <- fmrireg:::.demo_group_data()
+  expect_true(inherits(gd, "group_data") && inherits(gd, "group_data_gds"))
+  expect_true(length(fmrigds::subjects(gd)) >= 3L)
 
   meta <- suppressWarnings(fmrireg:::.demo_fmri_meta())
   expect_s3_class(meta, "fmri_meta")

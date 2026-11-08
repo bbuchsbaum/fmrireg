@@ -53,8 +53,8 @@ test_that("fmri_ttest classic/meta/welch engines with mc and contrast", {
   auto <- fmri_ttest(gd, formula = ~ 1, engine = "auto")
   expect_s3_class(auto, "fmri_ttest_fit")
 
-  # CSV meta path (no Y materialization) with BH
-  gd_csv <- fmrireg:::.demo_group_data_csv()
+  # gds tabular meta path (no Y materialization) with BH
+  gd_csv <- fmrireg:::.demo_group_data()
   csv_fit <- suppressWarnings(
     fmri_ttest(gd_csv, formula = ~ 1, engine = "meta", mc = "bh")
   )
@@ -75,6 +75,9 @@ test_that("fmri_ttest paired path and input/contrast error gates", {
     regexp = "."
   )
 
+  # LEGACY-GROUP-DELETE (next minor): delete only the lines from here to the
+  # expect_error() below (classic on a legacy group_data_csv; legacy branch of
+  # .fmri_ttest_materialize_effects). The rest of this block is live.
   # GDS-backed objects reject paired / nonzero mu0 when available
   gd_csv <- fmrireg:::.demo_group_data_csv()
   # classic materialization fails for csv; meta works

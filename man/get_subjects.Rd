@@ -16,6 +16,6 @@ Character vector of unique subject IDs
 Get Subject IDs
 }
 \examples{
-gd <- fmrireg:::.demo_group_data_csv()
+gd <- fmrireg:::.demo_group_data()
 get_subjects(gd)
 }

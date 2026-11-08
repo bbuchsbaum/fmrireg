@@ -148,6 +148,7 @@ contrast.fmri_meta <- function(x, contrast, ...) {
   # contrasts, an approximation otherwise).
   has_tri <- !is.null(x$cov) && is.list(x$cov) && identical(x$cov$type, "tri") &&
     !is.null(x$cov$tri)
+  # LEGACY-GROUP-DELETE (next minor): use_exact_roi and its `else if (use_exact_roi)` branch serve legacy group_data_csv fits only (gds fits store x$cov).
   use_exact_roi <- !has_tri && inherits(x, "fmri_meta_roi") &&
     inherits(x$data, "group_data_csv") && identical(x$robust, "none") &&
     (is.null(x$weights) || identical(x$weights, "ivw"))
@@ -169,7 +170,7 @@ contrast.fmri_meta <- function(x, contrast, ...) {
     for (i in seq_len(n_rois)) {
       roi_name <- x$roi_names[i]
       # Extract per-subject SE for this ROI
-      roi_dat <- try(extract_csv_data(x$data, roi = roi_name), silent = TRUE)
+      roi_dat <- try(.legacy_group_quiet(extract_csv_data(x$data, roi = roi_name)), silent = TRUE)
       if (inherits(roi_dat, "try-error") || is.null(roi_dat$se)) {
         next
       }
@@ -473,6 +474,7 @@ coef_image.fmri_meta <- function(object, coef = 1, statistic = c("estimate", "se
   )
   
   # Convert to image if spatial data
+  # LEGACY-GROUP-DELETE (next minor): drop the group_data_h5 / group_data_nifti tests here.
   if (inherits(object$data, "group_data_h5") ||
       inherits(object$data, "group_data_nifti") ||
       inherits(object$data, "group_data_gds")) {
@@ -489,6 +491,7 @@ coef_image.fmri_meta <- function(object, coef = 1, statistic = c("estimate", "se
 #' @return NeuroVol object
 #' @keywords internal
 reconstruct_image <- function(values, object) {
+  # LEGACY-GROUP-DELETE (next minor): the group_data_h5 and group_data_nifti branches of reconstruct_image(); keep the gds branch.
   if (inherits(object$data, "group_data_h5")) {
     # Use space information from group_data_h5
     if (!is.null(object$data$space)) {
@@ -879,6 +882,7 @@ write_results.fmri_meta <- function(x,
     return(fallback)
   }
 
+  # LEGACY-GROUP-DELETE (next minor): the group_data_nifti and group_data_h5 branches below; keep the gds handling.
   if (inherits(x$data, "group_data_nifti")) {
     if (!is.null(x$data$mask_data)) {
       mask_array <- as.array(x$data$mask_data) > 0
@@ -1108,6 +1112,7 @@ write_results.fmri_meta <- function(x,
   data <- x$data
   sources <- character(0)
 
+  # LEGACY-GROUP-DELETE (next minor): the group_data_nifti and group_data_h5 branches; keep the gds branch.
   if (inherits(data, "group_data_nifti")) {
     sources <- c(data$beta_paths, data$se_paths, data$var_paths, data$t_paths)
   } else if (inherits(data, "group_data_h5")) {

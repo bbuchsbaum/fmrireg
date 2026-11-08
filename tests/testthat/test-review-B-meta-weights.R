@@ -2,24 +2,20 @@
 # with an estimated residual scale (B2), and custom weight matrices are sliced
 # per chunk.
 
-mock_nifti_gd_w <- function(beta, se, covariates = NULL) {
+# Subject-level effects (subjects x voxels) as in-memory gds group data.
+gds_gd_w <- function(beta, se, covariates = NULL) {
   S <- nrow(beta)
   P <- ncol(beta)
-  dims <- c(P, 1L, 1L)
-  store <- new.env()
-  bp <- paste0("beta_", seq_len(S))
-  sp <- paste0("se_", seq_len(S))
-  for (i in seq_len(S)) {
-    store[[bp[i]]] <- array(beta[i, ], dims)
-    store[[sp[i]]] <- array(se[i, ], dims)
-  }
-  gd <- structure(
-    list(beta_paths = bp, se_paths = sp, var_paths = NULL, t_paths = NULL, df = NULL,
-         subjects = paste0("s", seq_len(S)), covariates = covariates, mask = NULL,
-         mask_data = NULL, dim = dims, format = "nifti", n_subjects = S, n_voxels = P),
-    class = c("group_data_nifti", "group_data")
-  )
-  list(gd = gd, store = store)
+  subj <- paste0("s", seq_len(S))
+  B <- t(beta)
+  dimnames(B) <- list(paste0("v", seq_len(P)), subj)
+  V <- t(se^2)
+  dimnames(V) <- dimnames(B)
+  cd <- if (is.null(covariates)) data.frame(row.names = subj) else covariates
+  rownames(cd) <- subj
+  g <- fmrigds::as_gds(list(beta = B, var = V), col_data = cd)
+  class(g) <- c("group_data_gds", "group_data", class(g))
+  g
 }
 
 weights_sim <- function(S = 13L, P = 9L, scale = 1, seed = 21) {
@@ -31,14 +27,12 @@ weights_sim <- function(S = 13L, P = 9L, scale = 1, seed = 21) {
 }
 
 test_that("B2: equal-weights fit equals the one-sample t-test for any data scale", {
+  skip_if_not_installed("fmrigds")
   for (scale in c(1e-3, 1, 250)) {
     sim <- weights_sim(scale = scale)
-    mk <- mock_nifti_gd_w(sim$beta, sim$se)
-    testthat::local_mocked_bindings(
-      read_nifti_data = function(path, mask = NULL) mk$store[[path]]
-    )
+    gd <- gds_gd_w(sim$beta, sim$se)
     for (method in c("fe", "pm")) {
-      fit <- fmri_meta(mk$gd, method = method, weights = "equal", verbose = FALSE, n_threads = 1)
+      fit <- fmri_meta(gd, method = method, weights = "equal", verbose = FALSE, n_threads = 1)
       for (j in seq_len(ncol(sim$beta))) {
         tt <- stats::t.test(sim$beta[, j])
         info <- paste("scale", scale, method, "voxel", j)
@@ -53,17 +47,15 @@ test_that("B2: equal-weights fit equals the one-sample t-test for any data scale
 })
 
 test_that("B2: custom weights equal weighted least squares (lm with weights)", {
+  skip_if_not_installed("fmrigds")
   sim <- weights_sim()
-  mk <- mock_nifti_gd_w(sim$beta, sim$se, covariates = sim$covars)
-  testthat::local_mocked_bindings(
-    read_nifti_data = function(path, mask = NULL) mk$store[[path]]
-  )
+  gd <- gds_gd_w(sim$beta, sim$se, covariates = sim$covars)
   S <- nrow(sim$beta)
   w <- seq(0.5, 3, length.out = S)
-  fit <- fmri_meta(mk$gd, formula = ~ x, weights = "custom", weights_custom = w,
+  fit <- fmri_meta(gd, formula = ~ x, weights = "custom", weights_custom = w,
                    verbose = FALSE, n_threads = 1)
   # rescaling the weights does not change anything
-  fit10 <- fmri_meta(mk$gd, formula = ~ x, weights = "custom", weights_custom = 10 * w,
+  fit10 <- fmri_meta(gd, formula = ~ x, weights = "custom", weights_custom = 10 * w,
                      verbose = FALSE, n_threads = 1)
   expect_equal(fit10$se, fit$se, tolerance = 1e-10)
   for (j in seq_len(ncol(sim$beta))) {
@@ -78,17 +70,15 @@ test_that("B2: custom weights equal weighted least squares (lm with weights)", {
 })
 
 test_that("B2: a custom weight matrix is sliced per chunk (chunk_size does not matter)", {
+  skip_if_not_installed("fmrigds")
   sim <- weights_sim(P = 11L)
-  mk <- mock_nifti_gd_w(sim$beta, sim$se, covariates = sim$covars)
-  testthat::local_mocked_bindings(
-    read_nifti_data = function(path, mask = NULL) mk$store[[path]]
-  )
+  gd <- gds_gd_w(sim$beta, sim$se, covariates = sim$covars)
   S <- nrow(sim$beta)
   P <- ncol(sim$beta)
   set.seed(3)
   W <- matrix(stats::runif(S * P, 0.2, 4), S, P)
   fits <- lapply(c(3L, 4L, 100L), function(cs) {
-    fmri_meta(mk$gd, formula = ~ x, weights = "custom", weights_custom = W,
+    fmri_meta(gd, formula = ~ x, weights = "custom", weights_custom = W,
               chunk_size = cs, verbose = FALSE, n_threads = 1)
   })
   expect_equal(fits[[2]]$coefficients, fits[[1]]$coefficients)
@@ -127,6 +117,7 @@ test_that("B2: fmri_ttest meta engine with equal / custom weights matches t.test
   }
 })
 
+# LEGACY-GROUP-DELETE (next minor): tests fit_meta_single(), the legacy csv/ROI fitter.
 test_that("B2: fit_meta_single (ROI path) uses the same weighting", {
   sim <- weights_sim()
   X <- stats::model.matrix(~ x, sim$covars)
