@@ -2,6 +2,18 @@
 
 ## fmrireg (development version)
 
+- Post-hoc contrast specifications now resolve against
+  [`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.html)
+  terms.
+  [`fit_contrasts()`](https://bbuchsbaum.github.io/fmrireg/reference/fit_contrasts.md)
+  skipped feature terms when matching a spec to a term, so
+  [`column_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.html)
+  on a feature term failed with “does not resolve against any event
+  term”. With an fmridesign that declares feature bands,
+  `fit_contrasts(fit, Fcontrasts(fit$model$event_model))` gives the
+  omnibus F-test for each feature term and one for each declared
+  sub-band.
+
 ### Dependencies
 
 - `tidyr` moved from Imports to Suggests (it is still used by

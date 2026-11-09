@@ -62,7 +62,8 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="fmrireg-development-version">fmrireg (development version)<a class="anchor" aria-label="anchor" href="#fmrireg-development-version"></a></h2>
-<div class="section level3">
+<ul><li>Post-hoc contrast specifications now resolve against <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/feature.html" class="external-link">feature()</a></code> terms. <code><a href="../reference/fit_contrasts.html">fit_contrasts()</a></code> skipped feature terms when matching a spec to a term, so <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.html" class="external-link">column_contrast()</a></code> on a feature term failed with “does not resolve against any event term”. With an fmridesign that declares feature bands, <code>fit_contrasts(fit, Fcontrasts(fit$model$event_model))</code> gives the omnibus F-test for each feature term and one for each declared sub-band.</li>
+</ul><div class="section level3">
 <h3 id="dependencies-development-version">Dependencies<a class="anchor" aria-label="anchor" href="#dependencies-development-version"></a></h3>
 <ul><li>
 <code>tidyr</code> moved from Imports to Suggests (it is still used by vignettes). <code><a href="../reference/design_plot.html">design_plot()</a></code> now reshapes the design matrix with an internal helper that returns the same long tibble <code><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">tidyr::pivot_longer()</a></code> produced, which trims the install footprint, notably under webR.</li>
