@@ -1257,7 +1257,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
 
 #' Resolve a contrast_spec against the fitted event terms
 #'
-#' Tries every (non-feature) event term with `contrast_weights()`; the spec
+#' Tries every event term with `contrast_weights()`; the spec
 #' must resolve against exactly one of them, with every weight row naming one
 #' of that term's design columns (the same mapping `contrast_weights()` uses
 #' for an event model during the fit).
@@ -1290,7 +1290,6 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   hits <- list()
   for (k in seq_along(event_terms)) {
     term <- event_terms[[k]]
-    if (inherits(term, "feature_term")) next
     term_vars <- unique(c(names(term$event_table), names(term$events), term$varname))
     if (length(spec_vars) > 0L && !all(spec_vars %in% term_vars)) next
     warns <- character(0)
