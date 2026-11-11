@@ -1,5 +1,14 @@
 # fmrireg (development version)
 
+* New `hrf_amplitude_latency()` turns the fitted coefficients of a
+  multi-basis HRF term (`hrf(cond, basis = "spmg2")`, or the quadrature pair
+  `fmrihrf::HRF_SPMGQ`) into per-voxel response amplitude and latency maps for
+  each condition, via `fmrihrf::amplitude_latency()`. The amplitude corrects
+  the bias a latency shift puts on the canonical coefficient, and stays
+  accurate for larger shifts than the derivative-boost estimate (also
+  available with `method = "boost"`). Needs an fmrihrf that provides
+  `amplitude_latency()`.
+
 * Post-hoc contrast specifications now resolve against `feature()` terms.
   `fit_contrasts()` skipped feature terms when matching a spec to a term, so
   `column_contrast()` on a feature term failed with "does not resolve against
