@@ -266,6 +266,9 @@
 - [`group_data_from_nifti()`](https://bbuchsbaum.github.io/fmrireg/reference/group_data_from_nifti.md)
   : Create Group Dataset from NIfTI Files
 
+- [`hrf_amplitude_latency()`](https://bbuchsbaum.github.io/fmrireg/reference/hrf_amplitude_latency.md)
+  : Response Amplitude and Latency from a Multi-Basis Fit
+
 - [`hrf_smoothing_kernel()`](https://bbuchsbaum.github.io/fmrireg/reference/hrf_smoothing_kernel.md)
   : Compute an HRF smoothing kernel
 

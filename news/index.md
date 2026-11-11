@@ -2,6 +2,17 @@
 
 ## fmrireg (development version)
 
+- New
+  [`hrf_amplitude_latency()`](https://bbuchsbaum.github.io/fmrireg/reference/hrf_amplitude_latency.md)
+  turns the fitted coefficients of a multi-basis HRF term
+  (`hrf(cond, basis = "spmg2")`, or the quadrature pair
+  `fmrihrf::HRF_SPMGQ`) into per-voxel response amplitude and latency
+  maps for each condition, via `fmrihrf::amplitude_latency()`. The
+  amplitude corrects the bias a latency shift puts on the canonical
+  coefficient, and stays accurate for larger shifts than the
+  derivative-boost estimate (also available with `method = "boost"`).
+  Needs an fmrihrf that provides `amplitude_latency()`.
+
 - Post-hoc contrast specifications now resolve against
   [`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.html)
   terms.
