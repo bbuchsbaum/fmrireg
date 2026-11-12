@@ -18,7 +18,7 @@
                                     neuroim2::NeuroSpace(c(V, 1, 1)))
   list(
     Z = Z, L = L, ev = ev, rl = rl,
-    latent = as_fmri_frame(list(basis = Z, loadings = L, mask = mask), TR = 2,
+    latent = latent_list_frame(list(basis = Z, loadings = L, mask = mask), TR = 2,
                           run_length = c(rl, rl), events = ev),
     dense = as_fmri_frame(Z %*% t(L), TR = 2, run_length = c(rl, rl), events = ev)
   )

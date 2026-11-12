@@ -19,3 +19,9 @@ frame_data <- function(x) {
 frame_sframe <- function(x) {
   fmridataset::as_sampling_frame(x)
 }
+
+# A latent frame from list(basis, loadings, mask), the form only the deprecated
+# latent_frame() accepts; built here without the deprecation warning.
+latent_list_frame <- function(x, ..., events = NULL) {
+  .latent_frame_impl(x, ..., event_table = events)
+}

@@ -19,7 +19,7 @@
   scores[, 1] <- scores[, 1] + 2 * rep(c(0, 1), length.out = n)
   L <- matrix(rnorm(nvox * k), nvox, k)
   list(
-    latent = as_fmri_frame(list(basis = scores, loadings = L, mask = mask),
+    latent = latent_list_frame(list(basis = scores, loadings = L, mask = mask),
                           TR = 2, run_length = rl, events = ev),
     scores = as_fmri_frame(scores, TR = 2, run_length = rl, events = ev),
     L = L

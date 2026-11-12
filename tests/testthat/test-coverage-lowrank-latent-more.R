@@ -95,7 +95,7 @@ test_that("fmri_latent_lm rejects unsupported autocor and non-latent datasets", 
     fmri_latent_lm(
       onset ~ hrf(condition), block = ~ run, dataset = dset, durations = 0
     ),
-    "latent_frame"
+    "basis_space"
   )
 
   skip_if_not_installed("fmristore")

@@ -274,9 +274,14 @@ latent_frame <- function(x, TR, run_length = NULL, event_table = NULL,
 .dset_censor <- function(x) fmridataset::temporal_schema(x)$censor
 
 #' Dense observation-by-feature matrix of the active assay
+#'
+#' Unlabelled: the engines index by position, and IDs on every block would
+#' leak into fitted quantities (sigma, rss, statistics) as names.
 #' @keywords internal
 #' @noRd
-.dset_data_matrix <- function(x, ...) fmridataset::collect_assay(x, ...)
+.dset_data_matrix <- function(x, ..., dimnames = FALSE) {
+  fmridataset::collect_assay(x, ..., dimnames = dimnames)
+}
 
 #' Feature space (or the parent volume space of a basis space)
 #' @keywords internal
@@ -332,7 +337,7 @@ latent_frame <- function(x, TR, run_length = NULL, event_table = NULL,
   } else {
     x[rows, cols]
   }
-  fmridataset::collect_assay(view)
+  fmridataset::collect_assay(view, dimnames = FALSE)
 }
 
 #' A chunk of data: the shape fmrireg's chunkwise and runwise engines consume

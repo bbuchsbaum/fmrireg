@@ -83,7 +83,7 @@ test_that("glm_ols and glm_lss happy paths plus validation branches", {
   )
   expect_equal(dim(ols_str$betas_ran), dim(ols_obj$betas_ran))
 
-  expect_error(glm_ols(list(), emod, fmrihrf::HRF_SPMG1), "matrix_frame")
+  expect_error(glm_ols(list(), emod, fmrihrf::HRF_SPMG1), "as_fmri_frame")
   expect_error(glm_ols(fx$dataset, list(), fmrihrf::HRF_SPMG1), "event_model")
   expect_error(glm_ols(fx$dataset, emod, "not_a_basis"), "Unknown HRF")
   expect_error(glm_ols(fx$dataset, emod, 123), "HRF object")
@@ -103,7 +103,7 @@ test_that("glm_ols and glm_lss happy paths plus validation branches", {
     "C\\+\\+-optimized LSS|retired"
   )
 
-  expect_error(glm_lss(list(), emod, fmrihrf::HRF_SPMG1), "matrix_frame")
+  expect_error(glm_lss(list(), emod, fmrihrf::HRF_SPMG1), "as_fmri_frame")
   expect_error(glm_lss(fx$dataset, list(), fmrihrf::HRF_SPMG1), "event_model")
   expect_error(glm_lss(fx$dataset, emod, "bad_basis"), "Unknown HRF")
   expect_error(glm_lss(fx$dataset, emod, TRUE), "HRF object")
