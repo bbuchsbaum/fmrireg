@@ -8,7 +8,7 @@ test_that("fit_contrasts.fmri_lm resolves pair_contrast and F-contrast specs", {
     run = 1L
   )
   Y <- matrix(rnorm(100 * 5), 100, 5)
-  dset <- matrix_frame(Y, TR = 1, run_length = 100, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = 100, events = etab)
   fit <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)
 
   con <- pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B")
@@ -102,7 +102,7 @@ test_that(".fit_rrr_gls_engine bootstrap SE and energy rank modes", {
     run = 1L
   )
   Y <- matrix(rnorm(80 * 6), 80, 6)
-  dset <- matrix_frame(Y, TR = 1, run_length = 80, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = 80, events = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
     sampling_frame = frame_sframe(dset)

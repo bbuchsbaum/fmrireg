@@ -17,8 +17,8 @@
 
   # First pass only to obtain the design matrix that fmri_lm() will use.
   probe <- fmri_lm(form, block = ~run,
-                   dataset = matrix_frame(matrix(rnorm(100 * n_vox), 100, n_vox),
-                                          TR = 2, run_length = 100, event_table = ev))
+                   dataset = as_fmri_frame(matrix(rnorm(100 * n_vox), 100, n_vox),
+                                          TR = 2, run_length = 100, events = ev))
   X <- as.matrix(design_matrix(probe$model))
   p <- ncol(X)
   ev_idx <- probe$result$event_indices
@@ -31,7 +31,7 @@
   Y <- X %*% t(B) + matrix(rnorm(100 * n_vox, sd = noise_sd), 100, n_vox)
 
   fit <- fmri_lm(form, block = ~run,
-                 dataset = matrix_frame(Y, TR = 2, run_length = 100, event_table = ev))
+                 dataset = as_fmri_frame(Y, TR = 2, run_length = 100, events = ev))
   list(fit = fit, B = B, X = X, ev_idx = ev_idx)
 }
 

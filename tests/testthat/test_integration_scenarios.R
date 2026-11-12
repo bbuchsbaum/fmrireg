@@ -19,11 +19,11 @@ test_that("AR + Robust fitting integration works", {
   Y <- X %*% c(2, 1) + as.vector(errors)
   
   # Create dataset
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     matrix(Y, ncol = 1),
     TR = 2,
     run_length = n,
-    event_table = data.frame(
+    events = data.frame(
       onsets = seq(10, 90, by = 20),
       condition = factor(rep(c("A", "B"), length.out = 5)),
       run = rep(1, 5)
@@ -75,11 +75,11 @@ test_that("Multi-run with different strategies produces consistent results", {
   all_events <- do.call(rbind, event_list)
   all_data <- do.call(rbind, data_list)
   
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     all_data,
     TR = 2,
     run_length = rep(n_per_run, n_runs),
-    event_table = all_events
+    events = all_events
   )
   
   # Fit with runwise strategy
@@ -130,11 +130,11 @@ test_that("Complex contrast specifications work with all model types", {
     }
   }
   
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     data_mat,
     TR = 2,  # Longer TR for stability
     run_length = c(50, 50),
-    event_table = event_data
+    events = event_data
   )
   
   # Test basic model fitting first
@@ -169,11 +169,11 @@ test_that("Missing data handling works across components", {
     run = rep(1, 8)
   )
   
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     data_mat,
     TR = 2,
     run_length = n,
-    event_table = event_data
+    events = event_data
   )
   
   # By default fmri_lm fails fast on non-finite response data.
@@ -222,11 +222,11 @@ test_that("Large dataset chunking maintains accuracy", {
     run = rep(1, 5)
   )
   
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     data_mat,
     TR = 1,
     run_length = n_time,
-    event_table = event_data
+    events = event_data
   )
   
   # Test with different chunk sizes

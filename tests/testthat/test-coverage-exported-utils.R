@@ -11,7 +11,7 @@ tiny_matrix_dataset <- function(n_time = 60L, n_vox = 8L, n_events = 6L, TR = 1)
   )
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
   list(
-    dataset = matrix_frame(Y, TR = TR, run_length = n_time, event_table = etab),
+    dataset = as_fmri_frame(Y, TR = TR, run_length = n_time, events = etab),
     events = etab
   )
 }

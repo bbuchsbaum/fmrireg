@@ -161,7 +161,7 @@ test_that("soft subspace options, apply, and extract_nuisance_timeseries", {
   expect_equal(dim(cleaned$X), dim(X))
   expect_error(apply_soft_projection(list(), Y, X), "soft_projection")
 
-  dset <- matrix_frame(Y, TR = 1, run_length = c(30, 30))
+  dset <- as_fmri_frame(Y, TR = 1, run_length = c(30, 30))
   mask <- c(rep(TRUE, 3), rep(FALSE, 7))
   nuis <- extract_nuisance_timeseries(dset, mask)
   expect_equal(dim(nuis), c(60L, 3L))

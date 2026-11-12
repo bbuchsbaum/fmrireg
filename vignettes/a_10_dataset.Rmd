@@ -77,10 +77,10 @@ knitr::kable(data.frame(
     "fMRIPrep derivatives (BIDS)"
   ),
   constructor = c(
-    "neurovec_frame()",
-    "nifti_frame()",
-    "matrix_frame()",
-    "latent_frame()",
+    "as_fmri_frame()",
+    "read_nifti_bold()",
+    "as_fmri_frame()",
+    "as_fmri_frame()",
     "fmridataset::read_bids_bold()"
   ),
   feature_space = c(
@@ -116,17 +116,17 @@ rebuilds the `sampling_frame` from them whenever the design code needs one.
 Because the columns are the truth, the timing follows subsetting and
 reordering of the frame for free.
 
-## In-Memory Volumetric Data (`neurovec_frame`)
+## In-memory volumetric data (`as_fmri_frame()`)
 
 Use this when your fMRI runs are loaded as `neuroim2::NeuroVec` objects in your R session.
 
 **Key Arguments:**
 
-*   `scans`: A `NeuroVec`, or a *list* of them, one for each run.
+*   `x`: A `NeuroVec`, or a *list* of them, one for each run.
 *   `mask`: A `neuroim2::LogicalNeuroVol` (or a `NeuroVol` whose non-zero voxels form the mask).
 *   `TR`: Repetition time (seconds), one value or one per run.
 *   `run_length` (Optional): Vector of run lengths; if omitted, inferred from the fourth dimension of each scan.
-*   `event_table` (Optional): A `data.frame` containing experimental design information.
+*   `events` (Optional): A `data.frame` containing experimental design information.
 *   `censor` (Optional): One entry per scan marking volumes to exclude (logical, 0/1, or 1-based indices).
 
 ```{r mem_dataset_example}
@@ -145,11 +145,11 @@ events_df <- data.frame(
 )
 
 # Create the frame
-mem_frame <- neurovec_frame(scans = list(scan1, scan2),
+mem_frame <- as_fmri_frame(list(scan1, scan2),
                             mask = mask_vol,
                             TR = 2.0,
                             # run_length automatically inferred as c(20, 20)
-                            event_table = events_df)
+                            events = events_df)
 
 dim(mem_frame)              # scans by masked voxels
 class(fmridataset::space(mem_frame))     # a volume_space on the mask's grid
@@ -159,18 +159,17 @@ as_sampling_frame(mem_frame)
 The masked voxel series are extracted once, with `neuroim2::series()`, so a
 `SparseNeuroVec` does not need to be densified.
 
-## File-Based Volumetric Data (`nifti_frame`)
+## File-based volumetric data (`read_nifti_bold()`)
 
 This is often the most practical option for typical fMRI analyses where data resides in files.
 
 **Key Arguments:**
 
-*   `scans`: A character vector of file paths to the 4D fMRI image files (e.g., `.nii.gz`), one path per run.
+*   `paths`: A character vector of file paths to the 4D fMRI image files (e.g., `.nii.gz`), one path per run.
 *   `mask`: The path to a 3D mask image (or a `LogicalNeuroVol`, or a `fmridataset::volume_space`).
 *   `TR`: Repetition time (seconds).
 *   `run_length` (Optional): Volumes per run; if omitted, read from each file's header.
-*   `event_table` (Optional): A `data.frame` with experimental design info.
-*   `base_path` (Optional): A path to prepend to relative file paths in `scans` and `mask`.
+*   `events` (Optional): A `data.frame` with experimental design info.
 
 ```{r file-dataset-fixture, include=FALSE}
 # --- Create Dummy Files (for illustration only) ---
@@ -205,19 +204,17 @@ below genuinely executes. In a study, start with your existing run and mask
 paths; the important teaching code is the constructor itself.
 
 ```{r file-dataset-example}
-# Pass only filenames to 'scans' and 'mask', and specify the directory in 'base_path'
-file_frame <- nifti_frame(scans = c(scan1_filename, scan2_filename),
-                          mask = mask_filename,
-                          TR = 1.5,
-                          run_length = c(20, 25), # Must match time dim of files
-                          event_table = events_df,
-                          base_path = tmp_dir)    # Set base_path to the temp directory
+file_frame <- read_nifti_bold(file.path(tmp_dir, c(scan1_filename, scan2_filename)),
+                              mask = file.path(tmp_dir, mask_filename),
+                              TR = 1.5,
+                              run_length = c(20, 25), # must match the files
+                              events = events_df)
 
 dim(file_frame)
 temporal_schema(file_frame)$run_lengths
 ```
 
-The frame wraps a `fmridataset::nifti_array_source()`: headers and the mask are
+The frame wraps a `fmridataset::nifti_source()`: headers and the mask are
 read at construction, but no BOLD volumes are read until a fit needs them, and
 reads are pushed down per file and per masked voxel. If the files change on
 disk after construction, the next read fails with a structured stale-source
@@ -227,16 +224,16 @@ error rather than silently returning different values.
 file.remove(mask_file_full_path, scan1_file_full_path, scan2_file_full_path)
 ```
 
-## Matrix Data (`matrix_frame`)
+## Matrix data (`as_fmri_frame()`)
 
 Use this if your fMRI data is already represented as a 2D matrix where rows are time points and columns are voxels or components (e.g., after surface projection or ROI averaging).
 
 **Key Arguments:**
 
-*   `datamat`: The numeric matrix (time x features).
+*   `x`: The numeric matrix (time x features).
 *   `TR`: Repetition time (seconds).
 *   `run_length`: Vector specifying the number of rows (time points) belonging to each run.
-*   `event_table` (Optional): One row per experimental event, with onset,
+*   `events` (Optional): One row per experimental event, with onset,
     condition, run, and any modulators used by the model. Its row count usually
     differs from the number of scans; onsets and run labels must instead be
     valid for the declared run lengths.
@@ -257,41 +254,41 @@ events_mat_df <- data.frame(
   run = rep(1:2, each = 5)
 )
 
-mat_frame <- matrix_frame(datamat = example_matrix,
+mat_frame <- as_fmri_frame(example_matrix,
                           TR = 2.5,
                           run_length = run_len,
-                          event_table = events_mat_df)
+                          events = events_mat_df)
 
 dim(mat_frame)
 class(fmridataset::space(mat_frame))   # an index_space: no spatial geometry
 as_sampling_frame(mat_frame)
 ```
 
-For `matrix_frame`, the concept of a spatial mask is implicit; all columns
-provided in `datamat` are included, and the feature space is a plain
+For a matrix, the concept of a spatial mask is implicit; all columns
+of `x` are included, and the feature space is a plain
 `index_space`.
 
-## Latent Data (`latent_frame`)
+## Latent data (`as_fmri_frame()`)
 
-This constructor is for data that has undergone dimensionality reduction (e.g., PCA, ICA). It takes a `fmristore::LatentNeuroVec`, which stores the basis (latent components over time) and loadings (spatial maps of components), and builds a frame whose assay holds the component scores and whose feature space is a `fmridataset::basis_space` carrying the loadings as its synthesis operator.
+This method is for data that has undergone dimensionality reduction (e.g., PCA, ICA). It takes a `fmristore::LatentNeuroVec`, which stores the basis (latent components over time) and loadings (spatial maps of components), and builds a frame whose assay holds the component scores and whose feature space is a `fmridataset::basis_space` carrying the loadings as its synthesis operator.
 
 **Key Arguments:**
 
 *   `x`: A `LatentNeuroVec` object from the `fmristore` package.
 *   `TR`: Repetition time (seconds).
 *   `run_length`: Vector specifying run lengths (must sum to the time dimension of `x`).
-*   `event_table` (Optional): Experimental design `data.frame`.
+*   `events` (Optional): Experimental design `data.frame`.
 
 ```{r latent_dataset_example, eval=FALSE}
 # Conceptual example (requires fmristore package and a LatentNeuroVec)
 # Assuming 'my_latent_neuro_vec' is a LatentNeuroVec object representing
 # 20 components over 300 time points (2 runs of 150)
 
-latent_frame_obj <- latent_frame(
+latent_frame_obj <- as_fmri_frame(
   my_latent_neuro_vec,
   TR = 2.0,
   run_length = c(150, 150),
-  event_table = some_event_df
+  events = some_event_df
 )
 collect_assay(latent_frame_obj)              # scores: time x components
 basis_synthesis(fmridataset::space(latent_frame_obj))     # loadings: voxels x components

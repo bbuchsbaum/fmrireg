@@ -46,11 +46,11 @@
   colnames(Y) <- paste0("voxel_", seq_len(n_voxels))
 
   list(
-    dataset = matrix_frame(
-      datamat = Y,
+    dataset = as_fmri_frame(
+      x = Y,
       TR = 1,
       run_length = n,
-      event_table = events
+      events = events
     ),
     events = events,
     Y = Y,
@@ -99,8 +99,8 @@
     signal_b %o% amplitudes["B", ] + drift +
     matrix(rnorm(n * 2L, sd = 0.014 * hrf_scale), nrow = n)
   colnames(response) <- c("visual_ROI", "motor_ROI")
-  dataset <- matrix_frame(
-    response, TR = 1, run_length = n, event_table = events
+  dataset <- as_fmri_frame(
+    response, TR = 1, run_length = n, events = events
   )
 
   list(
@@ -192,11 +192,11 @@ test_that("estimate_hrf distinguishes canonical and delayed response shapes", {
 
 test_that("estimate_hrf is linear in the response for fixed smoothing", {
   fixture <- .make_estimate_hrf_fixture(n_voxels = 2L, include_fixed = FALSE)
-  scaled_dataset <- matrix_frame(
-    datamat = 3.5 * fixture$Y,
+  scaled_dataset <- as_fmri_frame(
+    x = 3.5 * fixture$Y,
     TR = 1,
     run_length = nrow(fixture$Y),
-    event_table = fixture$events
+    events = fixture$events
   )
 
   fit <- estimate_hrf(
@@ -371,11 +371,11 @@ test_that("GCV and fitted curves respect scale and ordering invariants", {
 
   scales <- c(0.1, 4, 25)
   scaled_data <- sweep(fixture$Y, 2L, scales, "*")
-  scaled_dataset <- matrix_frame(
+  scaled_dataset <- as_fmri_frame(
     scaled_data,
     TR = 1,
     run_length = nrow(scaled_data),
-    event_table = fixture$events
+    events = fixture$events
   )
   scaled_fit <- estimate_hrf(
     onset ~ hrf(condition), block = ~run, dataset = scaled_dataset,
@@ -391,11 +391,11 @@ test_that("GCV and fitted curves respect scale and ordering invariants", {
   )
 
   permutation <- c(3L, 1L, 2L)
-  permuted_dataset <- matrix_frame(
+  permuted_dataset <- as_fmri_frame(
     fixture$Y[, permutation, drop = FALSE],
     TR = 1,
     run_length = nrow(fixture$Y),
-    event_table = fixture$events[sample.int(nrow(fixture$events)), , drop = FALSE]
+    events = fixture$events[sample.int(nrow(fixture$events)), , drop = FALSE]
   )
   permuted_fit <- estimate_hrf(
     onset ~ hrf(condition), block = ~run, dataset = permuted_dataset,
@@ -438,8 +438,8 @@ test_that("estimate_hrf handles runwise baselines and condition labels", {
     rep(c(-0.4, 0.6), times = run_length) +
     matrix(rnorm(sum(run_length) * 2L, sd = noise_sd), ncol = 2L)
   colnames(Y) <- c("left_ROI", "right_ROI")
-  dataset <- matrix_frame(
-    Y, TR = 1, run_length = run_length, event_table = events
+  dataset <- as_fmri_frame(
+    Y, TR = 1, run_length = run_length, events = events
   )
 
   fit <- estimate_hrf(
@@ -479,11 +479,11 @@ test_that("estimate_hrf fails clearly on invalid numerical contracts", {
 
   nonfinite_data <- fixture$Y
   nonfinite_data[3, 1] <- NA_real_
-  nonfinite_dataset <- matrix_frame(
+  nonfinite_dataset <- as_fmri_frame(
     nonfinite_data,
     TR = 1,
     run_length = nrow(nonfinite_data),
-    event_table = fixture$events
+    events = fixture$events
   )
   expect_error(
     estimate_hrf(
@@ -498,11 +498,11 @@ test_that("estimate_hrf fails clearly on invalid numerical contracts", {
     condition_copy = factor(rep(c("A", "B"), 4L)),
     run = 1L
   )
-  aliased_dataset <- matrix_frame(
+  aliased_dataset <- as_fmri_frame(
     matrix(rnorm(120), ncol = 1L),
     TR = 1,
     run_length = 120L,
-    event_table = aliased_events
+    events = aliased_events
   )
   expect_error(
     estimate_hrf(

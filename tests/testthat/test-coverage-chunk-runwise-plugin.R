@@ -8,7 +8,7 @@ make_two_run_fx <- function(n_per = 40L, V = 4L, seed = 17L) {
     run = rep(1:2, each = 4)
   )
   Y <- matrix(rnorm((2 * n_per) * V), 2 * n_per, V)
-  dset <- matrix_frame(Y, TR = 1, run_length = c(n_per, n_per), event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = c(n_per, n_per), events = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
     sampling_frame = frame_sframe(dset)

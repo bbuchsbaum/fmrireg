@@ -21,8 +21,8 @@ estimate_betas(x, ...)
 )
 }
 \arguments{
-\item{x}{An \code{fmri_frame} (see \code{\link[=matrix_frame]{matrix_frame()}}, \code{\link[=neurovec_frame]{neurovec_frame()}},
-\code{\link[=nifti_frame]{nifti_frame()}}, and \code{\link[=latent_frame]{latent_frame()}}). When the frame's feature space is a
+\item{x}{An \code{fmri_frame} (see \code{\link[fmridataset:as_fmri_frame]{fmridataset::as_fmri_frame()}} and
+\code{\link[fmridataset:frame-constructors]{fmridataset::read_nifti_bold()}}). When the frame's feature space is a
 \code{volume_space}, the fixed and random betas are returned as \code{NeuroVec}
 objects on that grid; otherwise (index or basis spaces) they are returned
 as coefficient-by-feature matrices.}
@@ -90,11 +90,11 @@ event_data <- data.frame(
 
 # Create sampling frame and dataset
 sframe <- sampling_frame(blocklens = 100, TR = 2)
-dset <- matrix_frame(
+dset <- as_fmri_frame(
   matrix(rnorm(100 * 2), 100, 2),
   TR = 2,
   run_length = 100,
-  event_table = event_data
+  events = event_data
 )
 
 # Estimate betas using mixed-effects model
@@ -111,8 +111,8 @@ facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrir
 facedes$frun <- factor(facedes$run)
 scans <- paste0("rscan0", 1:6, ".nii")
 
-dset <- nifti_frame(scans=scans, mask="mask.nii", TR=1.5,
-        run_length=rep(436,6), event_table=facedes)
+dset <- read_nifti_bold(scans, mask="mask.nii", TR=1.5,
+        run_length=rep(436,6), events = facedes)
 fixed = onset ~ hrf(run)
 ran = onset ~ trialwise()
 block = ~ run
@@ -126,9 +126,9 @@ Mumford, J. A., et al. (2012). Deconvolving BOLD activation in event-related des
 Pedregosa, F., et al. (2015). Data-driven HRF estimation for encoding and decoding models. NeuroImage, 104, 209-220.
 }
 \seealso{
-\code{\link{matrix_frame}}, \code{\link{neurovec_frame}}, \code{\link{latent_frame}}
+\code{\link{as_fmri_frame}}, \code{\link{read_nifti_bold}}
 
-\code{\link{matrix_frame}}, \code{\link{baseline_model}}, \code{\link{event_model}}
+\code{\link{as_fmri_frame}}, \code{\link{baseline_model}}, \code{\link{event_model}}
 }
 \concept{estimate_betas}
 \concept{model_estimation}

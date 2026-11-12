@@ -11,7 +11,7 @@ tiny_rrr <- function(n = 64L, V = 6L, seed = 51L, with_contrast = TRUE) {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
   form <- if (with_contrast) {
     con <- pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B")
     onset ~ hrf(condition, contrasts = list(con))

@@ -20,9 +20,9 @@
   cen <- rep(FALSE, total)
   cen[bad] <- TRUE
   list(
-    censored = matrix_frame(datamat, TR = 2, run_length = runs,
-                            event_table = ev, censor = cen),
-    plain = matrix_frame(datamat, TR = 2, run_length = runs, event_table = ev),
+    censored = as_fmri_frame(datamat, TR = 2, run_length = runs,
+                            events = ev, censor = cen),
+    plain = as_fmri_frame(datamat, TR = 2, run_length = runs, events = ev),
     bad = bad
   )
 }
@@ -88,7 +88,7 @@ test_that("rrr_gls censor = 'none' ignores the frame column (B7)", {
     space = neuroim2::NeuroSpace(c(5, 4, 1, n_time)),
     mask = rep(TRUE, n_vox), offset = rep(0, n_vox)
   ))
-  lds <- latent_frame(lvec, TR = 1, run_length = n_time, event_table = data.frame(
+  lds <- as_fmri_frame(lvec, TR = 1, run_length = n_time, events = data.frame(
     onset = c(8, 20, 32, 44), condition = factor(c("A", "B", "A", "B")), run = 1L
   ))
   fit <- fmri_latent_lm(
@@ -158,8 +158,8 @@ test_that("latent IID standard errors in voxel space are unchanged (B8)", {
 
 test_that("glm_lss names non-finite trial betas instead of a Cholesky failure", {
   ev <- data.frame(onset = c(10, 30), condition = factor(c("A", "B")), run = 1)
-  dset <- matrix_frame(matrix(rnorm(100), 50, 2), TR = 2, run_length = 50,
-                       event_table = ev)
+  dset <- as_fmri_frame(matrix(rnorm(100), 50, 2), TR = 2, run_length = 50,
+                       events = ev)
   emod <- event_model(onset ~ hrf(condition), data = ev, block = ~ run,
                       sampling_frame = fmrihrf::sampling_frame(50, TR = 2))
   local_mocked_bindings(

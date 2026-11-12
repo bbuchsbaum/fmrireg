@@ -515,7 +515,7 @@ simulate_fmri_matrix <- function(
   sim_matrix <- do.call(cbind, signal_list)
   
   # ---------------------------
-  # 3) fmri_frame (via matrix_frame)
+  # 3) fmri_frame (via as_fmri_frame)
   #    event_table = first column's durations/amplitudes
   # ---------------------------
   event_tab <- data.frame(
@@ -525,11 +525,11 @@ simulate_fmri_matrix <- function(
     amplitude = ampmat[,1]
   )
   
-  ds <- matrix_frame(
-    datamat     = sim_matrix,
+  ds <- as_fmri_frame(
+    x     = sim_matrix,
     TR          = TR,
     run_length  = n_time_points,
-    event_table = event_tab
+    events = event_tab
   )
   
   # ---------------------------

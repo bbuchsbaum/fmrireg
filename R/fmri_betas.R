@@ -110,8 +110,8 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL, nuisance = NULL
   c(as.numeric(fit$u), as.numeric(fit$beta)[seq_along(fixed_ind)])
 }
 
-#' @param x An `fmri_frame` (see [matrix_frame()], [neurovec_frame()],
-#'   [nifti_frame()], and [latent_frame()]). When the frame's feature space is a
+#' @param x An `fmri_frame` (see [as_fmri_frame()] and
+#'   [read_nifti_bold()]). When the frame's feature space is a
 #'   `volume_space`, the fixed and random betas are returned as `NeuroVec`
 #'   objects on that grid; otherwise (index or basis spaces) they are returned
 #'   as coefficient-by-feature matrices.
@@ -136,7 +136,7 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL, nuisance = NULL
 #'   * ran_model: Random effect model object.
 #'   * estimated_hrf: The estimated HRF vector (NULL for most methods).
 #'
-#' @seealso \code{\link{matrix_frame}}, \code{\link{baseline_model}}, \code{\link{event_model}}
+#' @seealso \code{\link{as_fmri_frame}}, \code{\link{baseline_model}}, \code{\link{event_model}}
 #'
 #' @examples
 #' \dontrun{
@@ -144,8 +144,8 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL, nuisance = NULL
 #' facedes$frun <- factor(facedes$run)
 #' scans <- paste0("rscan0", 1:6, ".nii")
 #'
-#' dset <- nifti_frame(scans=scans, mask="mask.nii", TR=1.5,
-#'         run_length=rep(436,6), event_table=facedes)
+#' dset <- read_nifti_bold(scans, mask="mask.nii", TR=1.5,
+#'         run_length=rep(436,6), events = facedes)
 #' fixed = onset ~ hrf(run)
 #' ran = onset ~ trialwise()
 #' block = ~ run
@@ -388,7 +388,7 @@ inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise", "
 #' 
 #' For single-trial estimation where each trial gets its own beta estimate, use `glm_lss()` instead.
 #'
-#' @param dataset An `fmri_frame` containing the fMRI time series data (see [matrix_frame()])
+#' @param dataset An `fmri_frame` containing the fMRI time series data (see [as_fmri_frame()])
 #' @param model_obj An `event_model` object specifying the experimental design
 #' @param basis_obj An HRF basis object (e.g., from `fmrihrf::HRF_SPMG1`, `HRF_FIR`, etc.)
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
@@ -416,7 +416,7 @@ inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise", "
 #' Y <- matrix(rnorm(1000), 100, 10)
 #' 
 #' # Create an fmri_frame with event table
-#' dset <- matrix_frame(Y, TR = 2, run_length = 100, event_table = event_data)
+#' dset <- as_fmri_frame(Y, TR = 2, run_length = 100, events = event_data)
 #' 
 #' # Fit with OLS - estimates average response for each condition
 #' fit <- glm_ols(dset, model_obj, fmrihrf::HRF_SPMG1)
@@ -461,7 +461,7 @@ glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL,
 #' 
 #' For standard condition-level estimation (averaging trials within conditions), use `glm_ols()` instead.
 #'
-#' @param dataset An `fmri_frame` containing the fMRI time series data (see [matrix_frame()])
+#' @param dataset An `fmri_frame` containing the fMRI time series data (see [as_fmri_frame()])
 #' @param model_obj An `event_model` object specifying the experimental design
 #' @param basis_obj An HRF basis object (e.g., from `fmrihrf::HRF_SPMG1`, `HRF_FIR`, etc.)
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
@@ -490,7 +490,7 @@ glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL,
 #' Y <- matrix(rnorm(1000), 100, 10)
 #' 
 #' # Create an fmri_frame with event table
-#' dset <- matrix_frame(Y, TR = 2, run_length = 100, event_table = event_data)
+#' dset <- as_fmri_frame(Y, TR = 2, run_length = 100, events = event_data)
 #' 
 #' # Fit with LSS - estimates separate beta for each individual trial
 #' fit <- glm_lss(dset, model_obj, fmrihrf::HRF_SPMG1)
@@ -548,7 +548,7 @@ glm_lss <- function(dataset, model_obj, basis_obj, basemod = NULL,
 #' @noRd
 .glm_convenience_formula <- function(dataset, model_obj, basis_obj) {
   if (!.is_fmri_frame(dataset)) {
-    stop("dataset must be an fmri_frame. Use matrix_frame() to create one from your data matrix.")
+    stop("dataset must be an fmri_frame. Use as_fmri_frame() to create one from your data matrix.")
   }
   
   if (!inherits(model_obj, "event_model")) {

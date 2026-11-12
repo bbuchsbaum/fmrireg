@@ -41,11 +41,11 @@
   )
 
   Y_tmp <- matrix(rnorm(Ttot * V, sd = 0.1), nrow = Ttot, ncol = V)
-  dtmp <- matrix_frame(
+  dtmp <- as_fmri_frame(
     Y_tmp,
     TR = 2,
     run_length = run_length,
-    event_table = ev
+    events = ev
   )
   model <- create_fmri_model(
     formula = onsets ~ hrf(condition),
@@ -93,11 +93,11 @@
   }
 
   Y <- signal + noise
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     Y,
     TR = 2,
     run_length = run_length,
-    event_table = ev
+    events = ev
   )
 
   list(dataset = dset, events = ev)

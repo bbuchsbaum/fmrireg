@@ -14,7 +14,7 @@
     run = 1L
   )
   Y0 <- matrix(0, n, V)
-  dset0 <- matrix_frame(Y0, TR = 1, run_length = n, event_table = etab)
+  dset0 <- as_fmri_frame(Y0, TR = 1, run_length = n, events = etab)
   bmod <- baseline_model(basis = basis, degree = degree,
                          sframe = frame_sframe(dset0))
   bdes <- fmrireg:::gen_beta_design(
@@ -26,7 +26,7 @@
   B <- rbind(seq(2, by = 0.5, length.out = V), seq(1, by = -0.25, length.out = V))
   G <- matrix(rnorm(ncol(Base) * V, sd = 3), ncol(Base), V)
   Y <- X %*% B + Base %*% G + noise_sd * matrix(rnorm(n * V), n, V)
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
   list(dset = dset, bmod = bmod, X = X, Base = Base, B = B, Y = Y, etab = etab)
 }
 
@@ -55,7 +55,7 @@ test_that("C1: OLS path with fixed effects equals lm on the joint design", {
   fx <- .beta_review_fixture(basis = "poly", degree = 1L, noise_sd = 0.5)
   etab <- fx$etab
   etab$rt <- seq(-1, 1, length.out = nrow(etab))
-  dset <- matrix_frame(fx$Y, TR = 1, run_length = nrow(fx$Y), event_table = etab)
+  dset <- as_fmri_frame(fx$Y, TR = 1, run_length = nrow(fx$Y), events = etab)
   out <- estimate_betas(dset, fixed = onset ~ hrf(rt), ran = onset ~ hrf(cond),
                         block = ~ run, method = "ols", basemod = fx$bmod,
                         progress = FALSE)
@@ -98,7 +98,7 @@ test_that("P-C1: LSS fixed-effect betas equal per-voxel lm.fit results", {
   fx <- .beta_review_fixture(basis = "poly", degree = 1L, noise_sd = 0.5, V = 5L)
   etab <- fx$etab
   etab$rt <- seq(-1, 1, length.out = nrow(etab))
-  dset <- matrix_frame(fx$Y, TR = 1, run_length = nrow(fx$Y), event_table = etab)
+  dset <- as_fmri_frame(fx$Y, TR = 1, run_length = nrow(fx$Y), events = etab)
   out <- estimate_betas(dset, fixed = onset ~ hrf(rt), ran = onset ~ trialwise(),
                         block = ~ run, method = "lss", basemod = fx$bmod,
                         progress = FALSE)

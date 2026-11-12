@@ -33,8 +33,8 @@ test_that("fmridesign integration works correctly", {
   
   # Test fmri dataset creation
   X <- matrix(rnorm(100 * 100), 100, 100)  # 100 time points, 100 voxels
-  dset <- matrix_frame(X, TR = 2, run_length = c(50, 50), 
-                         event_table = event_data)
+  dset <- as_fmri_frame(X, TR = 2, run_length = c(50, 50), 
+                         events = event_data)
   
   # Test fmri model creation
   fmri_mod <- fmri_model(ev_model, base_model, dset)

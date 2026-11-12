@@ -21,7 +21,7 @@
       noise[(r - 1L) * n + seq_len(n), v] <- e + 50 + 5 * r
     }
   }
-  fr0 <- matrix_frame(noise, TR = 2, run_length = rep(n, nrun), event_table = ev)
+  fr0 <- as_fmri_frame(noise, TR = 2, run_length = rep(n, nrun), events = ev)
   mod <- create_fmri_model(onset ~ hrf(condition), block = ~run,
                            dataset = fr0, durations = 0)
   X <- as.matrix(design_matrix(mod))
@@ -32,7 +32,7 @@
     rows <- (r - 1L) * n + spikes
     Y[rows, ] <- Y[rows, ] + spike_size
   }
-  list(dset = matrix_frame(Y, TR = 2, run_length = rep(n, nrun), event_table = ev),
+  list(dset = as_fmri_frame(Y, TR = 2, run_length = rep(n, nrun), events = ev),
        Y = Y, X = X, ec = ec, n = n, nrun = nrun)
 }
 

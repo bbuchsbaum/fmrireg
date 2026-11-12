@@ -17,7 +17,7 @@
     }
   }
   Y[c(7, 60), ] <- Y[c(7, 60), ] + 15
-  matrix_frame(Y, TR = 2, run_length = rep(n, nrun), event_table = ev)
+  as_fmri_frame(Y, TR = 2, run_length = rep(n, nrun), events = ev)
 }
 
 .ph_check <- function(dset, scope, noise, robust, backend, chunks) {

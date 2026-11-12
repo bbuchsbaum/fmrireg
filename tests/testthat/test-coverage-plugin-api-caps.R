@@ -8,7 +8,7 @@ make_plugin_model <- function(n = 50L, V = 4L, seed = 31) {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
     sampling_frame = frame_sframe(dset)

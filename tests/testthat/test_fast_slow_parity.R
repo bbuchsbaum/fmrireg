@@ -29,7 +29,7 @@ make_ds <- function(seed = 3, nvox = 4, ar_phi = NULL, n = 150, runs = 1, aliase
     ev$m <- rnorm(nrow(ev))
     ev$m2 <- ev$m
   }
-  matrix_frame(Y, TR = 1, run_length = rep(per, runs), event_table = ev)
+  as_fmri_frame(Y, TR = 1, run_length = rep(per, runs), events = ev)
 }
 
 fit_both <- function(form, dset, ...) {

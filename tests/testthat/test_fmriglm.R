@@ -41,10 +41,10 @@ test_that("can construct and run a simple fmri glm from in memory dataset", {
    mask <- neuroim2::LogicalNeuroVol(array(rnorm(10*10*10), c(10,10,10)) > 0, neuroim2::NeuroSpace(dim=c(10,10,10)))
    
    #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
-   dset <- neurovec_frame(scans=scans, 
+   dset <- as_fmri_frame(x=scans, 
                         mask=mask, 
                         TR=1.5, 
-                        event_table=facedes)
+                        events=facedes)
    
    
    mod <- fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset=dset, durations=0, strategy="chunkwise", nchunks=4)
@@ -72,10 +72,10 @@ test_that("can construct and run a simple fmri glm from in memory dataset and on
   mask <- neuroim2::LogicalNeuroVol(array(rnorm(10*10*10), c(10,10,10)) > 0, neuroim2::NeuroSpace(dim=c(10,10,10)))
   
   #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
-  dset <- neurovec_frame(scans=scans, 
+  dset <- as_fmri_frame(x=scans, 
                            mask=mask, 
                            TR=1.5, 
-                           event_table=facedes)
+                           events=facedes)
   
   con <<- contrast_set(pair_contrast( ~ repnum == 1, ~ repnum == 2, name="rep2_rep1"))
   
@@ -115,10 +115,10 @@ test_that("can construct and run a simple fmri glm from in memory dataset and on
  
 })
 
-test_that("can construct and run a simple fmri glm from a matrix_frame with 1 column", {
+test_that("can construct and run a simple fmri glm from a as_fmri_frame with 1 column", {
   
   vals <- rep(rnorm(244),6)
-  dset <- matrix_frame(as.matrix(vals),TR=1.5, run_length=rep(244,6), event_table=facedes)
+  dset <- as_fmri_frame(as.matrix(vals),TR=1.5, run_length=rep(244,6), events=facedes)
   
   c1 <- pair_contrast( ~ repnum == 1, ~ repnum == 2, name="rep2_rep1")
   c2 <- pair_contrast( ~ repnum == 3, ~ repnum == 4, name="rep3_rep4")
@@ -156,7 +156,7 @@ test_that("fmri glm for multivariate matrix and complex contrast ", {
   vals <- do.call(cbind, lapply(1:100, function(i) rnorm(244*6)))
   fd <- subset(facedes, null == 0 & rt < 2)
   fd$letter <- sample(factor(rep(letters[1:4], length.out=nrow(fd))))
-  dset <- matrix_frame(vals,TR=1.5, run_length=rep(244,6), event_table=fd)
+  dset <- as_fmri_frame(vals,TR=1.5, run_length=rep(244,6), events=fd)
   
   cset <<- contrast_set(pair_contrast( ~ letter %in% c("a", "b"), 
                        ~ letter %in% c("c", "d"),
@@ -191,10 +191,10 @@ test_that("fmri glm for multivariate matrix and complex contrast ", {
   
 })
 
-test_that("can construct and run a simple fmri glm from a matrix_frame with 2 columns", {
+test_that("can construct and run a simple fmri glm from a as_fmri_frame with 2 columns", {
   
   vals <- cbind(rep(rnorm(244),6), rep(rnorm(244),6))
-  dset <- matrix_frame(as.matrix(vals),TR=1.5, run_length=rep(244,6), event_table=facedes)
+  dset <- as_fmri_frame(as.matrix(vals),TR=1.5, run_length=rep(244,6), events=facedes)
   
   c1 <- pair_contrast( ~ repnum == 1, ~ repnum == 2, name="rep2_rep1")
   c2 <- pair_contrast( ~ repnum == 2, ~ repnum == 3, name="rep3_rep2")
@@ -232,7 +232,7 @@ test_that("can construct and run a simple fmri glm from a matrix_frame with 2 co
 test_that("can construct and run a simple fmri glm two terms and prefix args", {
   
   vals <- cbind(rep(rnorm(244),6), rep(rnorm(244),6))
-  dset <- matrix_frame(as.matrix(vals),TR=1.5, run_length=rep(244,6), event_table=facedes)
+  dset <- as_fmri_frame(as.matrix(vals),TR=1.5, run_length=rep(244,6), events=facedes)
   
   
   mod1 <- fmri_lm(onset ~ hrf(repnum, subset=repnum %in% c(1,2), prefix="r12")+ 
@@ -261,12 +261,12 @@ test_that("can construct and run a simple fmri glm two terms and prefix args", {
 })
 
 
-test_that("can run video fmri design with matrix_frame", {
+test_that("can run video fmri design with as_fmri_frame", {
   des <- read.table(system.file("extdata", "video_design.txt", package = "fmrireg"), header=TRUE)
   events <- rep(320,7)
   sframe <- sampling_frame(rep(320, length(events)), TR=1.5)
   
-  dset <- matrix_frame(matrix(rnorm(320*7*100), 320*7, 100),TR=1.5, run_length=rep(320,7), event_table=des)
+  dset <- as_fmri_frame(matrix(rnorm(320*7*100), 320*7, 100),TR=1.5, run_length=rep(320,7), events=des)
   
   evmod <- event_model(Onset ~ hrf(Video, Condition, basis="spmg1"), 
                        block = ~ run, sampling_frame=sframe, data=des)
@@ -338,7 +338,7 @@ test_that("can run video fmri design with matrix_frame", {
 
 })
 
-test_that("can run video fmri design with a file-backed nifti_frame", {
+test_that("can run video fmri design with a file-backed read_nifti_bold", {
   library(neuroim2)
   des <- read.table(system.file("extdata", "video_design.txt", package = "fmrireg"), header=TRUE)
   events <- rep(320,7)
@@ -347,7 +347,7 @@ test_that("can run video fmri design with a file-backed nifti_frame", {
   scans <- unlist(gen_fake_dataset(c(10,10,10,320), 7))  # Convert list to character vector
   maskfile <- gen_mask_file(c(10,10,10))
   
-  dset <- nifti_frame(scans, maskfile, TR=1.5, run_length=rep(320,7), event_table=tibble::as_tibble(des))
+  dset <- read_nifti_bold(scans, maskfile, TR=1.5, run_length=rep(320,7), events=tibble::as_tibble(des))
   evmod <- event_model(Onset ~ hrf(Video, Condition, basis="spmg1"), 
                        block = ~ run, sampling_frame=sframe, data=des)
   bmod <- baseline_model(basis="bs", degree=4, sframe=sframe)

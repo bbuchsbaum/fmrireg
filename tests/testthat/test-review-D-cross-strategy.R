@@ -18,13 +18,13 @@
         40 + 3 * r
     }
   }
-  fr0 <- matrix_frame(noise, TR = 2, run_length = rep(n, 2), event_table = ev)
+  fr0 <- as_fmri_frame(noise, TR = 2, run_length = rep(n, 2), events = ev)
   mod <- create_fmri_model(onset ~ hrf(condition), block = ~run,
                            dataset = fr0, durations = 0)
   X <- as.matrix(design_matrix(mod))
   ec <- unlist(attr(mod$event_model$design_matrix, "col_indices"))
   Y <- noise + X[, ec] %*% ((2 / max(abs(X[, ec]))) * matrix(c(1, -1), 2, V))
-  list(dset = matrix_frame(Y, TR = 2, run_length = rep(n, 2), event_table = ev),
+  list(dset = as_fmri_frame(Y, TR = 2, run_length = rep(n, 2), events = ev),
        X = X, Y = Y, ec = ec, n = n)
 }
 

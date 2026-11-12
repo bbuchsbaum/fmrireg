@@ -12,7 +12,7 @@
   list(
     ev = ev,
     Y = Y,
-    dset = matrix_frame(Y, TR = 2, run_length = 200, event_table = ev)
+    dset = as_fmri_frame(Y, TR = 2, run_length = 200, events = ev)
   )
 }
 

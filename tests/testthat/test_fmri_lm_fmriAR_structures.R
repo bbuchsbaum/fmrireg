@@ -40,7 +40,7 @@ simulate_glm_ar_dataset <- function(ar_coeff = numeric(), n_runs = 2, n_time = 1
     datamat[, v] <- scaled_signal + noise_vec
   }
 
-  matrix_frame(datamat, TR = TR, run_length = run_length, event_table = event_table)
+  as_fmri_frame(datamat, TR = TR, run_length = run_length, events = event_table)
 }
 
 test_that("fmri_lm chunkwise recovers AR coefficients across structures", {

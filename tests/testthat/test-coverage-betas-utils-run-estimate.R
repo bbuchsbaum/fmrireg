@@ -8,7 +8,7 @@ make_beta_fixture <- function(n = 48L, V = 3L, seed = 411L) {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
   bmod <- baseline_model("constant", sframe = frame_sframe(dset))
   bdes <- fmrireg:::gen_beta_design(
     fixed = NULL,

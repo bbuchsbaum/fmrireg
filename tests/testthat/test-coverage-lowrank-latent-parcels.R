@@ -8,7 +8,7 @@ make_matrix_fx <- function(n = 72L, V = 12L, seed = 11L) {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
     sampling_frame = frame_sframe(dset)
@@ -39,9 +39,9 @@ test_that(".run_lowrank_engine latent_dataset path covers loadings Matrix/dense"
     mask = rep(TRUE, n_vox),
     offset = rep(0, n_vox)
   )
-  lds <- latent_frame(
+  lds <- as_fmri_frame(
     lvec, TR = 1, run_length = n_time,
-    event_table = data.frame(
+    events = data.frame(
       onset = c(8, 20, 32, 44),
       condition = factor(c("A", "B", "A", "B")),
       run = 1L

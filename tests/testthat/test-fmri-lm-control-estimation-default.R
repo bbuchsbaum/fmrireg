@@ -9,9 +9,9 @@
     cond = factor(rep(c("a", "b"), 8)),
     run = rep(1:2, each = 8)
   )
-  matrix_frame(
+  as_fmri_frame(
     matrix(rnorm(120 * 4), 120, 4), TR = 2,
-    run_length = c(60, 60), event_table = events
+    run_length = c(60, 60), events = events
   )
 }
 

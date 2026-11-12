@@ -158,8 +158,8 @@ test_that("fmri_lm honours each configuration route and rejects conflicts", {
   cond <- factor(rep(c("a", "b"), length.out = 24))
   etab <- data.frame(onset = rep(onsets, n_run), cond = rep(cond, n_run),
                      run = rep(seq_len(n_run), each = 24))
-  dset <- matrix_frame(matrix(rnorm(n_t * 4), n_t, 4), TR = TR,
-                         run_length = rep(Tr, n_run), event_table = etab)
+  dset <- as_fmri_frame(matrix(rnorm(n_t * 4), n_t, 4), TR = TR,
+                         run_length = rep(Tr, n_run), events = etab)
   f <- onset ~ hrf(cond)
 
   expect_s3_class(fmri_lm(f, block = ~ run, dataset = dset), "fmri_lm")

@@ -27,7 +27,7 @@ test_that("spatial mask helpers normalize dims and recover space from backend", 
   set.seed(21)
   Y <- matrix(rnorm(20 * 4), 20, 4)
   etab <- data.frame(onset = c(3, 8, 13, 18), condition = factor(c("A", "B", "A", "B")), run = 1L)
-  dset <- matrix_frame(Y, TR = 1, run_length = 20, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = 20, events = etab)
 
   # matrix_dataset often lacks NeuroSpace; expect clear error
   expect_error(

@@ -26,9 +26,9 @@
   data <- .simulate_ar1_errors(n_time, n_voxels, rho)
   data[, network] <- data[, network] + effect * seed_ts
 
-  dataset <- matrix_frame(
+  dataset <- as_fmri_frame(
     data, TR = 2, run_length = n_time,
-    event_table = data.frame(onset = 0, run = 1L)
+    events = data.frame(onset = 0, run = 1L)
   )
   sframe <- sampling_frame(n_time, TR = 2)
   cov_data <- data.frame(seed = seed_ts, null_probe = null_probe)

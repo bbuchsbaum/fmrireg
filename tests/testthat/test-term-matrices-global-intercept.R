@@ -24,7 +24,7 @@
   beta <- matrix(rnorm(ncol(X) * nvox, sd = 2), ncol(X), nvox)
   beta[seq_len(2), ] <- matrix(c(3, -1.5), 2, nvox)
   Y <- X %*% beta + matrix(rnorm(nrow(X) * nvox, sd = 1e-3), nrow(X), nvox)
-  ds <- matrix_frame(Y, TR = TR, run_length = runs, event_table = ev)
+  ds <- as_fmri_frame(Y, TR = TR, run_length = runs, events = ev)
   list(ds = ds, bmod = bmod, emod = emod, X = X, beta = beta)
 }
 
@@ -151,7 +151,7 @@ test_that("a run without events still counts as a run when all are requested", {
   bmod <- fmridesign::baseline_model(basis = "poly", degree = 1, sframe = sf,
                                      intercept = "global")
   Y <- matrix(rnorm(sum(runs) * 3), sum(runs), 3)
-  ds <- matrix_frame(Y, TR = 2, run_length = runs, event_table = ev)
+  ds <- as_fmri_frame(Y, TR = 2, run_length = runs, events = ev)
   fm <- fmri_model(emod, bmod, dataset = ds)
   n_design <- ncol(as.matrix(design_matrix(fm)))
 

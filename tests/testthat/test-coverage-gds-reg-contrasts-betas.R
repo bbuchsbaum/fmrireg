@@ -76,9 +76,9 @@ test_that("estimate_betas.latent_dataset OLS and glm_* validation", {
     space = neuroim2::NeuroSpace(c(4, 3, 1, n_time)),
     mask = rep(TRUE, n_voxels), offset = rep(0, n_voxels)
   )
-  lds <- latent_frame(
+  lds <- as_fmri_frame(
     lvec, TR = 1, run_length = n_time,
-    event_table = data.frame(
+    events = data.frame(
       onset = c(5, 15, 25, 35),
       condition = factor(c("A", "B", "A", "B")),
       run = 1L
@@ -101,7 +101,7 @@ test_that("estimate_betas.latent_dataset OLS and glm_* validation", {
   # glm_ols / glm_lss validation
   etab <- data.frame(onset = 5, condition = factor("A"), run = 1L)
   Y <- matrix(rnorm(30 * 3), 30, 3)
-  dset <- matrix_frame(Y, TR = 1, run_length = 30, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = 30, events = etab)
   emod <- event_model(onset ~ hrf(condition), data = etab, block = ~ run,
                       sampling_frame = frame_sframe(dset))
 

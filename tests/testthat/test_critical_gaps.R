@@ -102,7 +102,7 @@ test_that("Data chunking works correctly", {
   n_voxels <- 10
   data_mat <- matrix(rnorm(n_time * n_voxels), n_time, n_voxels)
   
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     data_mat,
     TR = 2,
     run_length = c(100, 100)
@@ -173,11 +173,11 @@ test_that("fmri_lm basic functionality works", {
   # Simple data
   Y <- matrix(rnorm(n * 5), n, 5)
   
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     Y,
     TR = 1,
     run_length = n,
-    event_table = event_data
+    events = event_data
   )
   
   # Fit model

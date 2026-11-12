@@ -14,7 +14,7 @@
     condition = factor(rep(c("A", "B", "A", "B", "A"), 2)),
     run = rep(1:2, each = 5)
   )
-  dset <- neurovec_frame(scans = scans, mask = mask, TR = 1.5, event_table = ev)
+  dset <- as_fmri_frame(x = scans, mask = mask, TR = 1.5, events = ev)
   con <- con %||% contrast_set(
     pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B")
   )

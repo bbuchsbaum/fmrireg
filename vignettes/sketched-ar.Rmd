@@ -172,8 +172,8 @@ for (ix in seq_len(dim3[1]))
 
 ```{r create-dataset}
 vec  <- NeuroVec(arr, space4d)
-dset <- neurovec_frame(scans = list(vec), mask = maskVol,
-                         TR = TR, event_table = events_df)
+dset <- as_fmri_frame(list(vec), mask = maskVol,
+                         TR = TR, events = events_df)
 ```
 
 ### Choose the approximation engine

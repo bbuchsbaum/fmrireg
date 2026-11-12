@@ -80,7 +80,7 @@
 #'   resp <- function(on) as.numeric(fmrihrf::evaluate(fmrihrf::regressor(on), time))
 #'   y <- 100 + resp(events$onset[events$condition == "A"]) +
 #'     resp(events$onset[events$condition == "B"] + 1.5) + rnorm(150, sd = 0.02)
-#'   dset <- matrix_frame(cbind(y), TR = 2, run_length = 150, event_table = events)
+#'   dset <- as_fmri_frame(cbind(y), TR = 2, run_length = 150, events = events)
 #'   fit <- fmri_lm(onset ~ hrf(condition, basis = "spmg2"), block = ~ run,
 #'                  dataset = dset)
 #'   al <- hrf_amplitude_latency(fit)

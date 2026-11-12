@@ -25,9 +25,9 @@ make_censor_fixture <- function(bad = c(10L, 11L, 12L, 55L, 56L)) {
   cen <- rep(FALSE, total)
   cen[bad] <- TRUE
   list(
-    censored = matrix_frame(datamat, TR = TR, run_length = runs,
-                            event_table = ev, censor = cen),
-    plain = matrix_frame(datamat, TR = TR, run_length = runs, event_table = ev),
+    censored = as_fmri_frame(datamat, TR = TR, run_length = runs,
+                            events = ev, censor = cen),
+    plain = as_fmri_frame(datamat, TR = TR, run_length = runs, events = ev),
     bad = bad
   )
 }
@@ -45,7 +45,7 @@ fit_with <- function(ds, ar_opts) {
 
 coefs <- function(fit) as.numeric(as.matrix(coef(fit)))
 
-test_that("matrix_frame(censor=) reaches fmri_lm without opting in", {
+test_that("as_fmri_frame(censor=) reaches fmri_lm without opting in", {
   fx <- make_censor_fixture()
 
   # The whole point: no censor= in ar_options, yet the frame's column is used.

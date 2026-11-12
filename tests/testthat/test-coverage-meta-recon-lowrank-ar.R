@@ -104,7 +104,7 @@ test_that(".run_lowrank_engine global AR srht/gaussian/countsketch succeed", {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
     sampling_frame = frame_sframe(dset)
@@ -150,8 +150,8 @@ test_that(".run_lowrank_engine landmarks with spatial mem dataset", {
     condition = factor(rep(c("A", "B"), 3)),
     run = 1L
   )
-  dset <- neurovec_frame(
-    scans = list(scan), mask = mask, TR = 1, event_table = etab
+  dset <- as_fmri_frame(
+    x = list(scan), mask = mask, TR = 1, events = etab
   )
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,

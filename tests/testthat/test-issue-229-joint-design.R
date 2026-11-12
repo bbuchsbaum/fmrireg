@@ -15,7 +15,7 @@ make_issue_229_fixture <- function(equal_width = FALSE) {
   X <- cbind(as.matrix(design_matrix(em)), as.matrix(design_matrix(bm)))
   B <- matrix(rnorm(ncol(X) * 3), ncol(X), 3)
   Y <- X %*% B + matrix(rnorm(sum(n) * 3), sum(n), 3)
-  ds <- matrix_frame(Y, TR = 2, run_length = n, event_table = ev)
+  ds <- as_fmri_frame(Y, TR = 2, run_length = n, events = ev)
   list(model = fmri_model(em, bm, ds), dataset = ds, X = X, Y = Y, n = n)
 }
 
@@ -81,7 +81,7 @@ test_that("file-backed joint AR handles unequal run nuisance widths", {
   neuroim2::write_vol(neuroim2::NeuroVol(
     array(1, c(3, 1, 1)), neuroim2::NeuroSpace(c(3, 1, 1), spacing = c(2, 2, 2))
   ), mask)
-  ds <- nifti_frame(files, mask = mask, TR = 2, run_length = f$n)
+  ds <- read_nifti_bold(files, mask = mask, TR = 2, run_length = f$n)
   cfg <- fmri_lm_control(estimation = estimation_spec("joint"), noise = noise_spec("ar1"))
   fit <- fmri_lm(f$model, dataset = ds, control = cfg,
                  compute = compute_spec(voxel_chunks = 2))

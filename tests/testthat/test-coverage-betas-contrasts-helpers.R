@@ -17,9 +17,9 @@ test_that("ols_betas and gen_beta_design cover fixed/null-fixed layouts", {
     nuisance = rnorm(8),
     run = 1L
   )
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     matrix(rnorm(n * 2), n, 2),
-    TR = 1, run_length = n, event_table = etab
+    TR = 1, run_length = n, events = etab
   )
   bmod <- baseline_model(basis = "constant", sframe = frame_sframe(dset))
 

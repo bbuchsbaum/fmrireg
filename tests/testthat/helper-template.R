@@ -13,7 +13,7 @@ make_test_matrix_dataset <- function(nvox = 4L, runs = c(40L, 40L), TR = 2) {
       run = r
     )
   }))
-  matrix_frame(datamat, TR = TR, run_length = runs, event_table = ev)
+  as_fmri_frame(datamat, TR = TR, run_length = runs, events = ev)
 }
 
 # A minimal fitted fmri_lm on the matrix_frame fixture.

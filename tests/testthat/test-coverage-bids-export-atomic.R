@@ -184,7 +184,7 @@ test_that(".extract_source_files reads dataset attributes", {
   attr(obj$dataset, "source_files") <- c("a.nii", "b.nii")
   expect_equal(fmrireg:::.extract_source_files(obj), c("a.nii", "b.nii"))
 
-  frame <- matrix_frame(matrix(0, 4, 2), TR = 1, run_length = 4)
+  frame <- as_fmri_frame(matrix(0, 4, 2), TR = 1, run_length = 4)
   attr(frame, "file_path") <- "/data/sub-01_bold.nii.gz"
   obj2 <- list(dataset = frame)
   src <- fmrireg:::.extract_source_files(obj2)

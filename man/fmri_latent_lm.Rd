@@ -26,7 +26,7 @@ fmri_latent_lm(
 
 \item{baseline_model}{An optional baseline model.}
 
-\item{dataset}{A latent \code{fmri_frame} (see \code{\link[=latent_frame]{latent_frame()}}).}
+\item{dataset}{A latent \code{fmri_frame} (see \code{\link[fmridataset:as_fmri_frame]{fmridataset::as_fmri_frame()}}).}
 
 \item{durations}{The duration of events in the dataset. Default is 0
 (impulse events), as in \code{\link[=fmri_lm]{fmri_lm()}}.}
@@ -64,7 +64,7 @@ An object of class 'fmri_latent_lm' containing the regression model and dataset.
 \description{
 This function estimates a regression model for fMRI data using a latent component dataset.
 The dataset must be an \code{fmri_frame} whose feature space is a
-\code{fmridataset::basis_space} (see \code{\link[=latent_frame]{latent_frame()}}), so that the assay holds
+\code{fmridataset::basis_space} (see \code{\link[fmridataset:as_fmri_frame]{fmridataset::as_fmri_frame()}}), so that the assay holds
 component scores and the space carries the spatial loadings.
 }
 \details{
@@ -79,7 +79,7 @@ with \code{recon = TRUE}.
 autocorrelation. A \code{control} with \code{estimation_spec("runwise_meta")} (and,
 optionally, \code{noise_spec(..., voxelwise = TRUE)}) treats each component as
 a separate response with its own noise model and run weights, i.e. the
-same fit \code{fmri_lm()} gives for the score matrix as a \code{matrix_frame()}.
+same fit \code{fmri_lm()} gives for the score matrix as a \code{as_fmri_frame()}.
 That model has no exact voxel-space equivalent: \code{coef(recon = TRUE)}
 returns the loadings applied to the component estimates, but
 \code{standard_error()} and \code{stats()} with \code{recon = TRUE} are an error because
@@ -107,5 +107,5 @@ This method is currently experimental.
 #print(result)
 }
 \seealso{
-\code{\link[=latent_frame]{latent_frame()}}, \code{\link[=fmri_lm]{fmri_lm()}}, \code{\link[=fmri_lm_control]{fmri_lm_control()}}
+\code{\link[fmridataset:as_fmri_frame]{fmridataset::as_fmri_frame()}}, \code{\link[=fmri_lm]{fmri_lm()}}, \code{\link[=fmri_lm_control]{fmri_lm_control()}}
 }

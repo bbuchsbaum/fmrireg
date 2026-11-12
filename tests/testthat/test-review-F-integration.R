@@ -12,7 +12,7 @@
   for (r in seq_len(nrun)) for (v in seq_len(V)) {
     Y[(r - 1L) * n + seq_len(n), v] <- 3 * as.numeric(arima.sim(list(ar = phi), n)) + 100
   }
-  matrix_frame(Y, TR = 2, run_length = rep(n, nrun), event_table = ev)
+  as_fmri_frame(Y, TR = 2, run_length = rep(n, nrun), events = ev)
 }
 
 .fi_fit <- function(dset, backend, noise = "ar1") {
@@ -54,7 +54,7 @@ test_that("soft projection: residual df is tr((I-H)P^2), so sigma^2 is unbiased"
                    run = 1)
   N <- matrix(rnorm(n * k), n, k)
   Y <- matrix(rnorm(n * V), n, V)          # pure noise, unit variance
-  dset <- matrix_frame(Y, TR = 2, run_length = n, event_table = ev)
+  dset <- as_fmri_frame(Y, TR = 2, run_length = n, events = ev)
   fit <- fmri_lm(onset ~ hrf(condition), block = ~run, dataset = dset,
                  control = fmri_lm_control(
                    estimation = estimation_spec("runwise_meta"),

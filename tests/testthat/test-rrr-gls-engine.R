@@ -56,11 +56,11 @@ test_that("rrr_gls supports shared AR whitening", {
   )
 
   Y <- matrix(rnorm(Tlen * V), nrow = Tlen, ncol = V)
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     Y,
     TR = 2,
     run_length = Tlen,
-    event_table = ev
+    events = ev
   )
 
   fit <- fmri_lm(

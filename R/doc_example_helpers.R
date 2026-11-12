@@ -40,11 +40,11 @@
 #' @noRd
 .demo_matrix_dataset <- function() {
   signals <- matrix(seq_len(24), nrow = 8, ncol = 3)
-  matrix_frame(
+  as_fmri_frame(
     signals,
     TR = 2,
     run_length = c(4, 4),
-    event_table = .demo_event_data()
+    events = .demo_event_data()
   )
 }
 

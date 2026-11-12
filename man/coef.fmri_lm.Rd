@@ -60,7 +60,7 @@ edata <- data.frame(
   onsets = c(1, 12, 25, 38),
   run = 1
 )
-dset <- matrix_frame(X, TR = 2, run_length = 50, event_table = edata)
+dset <- as_fmri_frame(X, TR = 2, run_length = 50, events = edata)
 fit <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
 b <- coef(fit) # 3 voxels x 2 event coefficients
 dim(b)

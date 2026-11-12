@@ -44,7 +44,7 @@ test_that("Latent dataset + SRHT (global AR) matches exact reasonably", {
   v <- 0L
   for (ix in seq_len(dim3[1])) for (iy in seq_len(dim3[2])) for (iz in seq_len(dim3[3])) { v <- v+1L; arr[ix,iy,iz,] <- as.numeric(Y[,v]) }
   vec <- NeuroVec(arr, space4d)
-  dset_full <- neurovec_frame(scans = list(vec), mask = maskVol, TR = TR, event_table = events_df)
+  dset_full <- as_fmri_frame(x = list(vec), mask = maskVol, TR = TR, events = events_df)
   fit_exact <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset_full)
   B_exact <- t(fit_exact$result$betas$data[[1]]$estimate[[1]])
 
@@ -65,7 +65,7 @@ test_that("Latent dataset + SRHT (global AR) matches exact reasonably", {
   }, error = function(e) NULL)
   if (is.null(lvec)) skip("Cannot construct LatentNeuroVec; skipping")
 
-  dset_lat <- latent_frame(lvec, TR = TR, run_length = Tlen, event_table = events_df)
+  dset_lat <- as_fmri_frame(lvec, TR = TR, run_length = Tlen, events = events_df)
 
   # Engine on latent dataset: SRHT + global AR
   low <- lowrank_control(parcels = NULL, time_sketch = list(method = "srht", m = min(8L * p, Tlen)))

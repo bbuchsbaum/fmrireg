@@ -31,12 +31,12 @@
   nuis_alias <- if (identical(case, "duplicate")) cbind(n12, n3 = n12[, "n1"]) else n12
   list(
     alias = list(
-      ds = matrix_frame(Y, TR = TR, run_length = Tlen, event_table = ev_alias),
+      ds = as_fmri_frame(Y, TR = TR, run_length = Tlen, events = ev_alias),
       bm = suppressWarnings(fmridesign::baseline_model(
         basis = "poly", degree = 1, sframe = sf, nuisance_list = list(nuis_alias)))
     ),
     reduced = list(
-      ds = matrix_frame(Y, TR = TR, run_length = Tlen, event_table = ev_full),
+      ds = as_fmri_frame(Y, TR = TR, run_length = Tlen, events = ev_full),
       bm = fmridesign::baseline_model(
         basis = "poly", degree = 1, sframe = sf, nuisance_list = list(n12))
     ),

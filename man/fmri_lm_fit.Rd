@@ -27,6 +27,6 @@ them; \code{"joint"} fits one chunkwise model) and \code{compute} the
 mechanics. It is primarily an internal function used by \code{fmri_lm}.
 }
 \seealso{
-\code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{matrix_frame}}
+\code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{as_fmri_frame}}
 }
 \keyword{internal}

@@ -13,7 +13,7 @@ tiny_fmri_model <- function(n_time = 80L, n_vox = 6L, n_events = 8L) {
     run = rep(1:2, each = n_events / 2)
   )
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
-  dset <- matrix_frame(Y, TR = 1, run_length = c(n_time / 2, n_time / 2), event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = c(n_time / 2, n_time / 2), events = etab)
   emod <- event_model(
     onset ~ hrf(condition),
     data = etab,
@@ -282,7 +282,7 @@ test_that("group_data_from_fmrilm validates inputs", {
   etab <- data.frame(onset = c(5, 25), condition = factor(c("A", "B")), run = 1L)
   # matrix_dataset lacks NeuroSpace mask — expect spatial reconstruction error
   Y <- matrix(rnorm(50 * 4), 50, 4)
-  dset <- matrix_frame(Y, TR = 1, run_length = 50, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = 50, events = etab)
   fit <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)
 
   expect_error(group_data_from_fmrilm("not-a-list"), "must be a list")

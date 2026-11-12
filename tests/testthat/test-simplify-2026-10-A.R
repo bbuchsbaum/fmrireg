@@ -23,7 +23,7 @@
         as.numeric(arima.sim(list(ar = phi_v), n)) + 20 + r
     }
   }
-  matrix_frame(Y, TR = 2, run_length = rep(n, 2), event_table = ev)
+  as_fmri_frame(Y, TR = 2, run_length = rep(n, 2), events = ev)
 }
 
 .b11_fit <- function(dset, backend, chunks) {

@@ -23,11 +23,11 @@ test_that("AR+GLM: AR1 estimation with orthogonal design", {
   y <- 5 * design[,1] + errors
   
   # Create minimal dataset
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     matrix(y, ncol = 1), 
     TR = 1, 
     run_length = rep(n_time, n_runs),
-    event_table = data.frame(
+    events = data.frame(
       onset = rep(event_times, n_runs),
       run = rep(1:n_runs, each = length(event_times))
     )
@@ -64,11 +64,11 @@ test_that("AR+GLM: Standard errors increase with positive autocorrelation", {
     Y[, v] <- X %*% c(0, 2) + errors
   }
   
-  dset <- matrix_frame(Y, TR = 1, run_length = n_time)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n_time)
   
   # Create minimal event table for the model  
   etab <- data.frame(onset = 1, run = 1)
-  dset <- matrix_frame(Y, TR = 1, run_length = n_time, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n_time, events = etab)
   
   # Fit with and without AR correction
   fit_iid <- fmri_lm(onset ~ hrf(onset), block = ~ run, dataset = dset, baseline_model = NULL, 
@@ -106,7 +106,7 @@ test_that("AR+GLM: Global AR estimation works across runs", {
     onset = rep(1, n_runs),
     run = 1:n_runs
   )
-  dset <- matrix_frame(Y, TR = 1, run_length = rep(n_time_per_run, n_runs), event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = rep(n_time_per_run, n_runs), events = etab)
   
   # Fit with global AR estimation
   fit_global <- fmri_lm(onset ~ hrf(onset), block = ~ run, dataset = dset, baseline_model = NULL,
@@ -138,7 +138,7 @@ test_that("AR+GLM: Iterative GLS improves estimates", {
   y <- X %*% c(0, true_beta) + errors
   
   etab <- data.frame(onset = 1, run = 1)
-  dset <- matrix_frame(matrix(y, ncol = 1), TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(matrix(y, ncol = 1), TR = 1, run_length = n, events = etab)
   
   # Fit with different numbers of GLS iterations
   fit_gls1 <- fmri_lm(onset ~ hrf(onset), block = ~ run, dataset = dset, baseline_model = NULL,
@@ -168,7 +168,7 @@ test_that("ar_parameters returns stored AR estimates", {
   }
 
   etab <- data.frame(onset = 1, run = 1)
-  dset <- matrix_frame(Y, TR = 1, run_length = n_time, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n_time, events = etab)
 
   fit <- fmri_lm(onset ~ hrf(onset), block = ~ run, dataset = dset, baseline_model = NULL,
                  ar_options = list(struct = "ar1"), use_fast_path = TRUE)
@@ -209,9 +209,9 @@ test_that("chunkwise robust fitting produces finite standard errors", {
   observed <- signal + noise
   datamat <- cbind(observed, observed * 0.9, observed * 0.7)
 
-  dset <- matrix_frame(datamat = datamat, TR = TR,
+  dset <- as_fmri_frame(x = datamat, TR = TR,
                                       run_length = run_length,
-                                      event_table = event_table)
+                                      events = event_table)
 
   fit_robust <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset,
                         strategy = "chunkwise", nchunks = 1,

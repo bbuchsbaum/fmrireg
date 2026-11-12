@@ -100,7 +100,7 @@ test_that("C7: fmri_lm t and F statistics are invariant to rescaling the data", 
     oneway_contrast(~ cond, name = "main")
   )
   fit_at <- function(s) {
-    dset <- matrix_frame(Y * s, TR = 1, run_length = n, event_table = etab)
+    dset <- as_fmri_frame(Y * s, TR = 1, run_length = n, events = etab)
     fmri_lm(onset ~ hrf(cond, contrasts = cons), block = ~ run, dataset = dset)
   }
   f1 <- fit_at(1)

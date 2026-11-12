@@ -3,9 +3,9 @@ test_that("built-in joint fitting rejects voxelwise temporal covariance", {
   events <- data.frame(
     onset = c(10, 30), condition = factor(c("A", "B")), run = 1L
   )
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     matrix(rnorm(2L * n), nrow = n),
-    TR = 1, run_length = n, event_table = events
+    TR = 1, run_length = n, events = events
   )
   control <- fmri_lm_control(
     estimation = estimation_spec("joint"),
@@ -109,8 +109,8 @@ test_that("shared and voxelwise runwise estimators match their stated oracles", 
     condition = factor(rep(c("A", "B"), 4L)),
     run = 1L
   )
-  dset <- matrix_frame(
-    Y, TR = 1, run_length = n, event_table = events
+  dset <- as_fmri_frame(
+    Y, TR = 1, run_length = n, events = events
   )
   control_for <- function(voxelwise, shared_estimator = "pooled_acvf") {
     fmri_lm_control(

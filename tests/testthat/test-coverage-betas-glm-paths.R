@@ -11,7 +11,7 @@ make_beta_fixture <- function(n_time = 80L, n_vox = 4L, n_events = 8L, seed = 42
   )
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
   list(
-    dataset = matrix_frame(Y, TR = 1, run_length = n_time, event_table = etab),
+    dataset = as_fmri_frame(Y, TR = 1, run_length = n_time, events = etab),
     events = etab,
     Y = Y
   )

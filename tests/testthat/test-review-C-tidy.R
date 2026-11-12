@@ -8,7 +8,7 @@
                      cond = factor(rep(c("A", "B", "C"), length.out = 13)),
                      run = 1L)
   Y <- matrix(rnorm(n * 4), n, 4)
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
   cons <- contrast_set(
     pair_contrast(~ cond == "A", ~ cond == "B", name = "AvB"),
     pair_contrast(~ cond == "B", ~ cond == "C", name = "BvC"),

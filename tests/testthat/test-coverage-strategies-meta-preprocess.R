@@ -27,7 +27,7 @@ test_that("preprocess_run_data errors on non-finite Y and missing soft nuisance"
   )
 
   # Soft subspace with provided nuisance + run subsetting
-  dset <- matrix_frame(matrix(0, 40, 1), TR = 1, run_length = c(20L, 20L))
+  dset <- as_fmri_frame(matrix(0, 40, 1), TR = 1, run_length = c(20L, 20L))
   N <- cbind(rnorm(40), rnorm(40))
   cfg_soft$soft_subspace$nuisance_matrix <- N
   cfg_soft$soft_subspace$lambda <- 0.25

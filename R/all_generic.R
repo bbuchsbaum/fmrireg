@@ -69,7 +69,7 @@ tidy <- function(x, ...) UseMethod("tidy")
 #' )
 #' 
 #' # Create dataset and sampling frame
-#' dset <- matrix_frame(X, TR = 2, run_length = 100, event_table = event_data)
+#' dset <- as_fmri_frame(X, TR = 2, run_length = 100, events = event_data)
 #' sframe <- sampling_frame(blocklens = 100, TR = 2)
 #' 
 #' # Create event model with canonical HRF
@@ -152,11 +152,11 @@ coef_names <- function(x, ...) UseMethod("coef_names")
 #' 
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 50, TR = 2)
-#' dset <- matrix_frame(
+#' dset <- as_fmri_frame(
 #'   matrix(rnorm(50 * 2), 50, 2),
 #'   TR = 2,
 #'   run_length = 50,
-#'   event_table = event_data
+#'   events = event_data
 #' )
 #' 
 #' # Fit model
@@ -202,11 +202,11 @@ standard_error <- function(x, ...) UseMethod("standard_error")
 #' 
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 50, TR = 2)
-#' dset <- matrix_frame(
+#' dset <- as_fmri_frame(
 #'   matrix(rnorm(50 * 2), 50, 2),
 #'   TR = 2,
 #'   run_length = 50,
-#'   event_table = event_data
+#'   events = event_data
 #' )
 #' 
 #' # Fit model
@@ -244,11 +244,11 @@ stats <- function(x, ...) UseMethod("stats")
 #' 
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 50, TR = 2)
-#' dset <- matrix_frame(
+#' dset <- as_fmri_frame(
 #'   matrix(rnorm(50 * 2), 50, 2),
 #'   TR = 2,
 #'   run_length = 50,
-#'   event_table = event_data
+#'   events = event_data
 #' )
 #' 
 #' # Fit model
@@ -297,11 +297,11 @@ p_values <- function(x, ...) UseMethod("p_values")
 #' 
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 100, TR = 2)
-#' dset <- matrix_frame(
+#' dset <- as_fmri_frame(
 #'   matrix(rnorm(100 * 2), 100, 2),
 #'   TR = 2,
 #'   run_length = 100,
-#'   event_table = event_data
+#'   events = event_data
 #' )
 #' 
 #' # Estimate betas using mixed-effects model
@@ -319,7 +319,7 @@ p_values <- function(x, ...) UseMethod("p_values")
 #' Pedregosa, F., et al. (2015). Data-driven HRF estimation for encoding and decoding models. NeuroImage, 104, 209-220.
 #'
 #' @seealso
-#' \code{\link{matrix_frame}}, \code{\link{neurovec_frame}}, \code{\link{latent_frame}}
+#' \code{\link{as_fmri_frame}}, \code{\link{read_nifti_bold}}
 #' @family model_estimation
 #' @export
 estimate_betas <- function(x, ...) UseMethod("estimate_betas")

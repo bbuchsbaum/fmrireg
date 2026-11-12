@@ -140,7 +140,7 @@
 #'     logical vector where TRUE = censored, "auto" to extract from the
 #'     dataset, or "none" to ignore a censor column the dataset carries).
 #'     When left unset, a censor column on the dataset is used, so
-#'     `matrix_frame(censor = )` takes effect without opting in. Censoring
+#'     `as_fmri_frame(censor = )` takes effect without opting in. Censoring
 #'     feeds AR estimation and whitening only; it does not drop volumes from
 #'     the regression, and so has no effect under an iid noise model.
 #'

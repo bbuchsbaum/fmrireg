@@ -48,7 +48,7 @@ test_that("estimate_hrf() recovers each condition's own response shape", {
   signal <- 2 * event_regressor(fx, "fast", fmrihrf::HRF_SPMG1) +
     2 * event_regressor(fx, "slow", fmrihrf::HRF_SPMG1, delay = 4)
   Y <- sapply(1:3, function(v) signal[, 1] + stats::rnorm(nrow(signal), sd = 0.3)) + 100
-  ds <- matrix_frame(Y, TR = 1, run_length = c(fx$nscan, fx$nscan), event_table = fx$ev)
+  ds <- as_fmri_frame(Y, TR = 1, run_length = c(fx$nscan, fx$nscan), events = fx$ev)
 
   est <- estimate_hrf(onset ~ hrf(condition), block = ~run, dataset = ds,
                       rsam = seq(0, 20, by = 1), k = 8, lambda = 1)

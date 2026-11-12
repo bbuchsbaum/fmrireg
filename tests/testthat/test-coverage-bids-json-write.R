@@ -110,8 +110,8 @@ test_that(".save_gds_outputs builds assays when spatial mask available", {
     condition = factor(c("A", "B", "A", "B")),
     run = 1L
   )
-  dset <- neurovec_frame(
-    scans = list(scan), mask = mask, TR = 1, event_table = etab
+  dset <- as_fmri_frame(
+    x = list(scan), mask = mask, TR = 1, events = etab
   )
   fit <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)
   td <- tempfile("bids-gds-")

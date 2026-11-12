@@ -11,7 +11,7 @@ test_that(".prepare_hrf_estimation builds designs with and without fixed", {
   )
   Y <- matrix(rnorm(n * 2), n, 2)
   colnames(Y) <- c("v1", "v2")
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = events)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = events)
   spec <- fmrireg:::.new_hrf_basis_spec("tent", k = 5L, span = 24)
 
   prep <- fmrireg:::.prepare_hrf_estimation(
@@ -62,7 +62,7 @@ test_that("tidy.fmri_hrf_estimate filters curves/voxels and validates bounds", {
   )
   Y <- matrix(rnorm(n * 3), n, 3)
   colnames(Y) <- paste0("vox", 1:3)
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = events)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = events)
   fit <- estimate_hrf(
     onset ~ hrf(condition),
     block = ~ run,

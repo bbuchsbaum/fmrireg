@@ -20,7 +20,7 @@
     stop(
       "Spatial metadata is required for ", context,
       ", but the dataset's feature space is not a volume_space ",
-      "(build the frame with neurovec_frame(), nifti_frame(), or a volume_space).",
+      "(build the frame with as_fmri_frame(), read_nifti_bold(), or a volume_space).",
       call. = FALSE
     )
   }

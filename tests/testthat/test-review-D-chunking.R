@@ -18,7 +18,7 @@
     }
   }
   Y[c(5, 90), ] <- Y[c(5, 90), ] + 12
-  matrix_frame(Y, TR = 2, run_length = rep(n, nrun), event_table = ev)
+  as_fmri_frame(Y, TR = 2, run_length = rep(n, nrun), events = ev)
 }
 
 .ck_fit <- function(dset, noise = "iid", robust = "none", chunks = 1L,

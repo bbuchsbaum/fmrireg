@@ -51,7 +51,7 @@ test_that("prepare_fmri_lm_contrasts resolves model contrasts with col_indices",
     run = 1L
   )
   Y <- matrix(rnorm(70 * 3), 70, 3)
-  dset <- matrix_frame(Y, TR = 1, run_length = 70, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = 70, events = etab)
   con <- contrast_set(pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B"))
   emod <- event_model(
     onset ~ hrf(condition, contrasts = con),
@@ -83,7 +83,7 @@ test_that("fmri_lm_fit strategy dispatch and print with contrasts", {
     run = 1L
   )
   Y <- matrix(rnorm(60 * 2), 60, 2)
-  dset <- matrix_frame(Y, TR = 1, run_length = 60, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = 60, events = etab)
   con <- contrast_set(pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B"))
   fit <- fmri_lm(
     onset ~ hrf(condition, contrasts = con),

@@ -86,11 +86,11 @@ events <- data.frame(
   condition = factor(rep(c("A", "B"), 4)),
   run = 1L
 )
-dataset <- matrix_frame(
+dataset <- as_fmri_frame(
   matrix(rnorm(n * 2), nrow = n),
   TR = 1,
   run_length = n,
-  event_table = events
+  events = events
 )
 fit <- estimate_hrf(
   onset ~ hrf(condition),

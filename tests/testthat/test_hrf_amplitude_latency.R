@@ -17,7 +17,7 @@ skip_if_not(
   b <- resp(events$onset[events$condition == "B"] + shift_b)
   Y <- cbind(100 + a + b, 100 + 2 * a + 0.5 * b) +
     matrix(rnorm(400, sd = noise), 200, 2)
-  dset <- matrix_frame(Y, TR = 2, run_length = 200, event_table = events)
+  dset <- as_fmri_frame(Y, TR = 2, run_length = 200, events = events)
   form <- if (identical(basis, "spmg2")) {
     onset ~ hrf(condition, basis = "spmg2")
   } else {
@@ -62,8 +62,8 @@ test_that("hrf_amplitude_latency fails clearly on unsuitable input", {
   expect_error(hrf_amplitude_latency(list()), "fmri_lm")
   events <- data.frame(onset = seq(4, 180, by = 12),
                        condition = factor(rep(c("A", "B"), length.out = 15)), run = 1)
-  dset <- matrix_frame(matrix(rnorm(200), 100, 2), TR = 2, run_length = 100,
-                       event_table = events)
+  dset <- as_fmri_frame(matrix(rnorm(200), 100, 2), TR = 2, run_length = 100,
+                       events = events)
   fit1 <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)
   expect_error(hrf_amplitude_latency(fit1), "no event term with a multi-basis HRF")
 })

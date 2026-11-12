@@ -22,11 +22,11 @@ test_that("chunked processing maintains constant memory usage", {
   test_voxels <- 100
   test_data <- matrix(rnorm(n_time * test_voxels), n_time, test_voxels)
   
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     test_data,
     TR = 2,
     run_length = c(150, 150),
-    event_table = event_data
+    events = event_data
   )
   
   # Process in chunks
@@ -60,7 +60,7 @@ test_that("iterator pattern efficiently processes data", {
   
   data_mat <- matrix(rnorm(n_time * n_voxels), n_time, n_voxels)
   
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     data_mat,
     TR = 1,
     run_length = n_time
@@ -100,7 +100,7 @@ test_that("parallel processing maintains result consistency", {
     run = rep(1, 10)
   )
   
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = event_data)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = event_data)
   
   # Run with different thread counts
   old_threads <- getOption("fmrireg.num_threads", 1)

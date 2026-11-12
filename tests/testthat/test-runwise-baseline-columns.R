@@ -12,7 +12,7 @@
     cond = factor(rep(c("A", "B"), 5)),
     run = rep(1:2, each = 5)
   )
-  mk <- function(Y) matrix_frame(Y, TR = 2, run_length = c(60, 60), event_table = ev)
+  mk <- function(Y) as_fmri_frame(Y, TR = 2, run_length = c(60, 60), events = ev)
   args <- list(onset ~ hrf(cond), block = ~run,
                control = fmri_lm_control(estimation = estimation_spec("runwise")))
   if (!is.null(baseline)) args$baseline_model <- baseline

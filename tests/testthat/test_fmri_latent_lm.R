@@ -33,7 +33,7 @@ test_that("fmri_latent_lm works with basic latent dataset", {
   )
 
   # Create the latent frame
-  dset <- latent_frame(lvec, TR = 2, run_length = n_time, event_table = event_table)
+  dset <- as_fmri_frame(lvec, TR = 2, run_length = n_time, events = event_table)
   
   # Create a simple formula with LHS and HRF
   result <- fmri_latent_lm(
@@ -74,7 +74,7 @@ test_that("fmri_latent_lm handles different options", {
     X1 = c(1, 1)  # Add matching variable for the formula
   )
 
-  dset <- latent_frame(lvec, TR = 2, run_length = n_time, event_table = event_table)
+  dset <- as_fmri_frame(lvec, TR = 2, run_length = n_time, events = event_table)
   
   # Robust fitting has no latent-space reduction. It used to be accepted and
   # silently fitted by OLS; it is now an explicit error (review 2026-10, E2).
@@ -104,8 +104,8 @@ test_that("fmri_latent_lm handles different options", {
 test_that("fmri_latent_lm validates inputs", {
   # Non-latent dataset should error
   regular_data <- matrix(rnorm(100 * 10), 100, 10)
-  regular_dset <- matrix_frame(
-    datamat = regular_data,
+  regular_dset <- as_fmri_frame(
+    x = regular_data,
     TR = 2,
     run_length = 100
   )
@@ -121,7 +121,7 @@ test_that("fmri_latent_lm validates inputs", {
   )
 })
 
-test_that("latent_frame creation works correctly", {
+test_that("as_fmri_frame creation works correctly", {
   skip_if_not_installed("fmristore")
   skip_if_not_installed("neuroim2")
   
@@ -145,7 +145,7 @@ test_that("latent_frame creation works correctly", {
     offset = rep(0, n_voxels)
   )
   
-  dset <- latent_frame(lvec, TR = 2, run_length = c(50, 50))
+  dset <- as_fmri_frame(lvec, TR = 2, run_length = c(50, 50))
 
   expect_s3_class(dset, "fmri_frame")
   expect_s3_class(fmridataset::space(dset), "basis_space")
@@ -187,7 +187,7 @@ test_that("chunkwise_lm_latent processes correctly", {
     X1 = c(1, 1, 1)  # Add matching variable for the formula
   )
 
-  dset <- latent_frame(lvec, TR = 2, run_length = n_time, event_table = event_table)
+  dset <- as_fmri_frame(lvec, TR = 2, run_length = n_time, events = event_table)
   
   model <- fmrireg:::create_fmri_model(
     formula = onset ~ hrf(X1),  # Proper formula with LHS and HRF

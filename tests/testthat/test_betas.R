@@ -22,10 +22,10 @@ gen_dset <- function(D=5, des=facedes) {
   
   
   #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
-  neurovec_frame(scans=scans, 
+  as_fmri_frame(x=scans, 
                    mask=mask, 
                    TR=1.5, 
-                   event_table=des)
+                   events=des)
   
   
 }

@@ -17,8 +17,8 @@ create_spatial_fit <- function(dims = c(2, 2, 1), n_time = 40L) {
     condition = factor(rep(c("A", "B"), 4)),
     run = rep(1:2, each = 4)
   )
-  dset <- neurovec_frame(
-    scans = scans, mask = mask, TR = 1, event_table = event_table
+  dset <- as_fmri_frame(
+    x = scans, mask = mask, TR = 1, events = event_table
   )
   con <- contrast_set(pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B"))
   fit <- fmri_lm(
@@ -62,7 +62,7 @@ test_that("runwise_lm_voxelwise AR(1) path on multi-run matrix data", {
     run = rep(1:2, each = 3)
   )
   Y <- matrix(rnorm((2 * n_per) * V), 2 * n_per, V)
-  dset <- matrix_frame(Y, TR = 1, run_length = c(n_per, n_per), event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = c(n_per, n_per), events = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
     sampling_frame = frame_sframe(dset)
@@ -92,7 +92,7 @@ test_that("process_run_ar_robust covers AR+robust run fitting", {
   )
   Y <- matrix(rnorm(n * V), n, V)
   Y[1:2, 1] <- Y[1:2, 1] + 15
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
     sampling_frame = frame_sframe(dset)

@@ -8,7 +8,7 @@ test_that("runwise chunks cover each run in acquisition order", {
   n_runs <- 2
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
   run_length <- rep(n_time / n_runs, n_runs)
-  dset <- matrix_frame(Y, TR = 1, run_length = run_length)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = run_length)
 
   chunks <- fmrireg:::.dset_run_chunks(dset)
   expect_length(chunks, n_runs)
@@ -30,7 +30,7 @@ test_that("a single chunk holds the whole matrix", {
   n_time <- 50
   n_vox <- 5
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
-  dset <- matrix_frame(Y, TR = 1, run_length = n_time)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n_time)
 
   chunks <- fmrireg:::.dset_chunks(dset, nchunks = 1)
   expect_length(chunks, 1)
@@ -47,7 +47,7 @@ test_that("feature-wise chunks partition the voxels", {
   n_time <- 50
   n_vox <- 20
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
-  dset <- matrix_frame(Y, TR = 1, run_length = n_time)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n_time)
 
   chunks <- fmrireg:::.dset_chunks(dset, nchunks = 4)
   expect_length(chunks, 4)
@@ -63,7 +63,7 @@ test_that("feature-wise chunks partition the voxels", {
 
 test_that("requesting more chunks than voxels warns and caps the count", {
   Y <- matrix(rnorm(30), 10, 3)
-  dset <- matrix_frame(Y, TR = 1, run_length = 10)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = 10)
   expect_warning(chunks <- fmrireg:::.dset_chunks(dset, nchunks = 10),
                  "greater than number of voxels")
   expect_length(chunks, 3)
@@ -76,7 +76,7 @@ test_that("chunks read lazily from a volumetric frame and honour a feature view"
     neuroim2::SparseNeuroVec(matrix(rnorm(ntp * 100), ntp, 100),
                              space = neuroim2::NeuroSpace(c(5, 5, 4, ntp)), mask = mask)
   }, simplify = FALSE)
-  dset <- neurovec_frame(scans, mask, TR = 2)
+  dset <- as_fmri_frame(scans, mask, TR = 2)
 
   rchunks <- fmrireg:::.dset_run_chunks(dset)
   expect_length(rchunks, 3)

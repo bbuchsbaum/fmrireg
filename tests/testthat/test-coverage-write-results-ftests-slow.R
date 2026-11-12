@@ -14,8 +14,8 @@ test_that("write_results.fmri_lm nifti spatial export covers beta/contrast write
     condition = factor(c("A", "B", "A", "B")),
     run = 1L
   )
-  dset <- neurovec_frame(
-    scans = list(scan), mask = mask, TR = 1, event_table = etab
+  dset <- as_fmri_frame(
+    x = list(scan), mask = mask, TR = 1, events = etab
   )
   con <- contrast_set(pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B"))
   fit <- fmri_lm(
@@ -52,7 +52,7 @@ test_that("runwise_lm_slow and chunkwise_lm_slow paths via use_fast_path=FALSE",
     run = 1L
   )
   Y <- matrix(rnorm(n * 3), n, 3)
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
     sampling_frame = frame_sframe(dset)

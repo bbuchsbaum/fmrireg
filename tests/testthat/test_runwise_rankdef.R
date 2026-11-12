@@ -13,9 +13,9 @@ test_that("runwise_lm handles rank deficiency gracefully", {
   Y <- matrix(rnorm(sum(fmrihrf::blocklens(sframe)) * 2),
               sum(fmrihrf::blocklens(sframe)), 2)
 
-  dset <- matrix_frame(Y, TR = 1,
+  dset <- as_fmri_frame(Y, TR = 1,
                          run_length = fmrihrf::blocklens(sframe),
-                         event_table = etab)
+                         events = etab)
 
   espec <- event_model(onset ~ hrf(condition), data = etab,
                        block = ~run, sampling_frame = sframe)

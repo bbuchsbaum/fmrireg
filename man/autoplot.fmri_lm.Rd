@@ -114,7 +114,7 @@ set.seed(1)
 ev <- data.frame(onset = seq(10, 180, by = 12), run = 1,
                  condition = factor(rep(c("a", "b"), length.out = 15)))
 Y <- matrix(rnorm(100 * 5), 100, 5)
-dset <- matrix_frame(Y, TR = 2, run_length = 100, event_table = ev)
+dset <- as_fmri_frame(Y, TR = 2, run_length = 100, events = ev)
 fit <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)
 ggplot2::autoplot(fit)
 ggplot2::autoplot(fit, type = "timecourse", voxel = 1)

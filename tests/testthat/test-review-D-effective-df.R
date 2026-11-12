@@ -49,7 +49,7 @@ test_that("robust fits report sum(w) - rank as their inference df", {
                    run = 1)
   Y <- matrix(rnorm(n * 4, mean = 10), n, 4)
   Y[c(5, 30, 31), ] <- Y[c(5, 30, 31), ] + 30
-  dset <- matrix_frame(Y, TR = 2, run_length = n, event_table = ev)
+  dset <- as_fmri_frame(Y, TR = 2, run_length = n, events = ev)
   for (scope in c("joint", "runwise_meta")) {
     fit <- fmri_lm(onset ~ hrf(condition), block = ~run, dataset = dset,
                    durations = 0,

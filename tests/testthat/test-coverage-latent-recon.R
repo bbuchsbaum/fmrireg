@@ -18,9 +18,9 @@
     mask = rep(TRUE, n_voxels),
     offset = rep(0, n_voxels)
   )
-  lds <- latent_frame(
+  lds <- as_fmri_frame(
     lvec, TR = 1, run_length = n_time,
-    event_table = data.frame(
+    events = data.frame(
       onset = c(8, 20, 32, 44),
       condition = factor(c("A", "B", "A", "B")),
       run = 1L
@@ -117,9 +117,9 @@ test_that("latent recon keeps type-based orientation when n_comp equals n_condit
     mask = rep(TRUE, n_voxels),
     offset = rep(0, n_voxels)
   )
-  lds <- latent_frame(
+  lds <- as_fmri_frame(
     lvec, TR = 1, run_length = n_time,
-    event_table = data.frame(
+    events = data.frame(
       onset = c(8, 20, 32, 44, 56, 68),
       condition = factor(c("A", "B", "C", "D", "A", "B")),
       run = 1L
@@ -152,7 +152,7 @@ test_that("coef.fmri_latent_lm errors when loadings are unavailable", {
   fx <- .make_latent_fit()
   fit <- fx$fit
   scores <- frame_data(fit$dataset)
-  fit$dataset <- matrix_frame(as.matrix(scores), TR = 1,
+  fit$dataset <- as_fmri_frame(as.matrix(scores), TR = 1,
                               run_length = nrow(scores))
 
   expect_error(

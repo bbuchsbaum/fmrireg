@@ -38,11 +38,11 @@ create_test_dataset <- function(dims = c(3, 3, 2), n_timepoints = 50, sparse_mas
   )
   
   # Create an in-memory volumetric frame
-  dset <- neurovec_frame(
-    scans = scans,
+  dset <- as_fmri_frame(
+    x = scans,
     mask = mask,
     TR = 1.5,
-    event_table = event_table
+    events = event_table
   )
   
   return(dset)
@@ -81,12 +81,12 @@ create_test_file_dataset <- function(dims = c(3, 3, 2), n_timepoints = 50) {
     run = rep(1:2, each = 5)
   )
 
-  nifti_frame(
-    scans = scan_files,
+  read_nifti_bold(
+    paths = scan_files,
     mask = mask_file,
     TR = 1.5,
     run_length = rep(n_timepoints, 2),
-    event_table = event_table
+    events = event_table
   )
 }
 

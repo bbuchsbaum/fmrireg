@@ -13,10 +13,10 @@ tiny_design_fixture <- function(n_time = 60L, n_vox = 8L, n_events = 6L) {
     run = rep(1:2, each = n_events / 2)
   )
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     Y, TR = 1,
     run_length = c(run_len, run_len),
-    event_table = etab
+    events = etab
   )
   emod <- event_model(
     onset ~ hrf(condition),

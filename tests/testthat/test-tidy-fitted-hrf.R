@@ -12,11 +12,11 @@ test_that("tidy_fitted_hrf returns plottable long table", {
     condition = factor(c("A", "B", "A", "B"))
   )
 
-  dset <- matrix_frame(
-    datamat = Y,
+  dset <- as_fmri_frame(
+    x = Y,
     TR = 1,
     run_length = n,
-    event_table = ev
+    events = ev
   )
 
   fit <- fmri_lm(

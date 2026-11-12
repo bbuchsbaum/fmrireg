@@ -121,21 +121,27 @@ realize_dataset <- function(job) {
   assert_that(inherits(job, "fmri_job"), msg = "'job' must be an 'fmri_job'")
   spec <- job$dataset_spec
   # Allowlist the constructor: a job is a recipe that may have travelled from
-  # disk, so only known dataset constructors may be invoked by name.
-  if (!spec$constructor %in% .allowed_dataset_constructors) {
+  # disk, so only known dataset recipes may be invoked by name. The names are
+  # recipe labels; they realize through the implementations behind the
+  # deprecated helpers of the same name, so saved jobs keep working without
+  # deprecation warnings.
+  fn <- .dataset_constructors[[spec$constructor]]
+  if (is.null(fn)) {
     stop(sprintf("dataset constructor '%s' is not allowed; expected one of: %s",
                  spec$constructor,
-                 paste(.allowed_dataset_constructors, collapse = ", ")),
+                 paste(names(.dataset_constructors), collapse = ", ")),
          call. = FALSE)
   }
-  fn <- match.fun(spec$constructor)
   do.call(fn, spec$args)
 }
 
 #' @keywords internal
 #' @noRd
-.allowed_dataset_constructors <- c(
-  "matrix_frame", "nifti_frame", "neurovec_frame", "latent_frame"
+.dataset_constructors <- list(
+  matrix_frame = function(...) .matrix_frame_impl(...),
+  nifti_frame = function(...) .nifti_frame_impl(...),
+  neurovec_frame = function(...) .neurovec_frame_impl(...),
+  latent_frame = function(...) .latent_frame_impl(...)
 )
 
 #' @keywords internal

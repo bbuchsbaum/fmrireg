@@ -9,7 +9,7 @@ make_run_fx <- function(n = 48L, V = 4L, seed = 201L) {
   )
   Y <- matrix(rnorm(n * V), n, V)
   Y[1:2, 1] <- Y[1:2, 1] + 12
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
     sampling_frame = frame_sframe(dset)

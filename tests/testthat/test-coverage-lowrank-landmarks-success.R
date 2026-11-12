@@ -14,8 +14,8 @@ make_mem_lowrank_fx <- function(dims = c(4L, 4L, 1L), n_time = 60L, seed = 41L) 
     condition = factor(rep(c("A", "B"), 3)),
     run = 1L
   )
-  dset <- neurovec_frame(
-    scans = list(scan), mask = mask, TR = 1, event_table = etab
+  dset <- as_fmri_frame(
+    x = list(scan), mask = mask, TR = 1, events = etab
   )
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
@@ -83,7 +83,7 @@ test_that(".run_lowrank_engine parcels by_cluster with srht/ihs succeed", {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
     sampling_frame = frame_sframe(dset)
@@ -125,9 +125,9 @@ test_that(".run_lowrank_engine latent dense loadings path", {
     mask = rep(TRUE, n_vox),
     offset = rep(0, n_vox)
   ))
-  lds <- latent_frame(
+  lds <- as_fmri_frame(
     lvec, TR = 1, run_length = n_time,
-    event_table = data.frame(
+    events = data.frame(
       onset = c(6, 16, 26, 36),
       condition = factor(c("A", "B", "A", "B")),
       run = 1L

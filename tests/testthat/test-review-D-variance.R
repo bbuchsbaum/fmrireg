@@ -9,7 +9,7 @@
                    run = 1)
   Y <- vapply(seq_len(V), function(v) as.numeric(arima.sim(list(ar = 0.4), n)) + 20,
               numeric(n))
-  list(dset = matrix_frame(Y, TR = 2, run_length = n, event_table = ev), Y = Y)
+  list(dset = as_fmri_frame(Y, TR = 2, run_length = n, events = ev), Y = Y)
 }
 
 .vd_fit <- function(fx, variance) {

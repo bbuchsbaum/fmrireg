@@ -35,8 +35,8 @@ test_that("factorial vignette contrasts resolve sanitized design term tags", {
       name = "category_X_attention"
     )
   )
-  dataset <- matrix_frame(
-    Y, TR = 2, run_length = 120, event_table = design
+  dataset <- as_fmri_frame(
+    Y, TR = 2, run_length = 120, events = design
   )
 
   expect_no_warning(
@@ -72,8 +72,8 @@ test_that("vignette omnibus contrast executes as a two-df F test", {
   set.seed(404)
   Y <- X %*% matrix(c(1.0, 0.4, -0.2), ncol = 1) +
     matrix(rnorm(100, sd = 0.085 * max(abs(X))), ncol = 1)
-  dataset <- matrix_frame(
-    Y, TR = 2, run_length = 100, event_table = events
+  dataset <- as_fmri_frame(
+    Y, TR = 2, run_length = 100, events = events
   )
   omnibus <- oneway_contrast(~ condition, name = "condition_F")
   weights <- contrast_weights(omnibus, terms(event)[[1]])$weights

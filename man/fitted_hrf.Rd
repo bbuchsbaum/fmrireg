@@ -35,7 +35,7 @@ event_data <- data.frame(
 )
 
 # Create dataset and sampling frame
-dset <- matrix_frame(X, TR = 2, run_length = 100, event_table = event_data)
+dset <- as_fmri_frame(X, TR = 2, run_length = 100, events = event_data)
 sframe <- sampling_frame(blocklens = 100, TR = 2)
 
 # Create event model with canonical HRF

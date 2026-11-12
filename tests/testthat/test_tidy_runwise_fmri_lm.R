@@ -8,11 +8,11 @@ test_that("tidy fmri_lm normalizes runwise estimate and contrast layouts", {
     run = rep(1:2, each = 2)
   )
   Y <- matrix(rnorm(2L * samples_per_run * n_vox), ncol = n_vox)
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     Y,
     TR = 1,
     run_length = rep(samples_per_run, 2L),
-    event_table = events
+    events = events
   )
   con <- pair_contrast(
     ~ condition == "B", ~ condition == "A", name = "B_minus_A"

@@ -7,10 +7,13 @@
 dataset_spec(constructor, args = list(), source = c("file", "inline"))
 }
 \arguments{
-\item{constructor}{Name of a frame constructor (a string): one of
+\item{constructor}{Name of a dataset recipe (a string): one of
 \code{"nifti_frame"}, \code{"matrix_frame"}, \code{"neurovec_frame"}, or
-\code{"latent_frame"}. Resolved at run time, so the data is not loaded
-when the spec is built.}
+\code{"latent_frame"}. The arguments are those of the deprecated helpers
+of the same names; realizing a spec builds the frame with
+\code{\link[fmridataset:frame-constructors]{fmridataset::read_nifti_bold()}} or \code{\link[fmridataset:as_fmri_frame]{fmridataset::as_fmri_frame()}}
+without a deprecation warning. Resolved at run time, so the data is not
+loaded when the spec is built.}
 
 \item{args}{A named list of arguments passed to \code{constructor} (for
 \code{"nifti_frame"}: \code{scans}, \code{TR}, \code{run_length},
@@ -36,5 +39,5 @@ dataset_spec("nifti_frame",
              source = "file")
 }
 \seealso{
-\code{\link[=fmri_job]{fmri_job()}}, \code{\link[=nifti_frame]{nifti_frame()}}, \code{\link[=matrix_frame]{matrix_frame()}}
+\code{\link[=fmri_job]{fmri_job()}}, \code{\link[=realize_dataset]{realize_dataset()}}
 }

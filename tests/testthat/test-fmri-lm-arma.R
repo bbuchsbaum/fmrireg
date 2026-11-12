@@ -134,8 +134,8 @@ test_that("public runwise ARMA fitting returns per-run parameters and inference"
       as.numeric(stats::arima.sim(list(ar = 0.4, ma = 0.3), n = n))
     )
   }))
-  dset <- matrix_frame(
-    Y, TR = 1, run_length = rep(n, n_run), event_table = events
+  dset <- as_fmri_frame(
+    Y, TR = 1, run_length = rep(n, n_run), events = events
   )
   control <- fmri_lm_control(
     estimation = estimation_spec("runwise_meta"),

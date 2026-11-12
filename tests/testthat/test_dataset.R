@@ -1,10 +1,10 @@
 # Frame constructors: fmrireg builds fmridataset::fmri_frame objects from
 # matrices, NeuroVec objects, NIfTI files, and latent decompositions.
 
-test_that("matrix_frame builds a frame with the run structure and events", {
+test_that("as_fmri_frame builds a frame with the run structure and events", {
   Y <- matrix(seq_len(40), 20, 2)
   events <- data.frame(onset = c(2, 12), condition = factor(c("A", "B")), run = c(1, 2))
-  frame <- matrix_frame(Y, TR = 2, run_length = c(10, 10), event_table = events)
+  frame <- as_fmri_frame(Y, TR = 2, run_length = c(10, 10), events = events)
 
   expect_s3_class(frame, "fmri_frame")
   expect_equal(dim(frame), c(20L, 2L))
@@ -25,31 +25,31 @@ test_that("matrix_frame builds a frame with the run structure and events", {
   expect_true("event_id" %in% names(ev))
 
   expect_equal(fmridataset::observation_ids(frame)[c(1, 11)],
-               c("run-1-vol-00001", "run-2-vol-00001"))
+               c("run-1_vol-0001", "run-2_vol-0001"))
   expect_equal(fmridataset::feature_ids(frame), c("feature-1", "feature-2"))
 })
 
-test_that("matrix_frame validates run lengths and stores censor as a logical column", {
+test_that("as_fmri_frame validates run lengths and stores censor as a logical column", {
   Y <- matrix(0, 10, 1)
-  expect_error(matrix_frame(Y, TR = 1, run_length = c(4, 4)), "sum\\(run_length\\)")
+  expect_error(as_fmri_frame(Y, TR = 1, run_length = c(4, 4)), "run_length sums to")
 
-  f01 <- matrix_frame(Y, TR = 1, run_length = 10, censor = c(0, 0, 1, 0, 0, 0, 1, 0, 0, 0))
+  f01 <- as_fmri_frame(Y, TR = 1, run_length = 10, censor = c(0, 0, 1, 0, 0, 0, 1, 0, 0, 0))
   expect_equal(which(fmridataset::temporal_schema(f01)$censor), c(3L, 7L))
-  fidx <- matrix_frame(Y, TR = 1, run_length = 10, censor = c(3L, 7L))
+  fidx <- as_fmri_frame(Y, TR = 1, run_length = 10, censor = c(3L, 7L))
   expect_equal(which(fmridataset::temporal_schema(fidx)$censor), c(3L, 7L))
-  flog <- matrix_frame(Y, TR = 1, run_length = 10, censor = seq_len(10) %in% c(3, 7))
+  flog <- as_fmri_frame(Y, TR = 1, run_length = 10, censor = seq_len(10) %in% c(3, 7))
   expect_equal(fmridataset::temporal_schema(flog)$censor,
                fmridataset::temporal_schema(f01)$censor)
 })
 
-test_that("matrix_frame uses unique column names as feature IDs and keeps a per-run TR", {
+test_that("as_fmri_frame uses unique column names as feature IDs and keeps a per-run TR", {
   Y <- matrix(rnorm(12), 6, 2, dimnames = list(NULL, c("roi_a", "roi_b")))
-  frame <- matrix_frame(Y, TR = c(1, 2), run_length = c(3, 3))
+  frame <- as_fmri_frame(Y, TR = c(1, 2), run_length = c(3, 3))
   expect_equal(fmridataset::feature_ids(frame), c("roi_a", "roi_b"))
   expect_equal(unname(fmridataset::temporal_schema(frame)$TR), c(1, 2))
 })
 
-test_that("neurovec_frame extracts masked voxel series onto a volume_space", {
+test_that("as_fmri_frame extracts masked voxel series onto a volume_space", {
   facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header = TRUE)
   facedes$repnum <- factor(facedes$rep_num)
   n_runs <- length(unique(facedes$run))
@@ -62,8 +62,8 @@ test_that("neurovec_frame extracts masked voxel series onto a volume_space", {
   mask <- neuroim2::LogicalNeuroVol(array(rnorm(4 * 4 * 3), c(4, 4, 3)) > 0,
                                     neuroim2::NeuroSpace(dim = c(4, 4, 3)))
 
-  frame <- neurovec_frame(scans = scans, mask = mask, TR = 1.5,
-                          event_table = tibble::as_tibble(facedes))
+  frame <- as_fmri_frame(x = scans, mask = mask, TR = 1.5,
+                          events = tibble::as_tibble(facedes))
 
   expect_s3_class(frame, "fmri_frame")
   expect_s3_class(fmridataset::space(frame), "volume_space")
@@ -82,7 +82,7 @@ test_that("neurovec_frame extracts masked voxel series onto a volume_space", {
   expect_equal(dim(spatial$space), dim(mask))
 })
 
-test_that("nifti_frame builds a lazy file-backed frame", {
+test_that("read_nifti_bold builds a lazy file-backed frame", {
   skip_if_not_installed("RNifti")
   dims <- c(4, 4, 3)
   nii_dir <- tempfile("nifti-frame-")
@@ -105,9 +105,8 @@ test_that("nifti_frame builds a lazy file-backed frame", {
   mask_file <- file.path(nii_dir, "mask.nii")
   neuroim2::write_vol(mask, mask_file)
 
-  frame <- nifti_frame(basename(files), basename(mask_file), TR = 2,
-                       base_path = nii_dir,
-                       event_table = data.frame(onset = c(1, 3), run = c(1, 2)))
+  frame <- read_nifti_bold(files, mask_file, TR = 2,
+                           events = data.frame(onset = c(1, 3), run = c(1, 2)))
   expect_s3_class(frame, "fmri_frame")
   expect_equal(dim(frame), c(12L, 10L))
   expect_equal(unname(fmridataset::temporal_schema(frame)$run_lengths), c(6L, 6L))
@@ -116,13 +115,13 @@ test_that("nifti_frame builds a lazy file-backed frame", {
   expect_equal(unname(fmridataset::collect_assay(frame)), unname(expected), tolerance = 1e-6)
 
   # a NeuroVol mask is accepted too and yields the same space
-  frame2 <- nifti_frame(files, mask, TR = 2, run_length = c(6, 6))
+  frame2 <- read_nifti_bold(files, mask, TR = 2, run_length = c(6, 6))
   expect_true(fmridataset::same_space(fmridataset::space(frame), fmridataset::space(frame2))$same)
 
-  expect_error(nifti_frame(files, mask_file, TR = 2, run_length = c(5, 5)), "sum\\(run_length\\)")
+  expect_error(read_nifti_bold(files, mask_file, TR = 2, run_length = c(5, 5)), "run_length sums to")
 })
 
-test_that("latent_frame stores scores as the assay and loadings on a basis_space", {
+test_that("as_fmri_frame stores scores as the assay and loadings on a basis_space", {
   skip_if_not_installed("fmristore")
   n_time <- 12; n_comp <- 3; n_vox <- 24
   basis <- matrix(rnorm(n_time * n_comp), n_time, n_comp)
@@ -132,7 +131,7 @@ test_that("latent_frame stores scores as the assay and loadings on a basis_space
     space = neuroim2::NeuroSpace(c(4, 3, 2, n_time)),
     mask = rep(TRUE, n_vox), offset = rep(0, n_vox)
   )
-  frame <- latent_frame(lvec, TR = 2, run_length = c(6, 6))
+  frame <- as_fmri_frame(lvec, TR = 2, run_length = c(6, 6))
   expect_s3_class(frame, "fmri_frame")
   expect_true(fmrireg:::.dset_is_latent(frame))
   expect_equal(unname(fmridataset::collect_assay(frame)), unname(basis))

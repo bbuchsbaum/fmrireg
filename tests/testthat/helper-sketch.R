@@ -27,6 +27,6 @@ sketch_matrix_dataset <- function(run_length = 30L, nvox = 2L, baseline = 100,
       Xe <- as.matrix(fmridesign::design_matrix(em))
       Y <- Y + Xe %*% matrix(signal * stats::rnorm(ncol(Xe) * nvox), ncol(Xe), nvox)
     }
-    matrix_frame(Y, TR = TR, run_length = rep(run_length, nrun), event_table = ev)
+    as_fmri_frame(Y, TR = TR, run_length = rep(run_length, nrun), events = ev)
   })
 }

@@ -82,7 +82,7 @@ test_that("design_plot legend_threshold and color palette branches", {
     run = 1L
   )
   Y <- matrix(rnorm(50 * 3), 50, 3)
-  dset <- matrix_frame(Y, TR = 1, run_length = 50, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = 50, events = etab)
   emod <- event_model(onset ~ hrf(condition), data = etab, block = ~ run,
                       sampling_frame = frame_sframe(dset))
   bmod <- baseline_model(basis = "constant", sframe = frame_sframe(dset))
@@ -95,7 +95,7 @@ test_that("design_plot legend_threshold and color palette branches", {
   expect_true(inherits(app, "shiny.appobj") || is.list(app))
 })
 
-test_that("instantiate / realize_dataset cover inline matrix_frame jobs", {
+test_that("instantiate / realize_dataset cover inline as_fmri_frame jobs", {
   bs <- baseline_spec(degree = 1, basis = "poly")
   tmpl <- fmri_template(onset ~ hrf(condition), ~ run, baseline = bs)
   ev <- data.frame(

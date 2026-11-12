@@ -54,7 +54,7 @@ test_that(".fmri_lm_formula_legacy and .fmri_lm_model_legacy fit matrix data", {
     run = 1L
   )
   Y <- matrix(rnorm(n * 3), n, 3)
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
 
   fit <- fmrireg:::.fmri_lm_formula_legacy(
     onset ~ hrf(condition),

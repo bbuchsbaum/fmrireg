@@ -9,8 +9,8 @@
     condition = factor(rep(c("A", "B", "C", "A"), 2)),
     run = rep(1:2, each = 4)
   )
-  matrix_frame(matrix(rnorm(2 * n * 6), 2 * n, 6), TR = 1,
-               run_length = c(n, n), event_table = ev)
+  as_fmri_frame(matrix(rnorm(2 * n * 6), 2 * n, 6), TR = 1,
+               run_length = c(n, n), events = ev)
 }
 
 test_that("print.fmri_lm reports the fit's scope, stored df, formula and contrasts (B2)", {
@@ -119,7 +119,7 @@ test_that("with_package checks every package and names all missing ones (B6)", {
     condition = factor(rep(c("A", "B", "C", "B", "A"), 2)),
     run = rep(1:2, each = 5)
   )
-  dset <- neurovec_frame(scans = scans, mask = mask, TR = 1.5, event_table = ev)
+  dset <- as_fmri_frame(x = scans, mask = mask, TR = 1.5, events = ev)
   con <- contrast_set(
     pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B"),
     oneway_contrast(~ condition, name = "cond_F")

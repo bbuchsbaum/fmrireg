@@ -2,13 +2,13 @@
 #'
 #' This function estimates a regression model for fMRI data using a latent component dataset.
 #' The dataset must be an `fmri_frame` whose feature space is a
-#' `fmridataset::basis_space` (see [latent_frame()]), so that the assay holds
+#' `fmridataset::basis_space` (see [as_fmri_frame()]), so that the assay holds
 #' component scores and the space carries the spatial loadings.
 #'
 #' @param formula A formula specifying the regression model.
 #' @param block A factor indicating the block structure of the data.
 #' @param baseline_model An optional baseline model.
-#' @param dataset A latent `fmri_frame` (see [latent_frame()]).
+#' @param dataset A latent `fmri_frame` (see [as_fmri_frame()]).
 #' @param durations The duration of events in the dataset. Default is 0
 #'   (impulse events), as in [fmri_lm()].
 #' @param drop_empty Whether to drop empty events from the model. Default is TRUE.
@@ -45,7 +45,7 @@
 #' autocorrelation. A `control` with `estimation_spec("runwise_meta")` (and,
 #' optionally, `noise_spec(..., voxelwise = TRUE)`) treats each component as
 #' a separate response with its own noise model and run weights, i.e. the
-#' same fit `fmri_lm()` gives for the score matrix as a `matrix_frame()`.
+#' same fit `fmri_lm()` gives for the score matrix as a `as_fmri_frame()`.
 #' That model has no exact voxel-space equivalent: `coef(recon = TRUE)`
 #' returns the loadings applied to the component estimates, but
 #' `standard_error()` and `stats()` with `recon = TRUE` are an error because
@@ -57,7 +57,7 @@
 #'
 #' @note This method is currently experimental.
 #'
-#' @seealso [latent_frame()], [fmri_lm()], [fmri_lm_control()]
+#' @seealso [as_fmri_frame()], [fmri_lm()], [fmri_lm_control()]
 #' @export
 #'
 #' @examples
@@ -93,7 +93,7 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
   autocor_missing <- missing(autocor)
   autocor <- match.arg(autocor)
   assert_that(.dset_is_latent(dataset),
-              msg = "'dataset' must be an fmri_frame over a basis_space (see latent_frame())")
+              msg = "'dataset' must be an fmri_frame over a basis_space (see as_fmri_frame())")
   if (autocor %in% c("auto", "arma")) {
     stop("`fmri_latent_lm()` does not implement autocor = '", autocor,
          "'; choose 'none', 'ar1', or 'ar2'.", call. = FALSE)

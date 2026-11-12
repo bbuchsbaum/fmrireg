@@ -21,8 +21,8 @@ make_issue_226_fixture <- function(nvox = 1L) {
   bad <- c(10L, 11L, 12L, 40L)
   Y[bad, ] <- Y[bad, , drop = FALSE] + 50
   weights <- as.numeric(!(seq_len(n) %in% bad))
-  dataset <- matrix_frame(
-    Y, TR = 2, run_length = n, event_table = events
+  dataset <- as_fmri_frame(
+    Y, TR = 2, run_length = n, events = events
   )
   baseline <- baseline_model(basis = "constant", sframe = sframe)
 

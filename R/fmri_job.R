@@ -17,10 +17,13 @@
 #' paths and run lengths (no voxel data), which keeps the enclosing [fmri_job]
 #' tiny and portable. The dataset is realized lazily on the worker.
 #'
-#' @param constructor Name of a frame constructor (a string): one of
+#' @param constructor Name of a dataset recipe (a string): one of
 #'   \code{"nifti_frame"}, \code{"matrix_frame"}, \code{"neurovec_frame"}, or
-#'   \code{"latent_frame"}. Resolved at run time, so the data is not loaded
-#'   when the spec is built.
+#'   \code{"latent_frame"}. The arguments are those of the deprecated helpers
+#'   of the same names; realizing a spec builds the frame with
+#'   [fmridataset::read_nifti_bold()] or [fmridataset::as_fmri_frame()]
+#'   without a deprecation warning. Resolved at run time, so the data is not
+#'   loaded when the spec is built.
 #' @param args A named list of arguments passed to \code{constructor} (for
 #'   \code{"nifti_frame"}: \code{scans}, \code{TR}, \code{run_length},
 #'   \code{event_table}, \code{mask}, \code{base_path}, ...).
@@ -28,7 +31,7 @@
 #'   \code{"inline"} (data already in \code{args}, e.g. a matrix for
 #'   \code{matrix_frame}).
 #' @return An object of class \code{dataset_spec}.
-#' @seealso [fmri_job()], [nifti_frame()], [matrix_frame()]
+#' @seealso [fmri_job()], [realize_dataset()]
 #' @export
 #' @examples
 #' dataset_spec("nifti_frame",

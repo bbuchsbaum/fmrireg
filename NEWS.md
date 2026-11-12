@@ -1,5 +1,17 @@
 # fmrireg (development version)
 
+* `matrix_frame()`, `neurovec_frame()`, `nifti_frame()`, and `latent_frame()`
+  are deprecated. fmridataset now builds the same run-structured frames, and
+  fmrireg re-exports its constructors: use `as_fmri_frame()` for a matrix,
+  `NeuroVec` runs, or a `fmristore::LatentNeuroVec`, and `read_nifti_bold()`
+  for NIfTI files. The argument `event_table` is now `events`, and
+  `nifti_frame(base_path =)` has no counterpart (pass full paths). The old
+  helpers warn and forward, so their frames now carry fmridataset's IDs
+  (`run-1_vol-0001`) and a `volume_index` column. The list form
+  `latent_frame(list(basis, loadings, mask))` still works through the
+  deprecated helper. Saved jobs whose `dataset_spec()` names an old
+  constructor realize unchanged, without a warning.
+
 * New `hrf_amplitude_latency()` turns the fitted coefficients of a
   multi-basis HRF term (`hrf(cond, basis = "spmg2")`, or the quadrature pair
   `fmrihrf::HRF_SPMGQ`) into per-voxel response amplitude and latency maps for

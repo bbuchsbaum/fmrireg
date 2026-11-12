@@ -61,11 +61,11 @@ test_that("latent_sketch validates by_cluster requirements", {
       mask = rep(TRUE, n_voxels),
       offset = rep(0, n_voxels)
     )
-    latent_frame(
+    as_fmri_frame(
       lvec,
       TR = 1,
       run_length = Tlen,
-      event_table = data.frame(onsets = 1, condition = factor("A"), run = 1L)
+      events = data.frame(onsets = 1, condition = factor("A"), run = 1L)
     )
   })
 

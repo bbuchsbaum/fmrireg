@@ -35,7 +35,7 @@ make_plot_fixture <- function(nvox = 12L, basis = "spmg1", extra_factor = FALSE,
   E <- matrix(rnorm(nrow(X) * nvox), nrow(X))
   if (ar != 0) E <- apply(E, 2, function(e) as.numeric(stats::filter(e, ar, method = "recursive")))
   Y <- X %*% B + E + 100
-  dset <- matrix_frame(Y, TR = TR, run_length = c(nscan, nscan), event_table = events)
+  dset <- as_fmri_frame(Y, TR = TR, run_length = c(nscan, nscan), events = events)
   form <- if (extra_factor) {
     onset ~ hrf(condition, basis = basis) + hrf(rt_c) + hrf(task)
   } else if (partial_alias) {
@@ -205,7 +205,7 @@ test_that("single-voxel HRF band matches lm() for a single-run OLS fit", {
   fx <- make_plot_fixture(basis = "spmg3")
   rows <- seq_len(fx$nscan)
   ev1 <- fx$events[fx$events$run == 1, ]
-  d1 <- matrix_frame(fx$Y[rows, ], TR = 2, run_length = fx$nscan, event_table = ev1)
+  d1 <- as_fmri_frame(fx$Y[rows, ], TR = 2, run_length = fx$nscan, events = ev1)
   f1 <- fmri_lm(onset ~ hrf(condition, basis = "spmg3"), block = ~ run, dataset = d1)
   sa <- seq(0, 20, by = 0.5)
   p <- ggplot2::autoplot(f1, type = "hrf", voxel = 1, sample_at = sa)
@@ -232,8 +232,8 @@ test_that("time course refits run by run and guards R2 for constant voxels", {
 
   Yc <- fx$Y
   Yc[, 2] <- 100
-  dc <- matrix_frame(Yc, TR = 2, run_length = c(fx$nscan, fx$nscan),
-                     event_table = fx$events)
+  dc <- as_fmri_frame(Yc, TR = 2, run_length = c(fx$nscan, fx$nscan),
+                     events = fx$events)
   fc <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dc)
   pc <- ggplot2::autoplot(fc, type = "timecourse", voxel = 2)
   expect_match(pc$labels$subtitle, "n/a")
@@ -339,8 +339,8 @@ test_that("every fmri_lm view uses the current accessor API without warnings", {
   withr::local_seed(21)
   ev <- data.frame(onset = seq(10, 180, by = 12), run = 1,
                    condition = factor(rep(c("a", "b"), length.out = 15)))
-  dset <- matrix_frame(matrix(rnorm(100 * 5), 100, 5), TR = 2, run_length = 100,
-                       event_table = ev)
+  dset <- as_fmri_frame(matrix(rnorm(100 * 5), 100, 5), TR = 2, run_length = 100,
+                       events = ev)
   con <- pair_contrast(~ condition == "a", ~ condition == "b", name = "a_vs_b")
   fit <- fmri_lm(onset ~ hrf(condition, contrasts = con), block = ~ run, dataset = dset)
   expect_identical(dim(coef(fit)), c(5L, 2L))

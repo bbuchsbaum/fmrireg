@@ -11,11 +11,11 @@ test_that("parallel_chunks routes chunkwise fitting through future-compatible pa
     amp = c(1, 0, 1, 0, 1, 0),
     run = rep(1:2, each = 3)
   )
-  dset <- matrix_frame(
+  dset <- as_fmri_frame(
     matrix(rnorm(120 * 4), nrow = 120, ncol = 4),
     TR = 1,
     run_length = c(60, 60),
-    event_table = event_data
+    events = event_data
   )
 
   for (fast_path in c(FALSE, TRUE)) {

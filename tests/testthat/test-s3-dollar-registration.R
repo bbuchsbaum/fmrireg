@@ -25,7 +25,7 @@ test_that("`chunk$data` reads a lazy chunk when called from outside fmrireg", {
   set.seed(1)
   Y <- matrix(rnorm(40 * 6), 40, 6)
   ev <- data.frame(onset = c(4, 24, 44, 64), condition = factor("a"), run = 1)
-  dset <- matrix_frame(Y, TR = 2, run_length = 40, event_table = ev)
+  dset <- as_fmri_frame(Y, TR = 2, run_length = 40, events = ev)
   chunks <- fmrireg:::.dset_chunks(dset, nchunks = 2)
   ch <- chunks[[2]]
   expect_null(.subset2(ch, "data"))

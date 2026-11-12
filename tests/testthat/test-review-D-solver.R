@@ -102,7 +102,7 @@ test_that("voxelwise AR fitting never builds a pseudo-inverse", {
                    condition = factor(rep(c("A", "B"), length.out = 9)),
                    run = 1)
   Y <- matrix(rnorm(n * 6), n, 6)
-  dset <- matrix_frame(Y, TR = 2, run_length = n, event_table = ev)
+  dset <- as_fmri_frame(Y, TR = 2, run_length = n, events = ev)
   calls <- 0L
   orig <- fmrireg:::.preproject_pinv
   testthat::local_mocked_bindings(
@@ -138,7 +138,7 @@ test_that("voxelwise AR fitting never builds a pseudo-inverse", {
       Y[(r - 1) * 60 + 1:60, v] <- as.numeric(arima.sim(list(ar = 0.4), 60))
     }
   }
-  dset <- matrix_frame(Y, TR = 2, run_length = c(60, 60), event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 2, run_length = c(60, 60), events = etab)
   # The nuisance column duplicates each run's intercept: one aliased column
   # per run.
   bspec <- suppressWarnings(baseline_model(basis = "poly", degree = 1, sframe = sframe,

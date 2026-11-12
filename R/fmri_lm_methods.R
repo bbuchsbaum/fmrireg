@@ -45,7 +45,7 @@
 #'   onsets = c(1, 12, 25, 38),
 #'   run = 1
 #' )
-#' dset <- matrix_frame(X, TR = 2, run_length = 50, event_table = edata)
+#' dset <- as_fmri_frame(X, TR = 2, run_length = 50, events = edata)
 #' fit <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
 #' b <- coef(fit) # 3 voxels x 2 event coefficients
 #' dim(b)
@@ -519,8 +519,8 @@ print.fmri_lm <- function(x, ...) {
 #'   onsets = c(1, 12, 25, 38),
 #'   run = c(1, 1, 1, 1)
 #' )
-#' dset <- matrix_frame(X, TR = 2, run_length = 50,
-#'                                     event_table = edata)
+#' dset <- as_fmri_frame(X, TR = 2, run_length = 50,
+#'                                     events = edata)
 #' fit <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
 #' coef_names(fit)
 #' @method coef_names fmri_lm
@@ -578,8 +578,8 @@ coef_names.fmri_lm <- function(x, type = c("estimates", "contrasts", "F", "all")
 #'   onsets = c(1, 12, 25, 38),
 #'   run = c(1, 1, 1, 1)
 #' )
-#' dset <- matrix_frame(X, TR = 2, run_length = 50,
-#'                                     event_table = edata)
+#' dset <- as_fmri_frame(X, TR = 2, run_length = 50,
+#'                                     events = edata)
 #' fit <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
 #' # Get coefficient estimates as a numeric vector
 #' coef_image(fit, coef = 1)
@@ -669,8 +669,8 @@ coef_image.fmri_lm <- function(object, coef = 1,
 #'   onsets = c(1, 12, 25, 38),
 #'   run = c(1, 1, 1, 1)
 #' )
-#' dset <- matrix_frame(X, TR = 2, run_length = 50,
-#'                                     event_table = edata)
+#' dset <- as_fmri_frame(X, TR = 2, run_length = 50,
+#'                                     events = edata)
 #' fit <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
 #' # Named list of one volume per event regressor
 #' imgs <- coef_images(fit, statistic = "estimate", type = "estimates")

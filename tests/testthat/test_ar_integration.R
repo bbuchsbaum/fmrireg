@@ -19,7 +19,7 @@ simulate_ar_dataset <- function(ar_coeff = numeric(), n_runs = 2, n_time = 30, n
     onset = rep(c(5, 15), n_runs),
     cond = factor("A")
   )
-  matrix_frame(datamat, TR = 1, run_length = rep(n_time, n_runs), event_table = event_tab)
+  as_fmri_frame(datamat, TR = 1, run_length = rep(n_time, n_runs), events = event_tab)
 }
 
 

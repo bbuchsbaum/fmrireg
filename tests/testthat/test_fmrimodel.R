@@ -15,10 +15,10 @@ test_that("can construct and run an fmri_model with matrix data", {
   datamat <- matrix(rnorm(n_timepoints * n_voxels), n_timepoints, n_voxels)
   
   # Create matrix dataset
-  dset <- matrix_frame(datamat, 
+  dset <- as_fmri_frame(datamat, 
                         TR = 1.5,
                         run_length = rep(436, 2),
-                        event_table = facedes_subset)
+                        events = facedes_subset)
 
   # Create event and baseline models
   espec <- event_model(onset ~ hrf(repnum), data = facedes_subset, 
@@ -56,10 +56,10 @@ test_that("fmri_model handles edge cases correctly", {
   n_timepoints <- 100
   datamat <- matrix(rnorm(n_timepoints * 50), n_timepoints, 50)
   
-  dset <- matrix_frame(datamat, 
+  dset <- as_fmri_frame(datamat, 
                         TR = 2.0,
                         run_length = n_timepoints,
-                        event_table = mini_design)
+                        events = mini_design)
   
   # Test with minimal baseline model  
   espec <- event_model(onset ~ hrf(condition), data = mini_design,

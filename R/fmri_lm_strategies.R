@@ -60,7 +60,7 @@ extract_censor_from_dataset <- function(dataset, run_num = NULL, n_time = NULL) 
 #' An unset `censor` is not a decision to ignore censoring. When the dataset
 #' carries a censor column the frame is the single source of truth, so an
 #' unset spec resolves against it. Requiring `ar_options$censor = "auto"` to
-#' activate the frame's own censoring meant a `matrix_frame(censor = )` was
+#' activate the frame's own censoring meant a `as_fmri_frame(censor = )` was
 #' silently discarded by every fit. Pass `censor = "none"` to opt out.
 #'
 #' @param cfg fmri_lm_control object

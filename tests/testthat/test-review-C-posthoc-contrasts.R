@@ -15,7 +15,7 @@
     run = 1L
   )
   Y <- matrix(rnorm(n * 4), n, 4)
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
   specs <- list(
     AvB = pair_contrast(~ cond == "A", ~ cond == "B", name = "AvB"),
     unitc = unit_contrast(~ cond, name = "unitc"),

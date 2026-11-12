@@ -34,7 +34,7 @@ Imports:
     neuroim2,
     Rcpp,
     methods,
-    fmridataset (>= 0.11.0.9000),
+    fmridataset (>= 0.11.0.9001),
     cli,
     future.apply,
     jsonlite,

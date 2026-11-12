@@ -1,8 +1,8 @@
 # Shared frame fixtures and accessors for the test suite.
 #
 # fmrireg fits models to fmridataset::fmri_frame objects. Tests build them
-# through the package's own constructors (matrix_frame(), neurovec_frame(),
-# latent_frame(), nifti_frame()) and read them back through the public
+# with fmridataset's constructors (as_fmri_frame() and
+# read_nifti_bold(), re-exported by fmrireg) and read them back through the public
 # fmridataset API; the three accessors below just keep that one line long.
 
 # Event table stored on a frame, as a data frame (empty when absent).

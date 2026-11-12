@@ -10,7 +10,7 @@ test_that(".preflight_rrr_gls_engine and .fit_rrr_gls_engine happy path", {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
     sampling_frame = frame_sframe(dset)
@@ -44,7 +44,7 @@ test_that(".run_lowrank_engine landmarks path with tiny sketch", {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = n, events = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
     sampling_frame = frame_sframe(dset)
@@ -91,7 +91,7 @@ test_that("runwise_lm_fast and chunkwise_lm_fast return pooled structures", {
     run = rep(1:2, each = 3)
   )
   Y <- matrix(rnorm((2 * n_per) * V), 2 * n_per, V)
-  dset <- matrix_frame(Y, TR = 1, run_length = c(n_per, n_per), event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = c(n_per, n_per), events = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
     sampling_frame = frame_sframe(dset)

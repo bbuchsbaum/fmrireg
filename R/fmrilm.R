@@ -590,7 +590,7 @@ fmri_lm <- function(formula, ...) {
 #' canonical names in new code.
 #' 
 #' @export
-#' @seealso \code{\link{matrix_frame}}, \code{\link{fmri_lm_fit}}, \code{\link{fmri_lm_control}}
+#' @seealso \code{\link{as_fmri_frame}}, \code{\link{fmri_lm_fit}}, \code{\link{fmri_lm_control}}
 #' @examples
 #' 
 #' facedes <- subset(read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), 
@@ -610,9 +610,9 @@ fmri_lm <- function(formula, ...) {
 #' ys2 <- y + rnorm(length(y), sd=.02)
 #' 
 #' h <<- gen_hrf(fmrihrf::hrf_bspline, N=7, span=25)
-#' dset <- matrix_frame(cbind(ys1,ys2), TR=2, 
+#' dset <- as_fmri_frame(cbind(ys1,ys2), TR=2, 
 #'                        run_length=fmrihrf::blocklens(sframe), 
-#'                        event_table=facedes)
+#'                        events = facedes)
 #' flm <- fmri_lm(onset ~ hrf(face_gen, 
 #'                            basis=gen_hrf(fmrihrf::hrf_bspline, N=7, span=25)), 
 #'                block = ~ run, 
@@ -894,7 +894,7 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
 #'   reference backend, parallelism and progress.
 #' @return A fitted fMRI linear regression model with the specified fitting strategy.
 #' @keywords internal
-#' @seealso \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{matrix_frame}}
+#' @seealso \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{as_fmri_frame}}
 fmri_lm_fit <- function(fmrimod, dataset, cfg, compute = compute_spec()) {
   # Validate config before inspecting path-dependent combinations.
   assert_that(inherits(cfg, "fmri_lm_control"), msg = "'cfg' must be an 'fmri_lm_control' object")

@@ -59,7 +59,7 @@ test_that("create_fmri_model builds from formula and validates inputs", {
     run = 1L
   )
   Y <- matrix(rnorm(40 * 3), 40, 3)
-  dset <- matrix_frame(Y, TR = 1, run_length = 40, event_table = etab)
+  dset <- as_fmri_frame(Y, TR = 1, run_length = 40, events = etab)
   fm <- fmrireg:::create_fmri_model(
     onset ~ hrf(condition), block = ~ run, dataset = dset
   )

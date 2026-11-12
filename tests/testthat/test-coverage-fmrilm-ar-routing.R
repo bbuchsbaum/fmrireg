@@ -8,7 +8,7 @@ test_that("get_formula.fmri_model builds response formula from terms", {
       run = 1L
     )
     Y <- matrix(rnorm(50 * 3), 50, 3)
-    dset <- matrix_frame(Y, TR = 1, run_length = 50, event_table = etab)
+    dset <- as_fmri_frame(Y, TR = 1, run_length = 50, events = etab)
     emod <- event_model(
       onset ~ hrf(condition), data = etab, block = ~ run,
       sampling_frame = frame_sframe(dset)
