@@ -78,7 +78,7 @@ test_that("\"ihs\" with global AR(1) is exact OLS on the whitened data", {
                                 seed = 403L)
   fit <- .ihs_fit(dset, control = fmri_lm_control(noise = noise_spec("ar1")))
   X <- as.matrix(design_matrix(fit$model))
-  Y <- fmridataset::collect_assay(dset)
+  Y <- fmridataset::collect_assay(dset, dimnames = FALSE)
   # Run-pooled AR(1): one coefficient per run, as the engine whitened with.
   expect_length(fit$ar_coef, 2L)
   w <- fmrireg:::ar_whiten_transform(

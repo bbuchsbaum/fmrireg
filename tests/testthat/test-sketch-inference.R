@@ -122,7 +122,7 @@ test_that("IHS fits reproduce OLS coefficients, standard errors and df", {
   ))
   # Joint (all-runs) OLS on the same design.
   X <- as.matrix(design_matrix(fit$model))
-  Y <- fmridataset::collect_assay(dset)
+  Y <- fmridataset::collect_assay(dset, dimnames = FALSE)
   XtXinv <- solve(crossprod(X))
   B_ols <- XtXinv %*% crossprod(X, Y)
   df <- nrow(X) - ncol(X)
@@ -165,7 +165,7 @@ test_that("by_cluster fits solve each cluster with its own whitened design", {
   # Reference: per-cluster OLS on the cluster's whitened data, with the
   # cluster AR coefficients the fit used.
   X <- as.matrix(design_matrix(fit_ihs$model))
-  Y <- fmridataset::collect_assay(dset)
+  Y <- fmridataset::collect_assay(dset, dimnames = FALSE)
   run_idx <- fmrireg:::.model_run_indices(fit_ihs$model, nrow(X))
   exact_first <- isTRUE(attr(fit_ihs, "config")$ar$exact_first)
   B_ref <- SE_ref <- matrix(NA_real_, ncol(X), nvox)
